@@ -115,9 +115,41 @@ function closeCertModal() {
 }
 
 // Close outside click
-window.onclick = function(event) {
+window.onclick = function (event) {
     const modal = document.getElementById('certModal');
     if (event.target == modal) {
         closeCertModal();
     }
 }
+
+// Load Executive Images
+document.addEventListener('DOMContentLoaded', () => {
+    const execCards = document.querySelectorAll('.executive-card');
+    const execKeys = ['exec1', 'exec2', 'exec3', 'exec4'];
+
+    // Check if we are on the page with executive cards
+    if (execCards.length > 0) {
+        execCards.forEach((card, index) => {
+            if (index < execKeys.length) {
+                const key = 'keca_' + execKeys[index];
+                const storedImage = localStorage.getItem(key);
+                if (storedImage) {
+                    const avatarCircle = card.querySelector('.avatar-circle');
+                    if (avatarCircle) {
+                        // Replace text content with image
+                        avatarCircle.innerHTML = `<img src="${storedImage}" alt="Executive Image" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+
+                        // Apply styles to ensure proper display
+                        avatarCircle.style.background = 'transparent';
+                        avatarCircle.style.overflow = 'hidden';
+                        avatarCircle.style.padding = '0';
+                        avatarCircle.style.display = 'flex';
+                        avatarCircle.style.alignItems = 'center';
+                        avatarCircle.style.justifyContent = 'center';
+                        avatarCircle.style.border = 'none'; // Optional: remove border if it conflicts
+                    }
+                }
+            }
+        });
+    }
+});

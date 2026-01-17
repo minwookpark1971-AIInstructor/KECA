@@ -284,14 +284,73 @@
             <!-- Organization Management -->
             <div id="org" class="card">
                 <h2>조직 현황 이미지 등록</h2>
-                <form>
-                    <div class="form-group">
-                        <label>조직도 이미지</label>
-                        <input type="file" accept="image/*">
+                <p style="margin-bottom: 20px; color: #666; font-size: 0.9em;">
+                    각 임원의 사진을 등록해주세요. (이미지는 브라우저에 저장됩니다)<br>
+                    권장 사이즈: 1:1 비율 (정사각형)
+                </p>
+
+                <div class="org-upload-grid"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                    <!-- Exec 1 -->
+                    <div class="upload-item" style="border: 1px solid #eee; padding: 15px; border-radius: 8px;">
+                        <h4 style="margin-top:0">회장 조은아</h4>
+                        <div id="preview-exec1"
+                            style="width: 100px; height: 100px; background: #eee; border-radius: 50%; margin: 0 auto 10px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                            <span style="color: #999; font-size: 0.8em;">No Image</span>
+                        </div>
+                        <input type="file" id="input-exec1" accept="image/*"
+                            onchange="handleImageSelect(this, 'preview-exec1')"
+                            style="margin-bottom: 10px; font-size: 0.8em;">
+                        <button type="button" class="btn-sm" onclick="saveExecImage('exec1', 'input-exec1')">저장</button>
+                        <button type="button" class="btn-sm btn-danger"
+                            onclick="deleteExecImage('exec1', 'preview-exec1')">삭제</button>
                     </div>
-                    <button type="button" onclick="alert('조직도가 업데이트되었습니다.')">업로드</button>
-                    <button type="button" class="btn-danger" onclick="alert('조직도 이미지가 삭제되었습니다.')">삭제</button>
-                </form>
+
+                    <!-- Exec 2 -->
+                    <div class="upload-item" style="border: 1px solid #eee; padding: 15px; border-radius: 8px;">
+                        <h4 style="margin-top:0">임원 박민욱</h4>
+                        <div id="preview-exec2"
+                            style="width: 100px; height: 100px; background: #eee; border-radius: 50%; margin: 0 auto 10px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                            <span style="color: #999; font-size: 0.8em;">No Image</span>
+                        </div>
+                        <input type="file" id="input-exec2" accept="image/*"
+                            onchange="handleImageSelect(this, 'preview-exec2')"
+                            style="margin-bottom: 10px; font-size: 0.8em;">
+                        <button type="button" class="btn-sm" onclick="saveExecImage('exec2', 'input-exec2')">저장</button>
+                        <button type="button" class="btn-sm btn-danger"
+                            onclick="deleteExecImage('exec2', 'preview-exec2')">삭제</button>
+                    </div>
+
+                    <!-- Exec 3 -->
+                    <div class="upload-item" style="border: 1px solid #eee; padding: 15px; border-radius: 8px;">
+                        <h4 style="margin-top:0">임원 우기정</h4>
+                        <div id="preview-exec3"
+                            style="width: 100px; height: 100px; background: #eee; border-radius: 50%; margin: 0 auto 10px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                            <span style="color: #999; font-size: 0.8em;">No Image</span>
+                        </div>
+                        <input type="file" id="input-exec3" accept="image/*"
+                            onchange="handleImageSelect(this, 'preview-exec3')"
+                            style="margin-bottom: 10px; font-size: 0.8em;">
+                        <button type="button" class="btn-sm" onclick="saveExecImage('exec3', 'input-exec3')">저장</button>
+                        <button type="button" class="btn-sm btn-danger"
+                            onclick="deleteExecImage('exec3', 'preview-exec3')">삭제</button>
+                    </div>
+
+                    <!-- Exec 4 -->
+                    <div class="upload-item" style="border: 1px solid #eee; padding: 15px; border-radius: 8px;">
+                        <h4 style="margin-top:0">임원 김현정</h4>
+                        <div id="preview-exec4"
+                            style="width: 100px; height: 100px; background: #eee; border-radius: 50%; margin: 0 auto 10px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                            <span style="color: #999; font-size: 0.8em;">No Image</span>
+                        </div>
+                        <input type="file" id="input-exec4" accept="image/*"
+                            onchange="handleImageSelect(this, 'preview-exec4')"
+                            style="margin-bottom: 10px; font-size: 0.8em;">
+                        <button type="button" class="btn-sm" onclick="saveExecImage('exec4', 'input-exec4')">저장</button>
+                        <button type="button" class="btn-sm btn-danger"
+                            onclick="deleteExecImage('exec4', 'preview-exec4')">삭제</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Applicants Management -->
@@ -452,6 +511,68 @@
 
         /* --- Existing Logic --- */
 
+        /* --- Image Handling Logic --- */
+
+        // Initial Image Load
+        window.addEventListener('DOMContentLoaded', loadExecImages);
+
+        function loadExecImages() {
+            ['exec1', 'exec2', 'exec3', 'exec4'].forEach(id => {
+                const storedImage = localStorage.getItem('keca_' + id);
+                if (storedImage) {
+                    const preview = document.getElementById('preview-' + id);
+                    if (preview) {
+                        preview.innerHTML = `<img src="${storedImage}" style="width:100%; height:100%; object-fit:cover;">`;
+                        preview.style.background = 'transparent';
+                    }
+                }
+            });
+        }
+
+        function handleImageSelect(input, previewId) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const preview = document.getElementById(previewId);
+                    preview.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+                    preview.style.background = 'transparent';
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function saveExecImage(id, inputId) {
+            const input = document.getElementById(inputId);
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    try {
+                        localStorage.setItem('keca_' + id, e.target.result);
+                        alert('이미지가 저장되었습니다.');
+                    } catch (err) {
+                        alert('저장 용량을 초과하여 저장할 수 없습니다. (이미지 크기를 줄여주세요)');
+                        console.error(err);
+                    }
+                };
+                reader.readAsDataURL(input.files[0]);
+            } else {
+                alert('선택된 이미지가 없습니다.');
+            }
+        }
+
+        function deleteExecImage(id, previewId) {
+            if (confirm('이미지를 삭제하시겠습니까?')) {
+                localStorage.removeItem('keca_' + id);
+                const preview = document.getElementById(previewId);
+                preview.style.background = '#eee';
+                preview.innerHTML = '<span style="color: #999; font-size: 0.8em;">No Image</span>';
+                document.getElementById('input-' + id).value = '';
+                alert('삭제되었습니다.');
+            }
+        }
+
+        /* --- Existing Logic --- */
+
         function deleteRow(btn) {
             if (confirm('정말 삭제하시겠습니까?')) {
                 const row = btn.closest('tr');
@@ -464,6 +585,7 @@
         }
 
         function deleteImage(previewId) {
+            // Deprecated or for other uses
             if (confirm('이미지를 삭제하시겠습니까?')) {
                 const preview = document.getElementById(previewId);
                 if (preview) {
