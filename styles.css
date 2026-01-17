@@ -467,7 +467,8 @@ img {
 
 .nav-cta {
     padding: 10px 24px;
-    background: var(--gradient-primary);
+    background: #333333;
+    /* Dark Gray as requested */
     border-radius: 8px;
     color: var(--text-primary) !important;
     transition: var(--transition-smooth);
