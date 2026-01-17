@@ -224,9 +224,9 @@ img {
     color: var(--text-primary);
 }
 
-/* Ensure Hero stays Black */
+/* Ensure Hero background allows image to show */
 .hero {
-    background-color: #000000;
+    background-color: transparent;
     color: #FFFFFF;
 }
 
@@ -241,12 +241,15 @@ img {
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--color-accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #9CA3AF;
+    /* Changed to Gray as requested */
     margin-bottom: 1rem;
     padding: 0.5rem 1rem;
-    background: rgba(6, 182, 212, 0.1);
+    background: rgba(156, 163, 175, 0.1);
     border-radius: 50px;
-    border: 1px solid rgba(6, 182, 212, 0.2);
+    border: 1px solid rgba(156, 163, 175, 0.3);
 }
 
 .section-title {
@@ -659,7 +662,15 @@ img {
 /* Mission & Vision */
 .mission-vision {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+
+    .mission-vision {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        /* Force 2 equal columns */
+        gap: 3rem;
+        margin-bottom: 5rem;
+    }
+
     gap: 3rem;
     margin-bottom: 5rem;
 }
@@ -936,6 +947,8 @@ img {
 
 .org-box.primary {
     background: var(--gradient-primary);
+    color: #000000;
+    /* Primary boxes (Assembly, Board, Chair) text to Black */
     border-color: transparent;
     box-shadow: 0 10px 40px rgba(59, 130, 246, 0.4);
 }
@@ -1311,8 +1324,10 @@ img {
     align-items: center;
     justify-content: center;
     font-size: 3rem;
+    font-size: 3rem;
     font-weight: 900;
-    color: var(--text-primary);
+    color: #000000;
+    /* Changed to Black as requested */
     box-shadow: 0 10px 40px rgba(59, 130, 246, 0.5);
     border: 4px solid var(--bg-primary);
 }
