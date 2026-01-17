@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,8 +13,12 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
+
 <body>
     <!-- Animated Background -->
     <div class="bg-gradient"></div>
@@ -48,7 +53,10 @@
 
     <!-- Hero Section -->
     <section id="home" class="hero">
-        <div class="hero-grid"></div>
+        <div class="hero-bg-container">
+            <img src="images/hero-bg.png" alt="Background" class="hero-bg-image">
+            <div class="hero-overlay"></div>
+        </div>
         <div class="container">
             <div class="hero-content">
                 <div class="hero-badge">Korea Education Consulting Association</div>
@@ -65,7 +73,8 @@
                     <a href="#about" class="btn btn-primary">
                         <span>협회 소개서 다운로드</span>
                         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                            <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                     </a>
                     <a href="#certification" class="btn btn-secondary">
@@ -91,22 +100,22 @@
             <!-- 기관 개요 -->
             <div class="overview-grid">
                 <div class="glass-card">
-                    <div class="card-icon">🏛️</div>
+                    <div class="card-icon"><i class="ph ph-bank"></i></div>
                     <h3>기관명</h3>
                     <p>(사)한국교육컨설팅협회</p>
                 </div>
                 <div class="glass-card">
-                    <div class="card-icon">📅</div>
+                    <div class="card-icon"><i class="ph ph-calendar-blank"></i></div>
                     <h3>설립일</h3>
                     <p>2025년 4월</p>
                 </div>
                 <div class="glass-card">
-                    <div class="card-icon">👤</div>
+                    <div class="card-icon"><i class="ph ph-user"></i></div>
                     <h3>대표자</h3>
                     <p>회장 조은아</p>
                 </div>
                 <div class="glass-card span-full">
-                    <div class="card-icon">🎯</div>
+                    <div class="card-icon"><i class="ph ph-target"></i></div>
                     <h3>설립 목적</h3>
                     <p>교육컨설팅의 전문화 및 표준화를 통한 신뢰받는 교육 생태계 조성</p>
                 </div>
@@ -132,28 +141,28 @@
                 <div class="values-grid">
                     <div class="value-card">
                         <div class="value-number">01</div>
-                        <div class="value-icon">💼</div>
+                        <div class="value-icon"><i class="ph ph-briefcase"></i></div>
                         <h4>전문성</h4>
                         <p class="value-subtitle">Professionalism</p>
                         <p>데이터와 근거 기반의 과학적 컨설팅</p>
                     </div>
                     <div class="value-card">
                         <div class="value-number">02</div>
-                        <div class="value-icon">🛡️</div>
+                        <div class="value-icon"><i class="ph ph-shield-check"></i></div>
                         <h4>윤리성</h4>
                         <p class="value-subtitle">Integrity</p>
                         <p>투명하고 정직한 정보 제공</p>
                     </div>
                     <div class="value-card">
                         <div class="value-number">03</div>
-                        <div class="value-icon">💡</div>
+                        <div class="value-icon"><i class="ph ph-lightbulb"></i></div>
                         <h4>혁신성</h4>
                         <p class="value-subtitle">Innovation</p>
                         <p>AI 및 에듀테크 기술의 선도적 도입</p>
                     </div>
                     <div class="value-card">
                         <div class="value-number">04</div>
-                        <div class="value-icon">🤝</div>
+                        <div class="value-icon"><i class="ph ph-handshake"></i></div>
                         <h4>상생</h4>
                         <p class="value-subtitle">Coexistence</p>
                         <p>회원 간 협력 및 사회적 가치 실현</p>
@@ -259,7 +268,7 @@
                 <div class="business-item">
                     <div class="business-number">01</div>
                     <div class="business-content">
-                        <div class="business-icon">🔬</div>
+                        <div class="business-icon"><i class="ph ph-flask"></i></div>
                         <h3>R&D 센터 운영</h3>
                         <ul>
                             <li>AI 기반 진로/진학 진단 솔루션 개발</li>
@@ -271,7 +280,7 @@
                 <div class="business-item reverse">
                     <div class="business-number">02</div>
                     <div class="business-content">
-                        <div class="business-icon">🎓</div>
+                        <div class="business-icon"><i class="ph ph-graduation-cap"></i></div>
                         <h3>인재 양성</h3>
                         <ul>
                             <li>인공지능(AI)교육전문가 자격 과정 운영</li>
@@ -283,7 +292,7 @@
                 <div class="business-item">
                     <div class="business-number">03</div>
                     <div class="business-content">
-                        <div class="business-icon">🌐</div>
+                        <div class="business-icon"><i class="ph ph-globe"></i></div>
                         <h3>네트워크 구축</h3>
                         <ul>
                             <li>정기 학술 포럼 및 컨퍼런스 개최</li>
@@ -295,7 +304,7 @@
                 <div class="business-item reverse">
                     <div class="business-number">04</div>
                     <div class="business-content">
-                        <div class="business-icon">❤️</div>
+                        <div class="business-icon"><i class="ph ph-heart"></i></div>
                         <h3>사회공헌</h3>
                         <ul>
                             <li>찾아가는 학교 무료 진로 컨설팅</li>
@@ -311,19 +320,19 @@
                 <h3 class="subsection-title">주요 성과</h3>
                 <div class="achievements-grid">
                     <div class="achievement-card">
-                        <div class="achievement-icon">👥</div>
+                        <div class="achievement-icon"><i class="ph ph-users"></i></div>
                         <div class="achievement-number" data-count="50">0</div>
                         <div class="achievement-label">자격증 배출 인원 (명)</div>
                         <p class="achievement-detail">인공지능(AI)교육전문가 1기 (2025년)</p>
                     </div>
                     <div class="achievement-card">
-                        <div class="achievement-icon">✅</div>
+                        <div class="achievement-icon"><i class="ph ph-check-circle"></i></div>
                         <div class="achievement-number">100<span>%</span></div>
                         <div class="achievement-label">교육 시스템 구축</div>
                         <p class="achievement-detail">체계적인 커리큘럼 및 검정 시스템</p>
                     </div>
                     <div class="achievement-card">
-                        <div class="achievement-icon">🏆</div>
+                        <div class="achievement-icon"><i class="ph ph-trophy"></i></div>
                         <div class="achievement-number" data-count="4">0</div>
                         <div class="achievement-label">전문 임원진 (명)</div>
                         <p class="achievement-detail">조직 체계 확립 완료</p>
@@ -408,17 +417,17 @@
                 <h3 class="subsection-title">배출 실적</h3>
                 <div class="cert-stats-grid">
                     <div class="stat-card">
-                        <div class="stat-icon">👥</div>
+                        <div class="stat-icon"><i class="ph ph-users-three"></i></div>
                         <div class="stat-number">50명</div>
                         <div class="stat-label">1기 배출 인원 (2025년)</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon">💼</div>
+                        <div class="stat-icon"><i class="ph ph-briefcase"></i></div>
                         <div class="stat-text">활동 분야</div>
                         <div class="stat-detail">학교 방과 후 강사<br>기업 사내 강사<br>교육컨설팅 전문가</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon">📈</div>
+                        <div class="stat-icon"><i class="ph ph-chart-line-up"></i></div>
                         <div class="stat-number">200명</div>
                         <div class="stat-label">2026년 목표 (연간)</div>
                     </div>
@@ -430,7 +439,8 @@
                 <a href="#contact" class="btn btn-primary btn-large">
                     <span>자격증 신청하기</span>
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                        <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
                     </svg>
                 </a>
             </div>
@@ -507,32 +517,32 @@
 
             <div class="benefits-grid">
                 <div class="benefit-card">
-                    <div class="benefit-icon">🏅</div>
+                    <div class="benefit-icon"><i class="ph ph-medal"></i></div>
                     <h4>공신력 확보</h4>
                     <p>협회 인증 현판 및 로고 사용권 부여</p>
                 </div>
                 <div class="benefit-card">
-                    <div class="benefit-icon">📊</div>
+                    <div class="benefit-icon"><i class="ph ph-chart-bar"></i></div>
                     <h4>정보 접근권</h4>
                     <p>최신 교육 트렌드 리포트 및 정책 분석 자료집 정기 구독</p>
                 </div>
                 <div class="benefit-card">
-                    <div class="benefit-icon">⚖️</div>
+                    <div class="benefit-icon"><i class="ph ph-scales"></i></div>
                     <h4>경영 지원</h4>
                     <p>자문 변호사 및 세무사를 통한 법률·세무 지원 서비스</p>
                 </div>
                 <div class="benefit-card">
-                    <div class="benefit-icon">🖥️</div>
+                    <div class="benefit-icon"><i class="ph ph-desktop"></i></div>
                     <h4>플랫폼 이용</h4>
                     <p>컨설턴트 매칭 플랫폼 우선 등재 및 강연 의뢰 우선 배정</p>
                 </div>
                 <div class="benefit-card">
-                    <div class="benefit-icon">🤝</div>
+                    <div class="benefit-icon"><i class="ph ph-handshake"></i></div>
                     <h4>네트워킹</h4>
                     <p>정기 학술 포럼, 워크숍, 멘토링 프로그램 참여 기회</p>
                 </div>
                 <div class="benefit-card">
-                    <div class="benefit-icon">💳</div>
+                    <div class="benefit-icon"><i class="ph ph-credit-card"></i></div>
                     <h4>교육 지원</h4>
                     <p>자격 과정 및 보수 교육 수강료 할인 혜택</p>
                 </div>
@@ -552,21 +562,21 @@
             <div class="contact-wrapper">
                 <div class="contact-info">
                     <div class="contact-item">
-                        <div class="contact-icon">📍</div>
+                        <div class="contact-icon"><i class="ph ph-map-pin"></i></div>
                         <div>
                             <h4>주소</h4>
                             <p>서울특별시 강남구<br>(상세 주소 추가 예정)</p>
                         </div>
                     </div>
                     <div class="contact-item">
-                        <div class="contact-icon">📞</div>
+                        <div class="contact-icon"><i class="ph ph-phone"></i></div>
                         <div>
                             <h4>전화</h4>
                             <p>02-XXXX-XXXX<br>(전화번호 추가 예정)</p>
                         </div>
                     </div>
                     <div class="contact-item">
-                        <div class="contact-icon">✉️</div>
+                        <div class="contact-icon"><i class="ph ph-envelope-simple"></i></div>
                         <div>
                             <h4>이메일</h4>
                             <p>info@keca.or.kr<br>(이메일 추가 예정)</p>
@@ -637,10 +647,12 @@
     <!-- Back to Top Button -->
     <button id="backToTop" class="back-to-top" aria-label="맨 위로">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M12 19V5M5 12L12 5L19 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 19V5M5 12L12 5L19 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
         </svg>
     </button>
 
     <script src="script.js"></script>
 </body>
+
 </html>
