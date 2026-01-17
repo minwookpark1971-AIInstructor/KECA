@@ -22,6 +22,35 @@
             height: 100vh;
         }
 
+        /* Login View */
+        .login-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #f3f4f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .login-box {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-box h2 {
+            text-align: center;
+            color: #111827;
+            margin-bottom: 1.5rem;
+        }
+
         /* Sidebar */
         .sidebar {
             width: 250px;
@@ -68,6 +97,9 @@
 
         .dashboard-header {
             margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .dashboard-header h1 {
@@ -107,11 +139,13 @@
         }
 
         input[type="text"],
+        input[type="password"],
         input[type="file"] {
             width: 100%;
             padding: 0.5rem;
             border: 1px solid #d1d5db;
             border-radius: 6px;
+            box-sizing: border-box;
         }
 
         button {
@@ -154,6 +188,16 @@
             font-weight: 600;
         }
 
+        .status-new {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-done {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
         .btn-sm {
             padding: 0.25rem 0.5rem;
             font-size: 0.875rem;
@@ -179,133 +223,235 @@
 </head>
 
 <body>
-    <div class="sidebar">
-        <div class="sidebar-header">KECA Admin</div>
-        <a href="#" class="nav-link active">Dashboard</a>
-        <a href="#banner" class="nav-link">배너 관리</a>
-        <a href="#org" class="nav-link">조직 현황</a>
-        <a href="#applicants" class="nav-link">자격증 신청</a>
-        <a href="#inquiries" class="nav-link">문의 관리</a>
+
+    <!-- Login View -->
+    <div id="login-view" class="login-container">
+        <div class="login-box">
+            <h2>KECA Administrator</h2>
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="login-id">ID</label>
+                    <input type="text" id="login-id" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-pw">Password</label>
+                    <input type="password" id="login-pw" required>
+                </div>
+                <button type="submit" style="width:100%">Login</button>
+            </form>
+        </div>
     </div>
 
-    <div class="main-content">
-        <div class="dashboard-header">
-            <h1>관리자 대시보드</h1>
+    <!-- Dashboard View (Hidden by default) -->
+    <div id="dashboard-view" style="display: none; width: 100%; height: 100%; display: flex;">
+        <div class="sidebar">
+            <div class="sidebar-header">KECA Admin</div>
+            <a href="#" class="nav-link active">Dashboard</a>
+            <a href="#banner" class="nav-link">배너 관리</a>
+            <a href="#org" class="nav-link">조직 현황</a>
+            <a href="#applicants" class="nav-link">자격증 신청</a>
+            <a href="#inquiries" class="nav-link">문의 관리</a>
+            <a href="#settings" class="nav-link">비밀번호 변경</a>
+            <button onclick="logout()" style="margin-top: auto; background: #666;">Logout</button>
         </div>
 
-        <!-- Banner Management -->
-        <div id="banner" class="card">
-            <h2>메인 배너 교체</h2>
-            <form>
-                <div class="form-group">
-                    <label>현재 배너 이미지</label>
-                    <div id="banner-preview"
-                        style="width: 200px; height: 100px; background: #eee; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; color: #999;">
-                        Preview</div>
-                </div>
-                <div class="form-group">
-                    <label>새 이미지 업로드</label>
-                    <input type="file" accept="image/*">
-                </div>
-                <button type="button" onclick="alert('배너가 교체되었습니다.')">저장하기</button>
-                <button type="button" class="btn-danger" onclick="deleteImage('banner-preview')">삭제</button>
-            </form>
-        </div>
+        <div class="main-content">
+            <div class="dashboard-header">
+                <h1>관리자 대시보드</h1>
+            </div>
 
-        <!-- Organization Management -->
-        <div id="org" class="card">
-            <h2>조직 현황 이미지 등록</h2>
-            <form>
-                <div class="form-group">
-                    <label>조직도 이미지</label>
-                    <input type="file" accept="image/*">
-                </div>
-                <button type="button" onclick="alert('조직도가 업데이트되었습니다.')">업로드</button>
-                <button type="button" class="btn-danger" onclick="alert('조직도 이미지가 삭제되었습니다.')">삭제</button>
-            </form>
-        </div>
+            <!-- Dashboard Sections... (Same as before) -->
 
-        <!-- Applicants Management -->
-        <div id="applicants" class="card">
-            <h2>자격증 신청자 관리 (최신 5건)</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>이름</th>
-                        <th>연락처</th>
-                        <th>이메일</th>
-                        <th>신청일</th>
-                        <th>상태</th>
-                        <th>관리</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>김철수</td>
-                        <td>010-1234-5678</td>
-                        <td>kim@example.com</td>
-                        <td>2026-01-17</td>
-                        <td><span class="status-badge status-new">신규</span></td>
-                        <td>
-                            <button class="btn-sm btn-secondary" onclick="editRow(this)">수정</button>
-                            <button class="btn-sm btn-danger" onclick="deleteRow(this)">삭제</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>이영희</td>
-                        <td>010-9876-5432</td>
-                        <td>lee@example.com</td>
-                        <td>2026-01-16</td>
-                        <td><span class="status-badge status-done">완료</span></td>
-                        <td>
-                            <button class="btn-sm btn-secondary" onclick="editRow(this)">수정</button>
-                            <button class="btn-sm btn-danger" onclick="deleteRow(this)">삭제</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+            <!-- Banner Management -->
+            <div id="banner" class="card">
+                <h2>메인 배너 교체</h2>
+                <form>
+                    <div class="form-group">
+                        <label>현재 배너 이미지</label>
+                        <div id="banner-preview"
+                            style="width: 200px; height: 100px; background: #eee; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; color: #999;">
+                            Preview</div>
+                    </div>
+                    <div class="form-group">
+                        <label>새 이미지 업로드</label>
+                        <input type="file" accept="image/*">
+                    </div>
+                    <button type="button" onclick="alert('배너가 교체되었습니다.')">저장하기</button>
+                    <button type="button" class="btn-danger" onclick="deleteImage('banner-preview')">삭제</button>
+                </form>
+            </div>
 
-        <!-- Inquiry Management -->
-        <div id="inquiries" class="card">
-            <h2>1:1 문의 관리</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>제목</th>
-                        <th>작성자</th>
-                        <th>등록일</th>
-                        <th>답변 여부</th>
-                        <th>관리</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>자격증 과정 문의드립니다</td>
-                        <td>박지민</td>
-                        <td>2026-01-17</td>
-                        <td><span class="status-badge status-new">대기중</span></td>
-                        <td>
-                            <button class="btn-sm btn-secondary" onclick="editRow(this)">수정</button>
-                            <button class="btn-sm btn-danger" onclick="deleteRow(this)">삭제</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>협회 가입 절차 안내</td>
-                        <td>정호석</td>
-                        <td>2026-01-15</td>
-                        <td><span class="status-badge status-done">답변완료</span></td>
-                        <td>
-                            <button class="btn-sm btn-secondary" onclick="editRow(this)">수정</button>
-                            <button class="btn-sm btn-danger" onclick="deleteRow(this)">삭제</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            <!-- Organization Management -->
+            <div id="org" class="card">
+                <h2>조직 현황 이미지 등록</h2>
+                <form>
+                    <div class="form-group">
+                        <label>조직도 이미지</label>
+                        <input type="file" accept="image/*">
+                    </div>
+                    <button type="button" onclick="alert('조직도가 업데이트되었습니다.')">업로드</button>
+                    <button type="button" class="btn-danger" onclick="alert('조직도 이미지가 삭제되었습니다.')">삭제</button>
+                </form>
+            </div>
+
+            <!-- Applicants Management -->
+            <div id="applicants" class="card">
+                <h2>자격증 신청자 관리 (최신 5건)</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>이름</th>
+                            <th>연락처</th>
+                            <th>이메일</th>
+                            <th>신청일</th>
+                            <th>상태</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>김철수</td>
+                            <td>010-1234-5678</td>
+                            <td>kim@example.com</td>
+                            <td>2026-01-17</td>
+                            <td><span class="status-badge status-new">신규</span></td>
+                            <td>
+                                <button class="btn-sm btn-secondary" onclick="editRow(this)">수정</button>
+                                <button class="btn-sm btn-danger" onclick="deleteRow(this)">삭제</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>이영희</td>
+                            <td>010-9876-5432</td>
+                            <td>lee@example.com</td>
+                            <td>2026-01-16</td>
+                            <td><span class="status-badge status-done">완료</span></td>
+                            <td>
+                                <button class="btn-sm btn-secondary" onclick="editRow(this)">수정</button>
+                                <button class="btn-sm btn-danger" onclick="deleteRow(this)">삭제</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Inquiry Management -->
+            <div id="inquiries" class="card">
+                <h2>1:1 문의 관리</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>제목</th>
+                            <th>작성자</th>
+                            <th>등록일</th>
+                            <th>답변 여부</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>자격증 과정 문의드립니다</td>
+                            <td>박지민</td>
+                            <td>2026-01-17</td>
+                            <td><span class="status-badge status-new">대기중</span></td>
+                            <td>
+                                <button class="btn-sm btn-secondary" onclick="editRow(this)">수정</button>
+                                <button class="btn-sm btn-danger" onclick="deleteRow(this)">삭제</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>협회 가입 절차 안내</td>
+                            <td>정호석</td>
+                            <td>2026-01-15</td>
+                            <td><span class="status-badge status-done">답변완료</span></td>
+                            <td>
+                                <button class="btn-sm btn-secondary" onclick="editRow(this)">수정</button>
+                                <button class="btn-sm btn-danger" onclick="deleteRow(this)">삭제</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Settings / Password Management -->
+            <div id="settings" class="card">
+                <h2>관리자 비밀번호 변경</h2>
+                <form onsubmit="changePassword(event)">
+                    <div class="form-group">
+                        <label>현재 비밀번호</label>
+                        <input type="password" id="current-pw" required>
+                    </div>
+                    <div class="form-group">
+                        <label>새 비밀번호</label>
+                        <input type="password" id="new-pw" required>
+                    </div>
+                    <button type="submit">변경하기</button>
+                </form>
+            </div>
         </div>
     </div>
 
     <script>
+        // Init: Check Auth
+        window.onload = function () {
+            // Set default password if not set
+            if (!localStorage.getItem('adminPw')) {
+                localStorage.setItem('adminPw', '1234');
+            }
+
+            if (sessionStorage.getItem('isLoggedIn') === 'true') {
+                showDashboard();
+            } else {
+                showLogin();
+            }
+        };
+
+        function showLogin() {
+            document.getElementById('login-view').style.display = 'flex';
+            document.getElementById('dashboard-view').style.display = 'none';
+        }
+
+        function showDashboard() {
+            document.getElementById('login-view').style.display = 'none';
+            document.getElementById('dashboard-view').style.display = 'flex';
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const id = document.getElementById('login-id').value;
+            const pw = document.getElementById('login-pw').value;
+            const storedPw = localStorage.getItem('adminPw');
+
+            if (id === 'admin' && pw === storedPw) {
+                sessionStorage.setItem('isLoggedIn', 'true');
+                showDashboard();
+            } else {
+                alert('아이디 또는 비밀번호가 올바르지 않습니다.');
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem('isLoggedIn');
+            showLogin();
+        }
+
+        function changePassword(e) {
+            e.preventDefault();
+            const currentPw = document.getElementById('current-pw').value;
+            const newPw = document.getElementById('new-pw').value;
+            const storedPw = localStorage.getItem('adminPw');
+
+            if (currentPw === storedPw) {
+                localStorage.setItem('adminPw', newPw);
+                alert('비밀번호가 성공적으로 변경되었습니다.\n다시 로그인해주세요.');
+                logout();
+            } else {
+                alert('현재 비밀번호가 일치하지 않습니다.');
+            }
+        }
+
+        /* --- Existing Logic --- */
+
         function deleteRow(btn) {
             if (confirm('정말 삭제하시겠습니까?')) {
                 const row = btn.closest('tr');
