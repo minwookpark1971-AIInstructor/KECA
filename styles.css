@@ -221,7 +221,8 @@ img {
     --text-primary: #000000;
     --text-secondary: #4B5563;
     /* Slate 600 */
-    --text-box: #000000;
+    --text-box: #6B7280;
+    /* Light Gray (Slate 500) for boxes as requested */
 
     /* Accents can shift to Blue for pop on white, or stay black/monochrome */
     --color-primary: #000000;
@@ -1221,7 +1222,8 @@ img {
 
 .cert-table th {
     font-weight: 600;
-    color: var(--text-primary);
+    color: #000000;
+    /* Black header text */
     font-size: 1.125rem;
 }
 
@@ -1368,12 +1370,14 @@ img {
 
 .timeline-year {
     display: inline-block;
-    color: var(--color-accent);
+    color: #FFFFFF;
+    /* White text */
     font-weight: 700;
     font-size: 1.125rem;
     margin-bottom: 1rem;
     padding: 0.5rem 1rem;
-    background: rgba(6, 182, 212, 0.1);
+    background: #333333;
+    /* Dark Gray background */
     border-radius: 8px;
     border: 1px solid rgba(6, 182, 212, 0.3);
 }
