@@ -106,9 +106,9 @@ h1 {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    opacity: 0.6;
-    /* Increased visibility as requested */
-    filter: contrast(1.1) brightness(0.9);
+    opacity: 1.0;
+    /* Restored full visibility */
+    filter: none;
 }
 
 .hero-overlay {
@@ -195,8 +195,8 @@ img {
 }
 
 /* Alternating Backgrounds Logic */
-/* Even Sections -> Switch to WHITE Theme overrides */
-.section:nth-of-type(even) {
+/* Odd Sections -> Switch to WHITE Theme overrides (Hero is Black -> About is White) */
+.section:nth-of-type(odd) {
     --bg-primary: #FFFFFF;
     --bg-secondary: #F3F4F6;
     /* Boxes on white bg need to be light gray or white with border */
@@ -218,9 +218,9 @@ img {
 }
 
 /* Explicitly set color for headers inside white sections to use the new variable */
-.section:nth-of-type(even) .section-title,
-.section:nth-of-type(even) h2,
-.section:nth-of-type(even) h3 {
+.section:nth-of-type(odd) .section-title,
+.section:nth-of-type(odd) h2,
+.section:nth-of-type(odd) h3 {
     color: var(--text-primary);
 }
 
@@ -293,7 +293,7 @@ img {
 }
 
 /* Fix hover for white sections specifically */
-.section:nth-of-type(even) .glass-card:hover {
+.section:nth-of-type(odd) .glass-card:hover {
     background: #FFFFFF;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
@@ -914,9 +914,9 @@ img {
 }
 
 .org-box {
-    background: #FFFFFF;
-    color: #000000;
-    /* Text color changed to Black as requested */
+    background: #000000;
+    color: #FFFFFF;
+    /* Text color changed to White as requested */
     padding: 1.5rem 3rem;
     border-radius: 50px;
     font-weight: 700;
@@ -926,7 +926,7 @@ img {
     min-width: 200px;
     text-align: center;
     z-index: 1;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .org-box:hover {
