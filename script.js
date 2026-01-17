@@ -127,6 +127,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const execCards = document.querySelectorAll('.executive-card');
     const execKeys = ['exec1', 'exec2', 'exec3', 'exec4'];
 
+    // Load Banner Image
+    const bannerImage = localStorage.getItem('keca_banner');
+    if (bannerImage) {
+        const heroBg = document.querySelector('.hero-bg-image');
+        if (heroBg) {
+            heroBg.src = bannerImage;
+        }
+    }
+
     // Check if we are on the page with executive cards
     if (execCards.length > 0) {
         execCards.forEach((card, index) => {

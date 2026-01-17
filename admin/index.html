@@ -269,15 +269,16 @@
                     <div class="form-group">
                         <label>현재 배너 이미지</label>
                         <div id="banner-preview"
-                            style="width: 200px; height: 100px; background: #eee; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; color: #999;">
+                            style="width: 200px; height: 100px; background: #eee; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; color: #999; overflow: hidden;">
                             Preview</div>
                     </div>
                     <div class="form-group">
                         <label>새 이미지 업로드</label>
-                        <input type="file" accept="image/*">
+                        <input type="file" id="input-banner" accept="image/*"
+                            onchange="handleImageSelect(this, 'banner-preview')">
                     </div>
-                    <button type="button" onclick="alert('배너가 교체되었습니다.')">저장하기</button>
-                    <button type="button" class="btn-danger" onclick="deleteImage('banner-preview')">삭제</button>
+                    <button type="button" onclick="saveBannerImage()">저장하기</button>
+                    <button type="button" class="btn-danger" onclick="deleteBannerImage()">삭제</button>
                 </form>
             </div>
 
@@ -514,7 +515,10 @@
         /* --- Image Handling Logic --- */
 
         // Initial Image Load
-        window.addEventListener('DOMContentLoaded', loadExecImages);
+        window.addEventListener('DOMContentLoaded', () => {
+            loadExecImages();
+            loadBannerImage();
+        });
 
         function loadExecImages() {
             ['exec1', 'exec2', 'exec3', 'exec4'].forEach(id => {
@@ -567,6 +571,49 @@
                 preview.style.background = '#eee';
                 preview.innerHTML = '<span style="color: #999; font-size: 0.8em;">No Image</span>';
                 document.getElementById('input-' + id).value = '';
+                alert('삭제되었습니다.');
+            }
+        }
+
+        /* --- Banner Image Handling Logic --- */
+
+        function loadBannerImage() {
+            const storedImage = localStorage.getItem('keca_banner');
+            if (storedImage) {
+                const preview = document.getElementById('banner-preview');
+                if (preview) {
+                    preview.innerHTML = `<img src="${storedImage}" style="width:100%; height:100%; object-fit:cover;">`;
+                    preview.style.background = 'transparent';
+                }
+            }
+        }
+
+        function saveBannerImage() {
+            const input = document.getElementById('input-banner');
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    try {
+                        localStorage.setItem('keca_banner', e.target.result);
+                        alert('배너가 저장되었습니다.');
+                    } catch (err) {
+                        alert('저장 용량을 초과하여 저장할 수 없습니다. (이미지 크기를 줄여주세요)');
+                        console.error(err);
+                    }
+                };
+                reader.readAsDataURL(input.files[0]);
+            } else {
+                alert('선택된 이미지가 없습니다.');
+            }
+        }
+
+        function deleteBannerImage() {
+            if (confirm('배너 이미지를 삭제하시겠습니까? (기본 이미지로 돌아갑니다)')) {
+                localStorage.removeItem('keca_banner');
+                const preview = document.getElementById('banner-preview');
+                preview.style.background = '#eee';
+                preview.innerHTML = 'Preview';
+                document.getElementById('input-banner').value = '';
                 alert('삭제되었습니다.');
             }
         }
