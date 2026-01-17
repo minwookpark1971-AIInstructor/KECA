@@ -3,36 +3,39 @@
    한국교육컨설팅협회 공식 웹사이트
    ================================================================= */
 
-/* CSS Variables - Light Theme */
+/* CSS Variables - Black & White Zebra Theme */
 :root {
-    /* KECA Light Theme Colors */
-    --bg-primary: #FFFFFF;
-    --bg-secondary: #F8FAFC; /* Softer Blue-Gray tint for alternating sections */
-    --bg-navbar: rgba(255, 255, 255, 0.85);
-    --bg-box: #FFFFFF;
+    /* Base Theme: Dark (Black) */
+    --bg-primary: #000000;
+    --bg-secondary: #000000;
+    /* Secondary is also black mostly, alternating happens via section overrides */
+    --bg-navbar: rgba(0, 0, 0, 0.85);
+    /* For dark sections, boxes should be slightly lighter than black */
+    --bg-box: rgba(255, 255, 255, 0.05);
 
-    --text-primary: #1e293b; /* Slate 800 */
-    --text-secondary: #64748b; /* Slate 500 */
-    --text-box: #1e293b;
+    --text-primary: #FFFFFF;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --text-box: #FFFFFF;
 
-    --color-primary: #0F62FE; /* Corporate Blue */
-    --color-secondary: #475569;
-    --color-accent: #0F62FE;
+    --color-primary: #FFFFFF;
+    /* Stark White accents on Black */
+    --color-secondary: #CCCCCC;
+    --color-accent: #FFFFFF;
 
-    /* Glassmorphism - Light Mode */
-    --glass-bg: rgba(255, 255, 255, 0.8);
-    --glass-border: rgba(0, 0, 0, 0.08); /* Much lighter border */
-    --glass-blur: blur(12px);
+    /* Glassmorphism - Default Dark */
+    --glass-bg: rgba(20, 20, 20, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-blur: blur(20px);
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, #0F62FE 0%, #00D4FF 100%);
-    --gradient-text: linear-gradient(135deg, #1e293b, #0F62FE);
+    --gradient-primary: linear-gradient(135deg, #FFFFFF 0%, #E0E0E0 100%);
+    --gradient-text: linear-gradient(135deg, #FFFFFF, #CCCCCC);
     --gradient-bg: none;
 
     /* Shadows */
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
 
     /* Typography */
     --font-heading: 'Playfair Display', serif;
@@ -103,8 +106,9 @@ h1 {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    opacity: 0.1; /* Very subtle in light mode */
-    filter: grayscale(100%);
+    opacity: 0.6;
+    /* Increased visibility as requested */
+    filter: contrast(1.1) brightness(0.9);
 }
 
 .hero-overlay {
@@ -114,8 +118,9 @@ h1 {
     width: 100%;
     height: 100%;
     background: linear-gradient(to bottom,
-            rgba(255, 255, 255, 0.8) 0%,
-            rgba(255, 255, 255, 0.95) 100%);
+            rgba(0, 0, 0, 0.4) 0%,
+            rgba(0, 0, 0, 0.8) 80%,
+            #000000 100%);
 }
 
 /* Remove old bg-gradient if present */
@@ -184,18 +189,45 @@ img {
 .section {
     padding: var(--section-padding);
     position: relative;
-    background-color: var(--bg-primary); /* Default to white */
+    background-color: var(--bg-primary);
+    /* Default to Black */
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Alternating Backgrounds Logic */
-/* Assume Hero is the 1st 'section'-like element but it has its own class.
-   The main content sections start after hero. */
+/* Even Sections -> Switch to WHITE Theme overrides */
 .section:nth-of-type(even) {
-    background-color: var(--bg-secondary); /* Light Gray */
+    --bg-primary: #FFFFFF;
+    --bg-secondary: #F3F4F6;
+    /* Boxes on white bg need to be light gray or white with border */
+    --bg-box: #F8FAFC;
+    --glass-border: rgba(0, 0, 0, 0.1);
+
+    /* Text becomes Black */
+    --text-primary: #000000;
+    --text-secondary: #4B5563;
+    /* Slate 600 */
+    --text-box: #000000;
+
+    /* Accents can shift to Blue for pop on white, or stay black/monochrome */
+    --color-primary: #000000;
+    --gradient-text: linear-gradient(135deg, #000000, #333333);
+
+    background-color: #FFFFFF;
+    color: #000000;
 }
-/* Ensure Hero stands apart or matches */
+
+/* Explicitly set color for headers inside white sections to use the new variable */
+.section:nth-of-type(even) .section-title,
+.section:nth-of-type(even) h2,
+.section:nth-of-type(even) h3 {
+    color: var(--text-primary);
+}
+
+/* Ensure Hero stays Black */
 .hero {
-    background-color: var(--bg-primary);
+    background-color: #000000;
+    color: #FFFFFF;
 }
 
 .section-header {
@@ -240,21 +272,30 @@ img {
     font-size: 2.5rem;
 }
 
-/* Glassmorphism Cards - Light Theme Updates */
+/* Glassmorphism Cards - Universal Update */
 .glass-card {
     background: var(--bg-box);
     border: 1px solid var(--glass-border);
     border-radius: 12px;
     padding: 2.5rem;
     transition: var(--transition-smooth);
-    box-shadow: var(--shadow-md); /* Add shadow for depth in light mode */
+    /* Shadow adapts to the current theme variables? 
+       No, variables are scoped! So we can use a generic shadow var if we defined one. 
+       For now, let's just be explicit or rely on defaults. 
+    */
 }
 
 .glass-card:hover {
-    background: #FFFFFF;
+    background: rgba(255, 255, 255, 0.1);
+    /* Effect for dark */
     border-color: var(--color-primary);
     transform: translateY(-5px);
-    box-shadow: var(--shadow-lg);
+}
+
+/* Fix hover for white sections specifically */
+.section:nth-of-type(even) .glass-card:hover {
+    background: #FFFFFF;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
 
 /* Buttons */
@@ -292,15 +333,17 @@ img {
 
 .btn-primary {
     background: var(--gradient-primary);
-    color: #FFFFFF;
-    box-shadow: 0 4px 15px rgba(15, 98, 254, 0.3);
+    color: #000000;
+    /* Always dark text on primary button */
+    background: #FFFFFF;
+    box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
     border: none;
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(15, 98, 254, 0.4);
-    filter: brightness(1.1);
+    box-shadow: 0 8px 25px rgba(255, 255, 255, 0.4);
+    background: #E5E5E5;
 }
 
 .btn-secondary {
@@ -353,11 +396,11 @@ img {
 }
 
 .navbar.scrolled {
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(0, 0, 0, 0.9);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     border-bottom: 1px solid var(--glass-border);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .nav-wrapper {
@@ -483,13 +526,13 @@ img {
     font-weight: 500;
     letter-spacing: 0.15em;
     text-transform: uppercase;
-    color: var(--color-primary);
+    color: var(--text-primary);
     margin-bottom: 2.5rem;
     padding: 0.5rem 1.2rem;
-    background: rgba(15, 98, 254, 0.1);
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 100px;
-    border: 1px solid rgba(15, 98, 254, 0.2);
-    backdrop-filter: none;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: var(--glass-blur);
 }
 
 .hero-title {
@@ -657,7 +700,7 @@ img {
 }
 
 /* Ensure content stays above the pseudo-element */
-.mv-card > * {
+.mv-card>* {
     position: relative;
     z-index: 1;
 }
@@ -710,7 +753,8 @@ img {
     right: 1.5rem;
     font-size: 3rem;
     font-weight: 900;
-    color: #E2E8F0; /* Lighter Gray for subtle background number */
+    color: #E2E8F0;
+    /* Lighter Gray for subtle background number */
     line-height: 1;
 }
 
