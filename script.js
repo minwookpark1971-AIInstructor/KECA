@@ -50,7 +50,7 @@ backToTopButton.addEventListener('click', () => {
 });
 
 // Achievements Counter Animation
-const counters = document.querySelectorAll('.achievement-number');
+const counters = document.querySelectorAll('.achievement-number[data-count]');
 const speed = 200;
 
 const animateCounters = () => {
