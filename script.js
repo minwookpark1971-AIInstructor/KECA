@@ -16,7 +16,29 @@ document.querySelectorAll('.nav-menu a').forEach(link => {
     });
 });
 
-// Scroll Effect for Navbar
+// Scroll Effect for Navbar + Active Nav Link Tracking
+const sections = document.querySelectorAll('.section, .hero');
+const navLinks = document.querySelectorAll('.nav-menu a:not(.nav-cta)');
+
+function updateActiveNav() {
+    const scrollPos = window.scrollY + 150;
+
+    sections.forEach(section => {
+        const top = section.offsetTop;
+        const height = section.offsetHeight;
+        const id = section.getAttribute('id');
+
+        if (scrollPos >= top && scrollPos < top + height) {
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + id) {
+                    link.classList.add('active');
+                }
+            });
+        }
+    });
+}
+
 window.addEventListener('scroll', () => {
     if (window.scrollY > 50) {
         navbar.classList.add('scrolled');
@@ -29,6 +51,9 @@ window.addEventListener('scroll', () => {
     const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
     const scrolled = (winScroll / height) * 100;
     document.getElementById('scrollProgress').style.width = scrolled + '%';
+
+    // Active nav link
+    updateActiveNav();
 });
 
 // Back to Top Button
@@ -91,7 +116,7 @@ document.querySelectorAll('.section').forEach(section => {
     observer.observe(section);
 });
 
-document.querySelector('.achievements').classList.add('observe-me'); // Flag for counter
+document.querySelector('.achievements').classList.add('observe-me');
 observer.observe(document.querySelector('.achievements'));
 
 
@@ -99,10 +124,9 @@ observer.observe(document.querySelector('.achievements'));
 function openCertModal() {
     const modal = document.getElementById('certModal');
     modal.style.display = 'flex';
-    // Trigger reflow
     void modal.offsetWidth;
     modal.classList.add('show');
-    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    document.body.style.overflow = 'hidden';
 }
 
 function closeCertModal() {
@@ -120,6 +144,116 @@ window.onclick = function (event) {
     if (event.target == modal) {
         closeCertModal();
     }
+}
+
+// Contact Form Validation & Submit
+const contactForm = document.getElementById('contactForm');
+if (contactForm) {
+    contactForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        // Clear previous states
+        const formGroups = contactForm.querySelectorAll('.form-group');
+        formGroups.forEach(group => {
+            group.classList.remove('error', 'success');
+        });
+
+        const formStatus = document.getElementById('formStatus');
+        formStatus.className = 'form-status';
+        formStatus.style.display = 'none';
+
+        let isValid = true;
+
+        // Validate each required field
+        const nameField = document.getElementById('name');
+        const emailField = document.getElementById('email');
+        const subjectField = document.getElementById('subject');
+        const messageField = document.getElementById('message');
+
+        if (!nameField.value.trim()) {
+            nameField.closest('.form-group').classList.add('error');
+            isValid = false;
+        } else {
+            nameField.closest('.form-group').classList.add('success');
+        }
+
+        if (!emailField.value.trim() || !emailField.value.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+            emailField.closest('.form-group').classList.add('error');
+            isValid = false;
+        } else {
+            emailField.closest('.form-group').classList.add('success');
+        }
+
+        if (!subjectField.value.trim()) {
+            subjectField.closest('.form-group').classList.add('error');
+            isValid = false;
+        } else {
+            subjectField.closest('.form-group').classList.add('success');
+        }
+
+        if (!messageField.value.trim()) {
+            messageField.closest('.form-group').classList.add('error');
+            isValid = false;
+        } else {
+            messageField.closest('.form-group').classList.add('success');
+        }
+
+        if (!isValid) return;
+
+        // Show loading state
+        const submitBtn = document.getElementById('submitBtn');
+        const btnText = submitBtn.querySelector('.btn-text');
+        const btnLoading = submitBtn.querySelector('.btn-loading');
+
+        submitBtn.disabled = true;
+        btnText.style.display = 'none';
+        btnLoading.style.display = 'inline';
+
+        // Simulate submission
+        setTimeout(() => {
+            submitBtn.disabled = false;
+            btnText.style.display = 'inline';
+            btnLoading.style.display = 'none';
+
+            formStatus.textContent = '문의가 성공적으로 접수되었습니다. 빠른 시일 내에 답변 드리겠습니다.';
+            formStatus.className = 'form-status success';
+
+            contactForm.reset();
+            formGroups.forEach(group => {
+                group.classList.remove('error', 'success');
+            });
+        }, 1500);
+    });
+
+    // Real-time validation on blur
+    contactForm.querySelectorAll('input, textarea').forEach(field => {
+        field.addEventListener('blur', function () {
+            const group = this.closest('.form-group');
+            if (this.required && !this.value.trim()) {
+                group.classList.add('error');
+                group.classList.remove('success');
+            } else if (this.type === 'email' && this.value.trim() && !this.value.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+                group.classList.add('error');
+                group.classList.remove('success');
+            } else if (this.value.trim()) {
+                group.classList.remove('error');
+                group.classList.add('success');
+            }
+        });
+
+        field.addEventListener('input', function () {
+            const group = this.closest('.form-group');
+            if (group.classList.contains('error') && this.value.trim()) {
+                if (this.type === 'email') {
+                    if (this.value.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+                        group.classList.remove('error');
+                    }
+                } else {
+                    group.classList.remove('error');
+                }
+            }
+        });
+    });
 }
 
 // Load Executive Images
@@ -145,20 +279,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (storedImage) {
                     const avatarCircle = card.querySelector('.avatar-circle');
                     if (avatarCircle) {
-                        // Replace text content with image
                         avatarCircle.innerHTML = `<img src="${storedImage}" alt="Executive Image" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
-
-                        // Apply styles to ensure proper display
                         avatarCircle.style.background = 'transparent';
                         avatarCircle.style.overflow = 'hidden';
                         avatarCircle.style.padding = '0';
                         avatarCircle.style.display = 'flex';
                         avatarCircle.style.alignItems = 'center';
                         avatarCircle.style.justifyContent = 'center';
-                        avatarCircle.style.border = 'none'; // Optional: remove border if it conflicts
+                        avatarCircle.style.border = 'none';
                     }
                 }
             }
         });
     }
+
+    // Initial active nav state
+    updateActiveNav();
 });
