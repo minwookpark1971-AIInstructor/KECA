@@ -50,6 +50,11 @@ export default function InstructorsContent({ instructors }: { instructors: Profi
           </div>
 
           {/* 강사 카드 그리드 */}
+          {filteredInstructors.length === 0 && (
+            <div className="text-center py-20 text-text-muted">
+              {activeFilter ? `"${activeFilter}" 분야의 강사가 없습니다.` : "등록된 강사가 없습니다."}
+            </div>
+          )}
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredInstructors.map((inst) => (
               <Link

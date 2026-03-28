@@ -21,7 +21,6 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // 페이지 이동 시 메뉴 닫기
   useEffect(() => {
     setMobileOpen(false);
     setActiveMenu(null);
@@ -33,32 +32,24 @@ export function Header() {
         className={cn(
           "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
           scrolled
-            ? "bg-white/95 backdrop-blur-md shadow-sm"
-            : "bg-white"
+            ? "bg-white shadow-[0_1px_0_rgba(0,0,0,0.06)]"
+            : "bg-white/0"
         )}
       >
-        {/* 상단 유틸 바 */}
-        <div className="border-b border-border-light">
-          <div className="container-custom flex items-center justify-end gap-4 py-2 text-xs text-text-sub">
-            <AuthStatus />
-          </div>
-        </div>
-
-        {/* 메인 GNB */}
         <div className="container-custom">
-          <div className="flex items-center justify-between h-16 lg:h-20">
+          <div className="flex items-center justify-between h-20">
             {/* 로고 */}
-            <Link href="/" className="flex items-center gap-2">
-              <span className="text-2xl lg:text-3xl font-extrabold tracking-tight text-primary">
+            <Link href="/" className="flex items-center gap-3">
+              <span className="text-2xl font-extrabold tracking-tight text-primary">
                 KECA
               </span>
-              <span className="hidden sm:block text-[10px] lg:text-xs text-text-sub leading-tight">
+              <span className="hidden sm:block text-[10px] text-text-muted leading-tight border-l border-border pl-3">
                 한국교육컨설팅협회
               </span>
             </Link>
 
             {/* 데스크톱 네비게이션 */}
-            <nav className="hidden lg:flex items-center gap-1" aria-label="메인 메뉴">
+            <nav className="hidden lg:flex items-center gap-0.5" aria-label="메인 메뉴">
               {mainNavigation.map((item) => (
                 <div
                   key={item.href}
@@ -69,26 +60,26 @@ export function Header() {
                   <Link
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-md transition-colors",
+                      "flex items-center gap-1 px-4 py-2 text-[13px] font-medium tracking-tight transition-colors",
                       pathname.startsWith(item.href)
                         ? "text-primary"
-                        : "text-text hover:text-primary hover:bg-surface"
+                        : "text-text-sub hover:text-primary"
                     )}
                   >
                     {item.label}
-                    {item.children && <ChevronDown size={14} className="opacity-50" />}
+                    {item.children && <ChevronDown size={12} className="opacity-40" />}
                   </Link>
 
-                  {/* 드롭다운 */}
+                  {/* 드롭다운 — 전폭 메가메뉴 */}
                   {item.children && activeMenu === item.label && (
-                    <div className="absolute top-full left-0 pt-1 min-w-[200px] z-50">
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 min-w-[220px] z-50">
                       <div className="bg-white rounded-lg shadow-lg border border-border-light py-2">
                         {item.children.map((child) => (
                           <Link
                             key={child.href}
                             href={child.href}
                             className={cn(
-                              "block px-4 py-2.5 text-sm transition-colors",
+                              "block px-5 py-2.5 text-[13px] transition-colors",
                               pathname === child.href
                                 ? "text-primary bg-surface font-medium"
                                 : "text-text-sub hover:text-primary hover:bg-surface"
@@ -104,14 +95,20 @@ export function Header() {
               ))}
             </nav>
 
-            {/* 모바일 메뉴 버튼 */}
-            <button
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className="lg:hidden p-2 text-text hover:text-primary transition-colors"
-              aria-label="메뉴"
-            >
-              {mobileOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+            {/* 우측: 인증 상태 + 모바일 버튼 */}
+            <div className="flex items-center gap-4">
+              <div className="hidden lg:flex items-center gap-3 text-xs text-text-sub">
+                <AuthStatus />
+              </div>
+
+              <button
+                onClick={() => setMobileOpen(!mobileOpen)}
+                className="lg:hidden p-2 text-text hover:text-primary transition-colors"
+                aria-label="메뉴"
+              >
+                {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -119,8 +116,8 @@ export function Header() {
       {/* 모바일 네비게이션 */}
       <MobileNav open={mobileOpen} onClose={() => setMobileOpen(false)} />
 
-      {/* 헤더 높이만큼 spacer */}
-      <div className="h-[105px] lg:h-[113px]" />
+      {/* 헤더 높이 spacer */}
+      <div className="h-20" />
     </>
   );
 }
