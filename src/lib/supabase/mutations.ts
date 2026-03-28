@@ -51,6 +51,7 @@ export async function createProgram(formData: {
   target_audience?: string;
   duration?: string;
   description?: string;
+  thumbnail_url?: string;
   status?: string;
 }) {
   const supabase = await createClient();

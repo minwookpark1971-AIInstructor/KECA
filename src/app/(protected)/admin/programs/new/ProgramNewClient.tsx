@@ -17,6 +17,26 @@ export default function ProgramNewClient({ categories }: { categories: Category[
   const [targetAudience, setTargetAudience] = useState("");
   const [duration, setDuration] = useState("");
   const [description, setDescription] = useState("");
+  const [thumbnailUrl, setThumbnailUrl] = useState("");
+  const [imageUploading, setImageUploading] = useState(false);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setError("이미지 크기는 5MB 이하여야 합니다."); return; }
+    setImageUploading(true);
+    setError(null);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", "programs");
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) { setError("이미지 업로드 실패: " + data.error); }
+      else { setThumbnailUrl(data.url); }
+    } catch { setError("이미지 업로드에 실패했습니다."); }
+    setImageUploading(false);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +62,7 @@ export default function ProgramNewClient({ categories }: { categories: Category[
           target_audience: targetAudience || undefined,
           duration: duration || undefined,
           description: description || undefined,
+          thumbnail_url: thumbnailUrl || undefined,
           status: "draft",
         });
         router.push("/admin/programs");
@@ -102,14 +123,22 @@ export default function ProgramNewClient({ categories }: { categories: Category[
           </div>
         </div>
 
-        {/* 이미지 업로드 (추후 확장) */}
+        {/* 썸네일 이미지 */}
         <div className="bg-white border border-border-light rounded-xl p-6">
-          <h2 className="text-sm font-bold text-text mb-4">이미지</h2>
-          <div className="border-2 border-dashed border-border rounded-xl p-8 text-center">
-            <Upload size={32} className="mx-auto text-text-muted/40 mb-2" />
-            <p className="text-sm text-text-sub">PNG, JPG 이미지를 드래그하거나 클릭하여 업로드</p>
-            <p className="text-xs text-text-muted mt-1">이미지 업로드는 추후 지원 예정입니다</p>
-          </div>
+          <h2 className="text-sm font-bold text-text mb-4">썸네일 이미지</h2>
+          {thumbnailUrl ? (
+            <div className="relative">
+              <img src={thumbnailUrl} alt="썸네일" className="w-full max-h-60 object-cover rounded-lg" />
+              <button type="button" onClick={() => setThumbnailUrl("")} className="absolute top-2 right-2 bg-white/90 text-text-muted hover:text-error px-2 py-1 rounded text-xs">삭제</button>
+            </div>
+          ) : (
+            <label className="block border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-primary/30 transition-colors">
+              <Upload size={32} className="mx-auto text-text-muted/40 mb-2" />
+              <p className="text-sm text-text-sub">{imageUploading ? "업로드 중..." : "PNG, JPG 이미지를 클릭하여 업로드"}</p>
+              <p className="text-xs text-text-muted mt-1">최대 5MB</p>
+              <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleImageUpload} disabled={imageUploading} className="hidden" />
+            </label>
+          )}
         </div>
 
         {/* 저장 */}

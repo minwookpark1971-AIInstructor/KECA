@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Save, Trash2, ArrowLeft, Eye } from "lucide-react";
+import { Save, Trash2, ArrowLeft, Eye, Upload } from "lucide-react";
 import { updateProgram, deleteProgram } from "@/lib/supabase/mutations";
 import type { Program, Category } from "@/types";
 
@@ -26,6 +26,25 @@ export default function ProgramEditClient({
   const [description, setDescription] = useState(program.description || "");
   const [status, setStatus] = useState(program.status);
   const [isFeatured, setIsFeatured] = useState(program.is_featured);
+  const [thumbnailUrl, setThumbnailUrl] = useState(program.thumbnail_url || "");
+  const [imageUploading, setImageUploading] = useState(false);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setMsg({ type: "error", text: "이미지 크기는 5MB 이하여야 합니다." }); return; }
+    setImageUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", "programs");
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) { setMsg({ type: "error", text: "업로드 실패: " + data.error }); }
+      else { setThumbnailUrl(data.url); }
+    } catch { setMsg({ type: "error", text: "이미지 업로드에 실패했습니다." }); }
+    setImageUploading(false);
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +60,7 @@ export default function ProgramEditClient({
           description: description || null,
           status,
           is_featured: isFeatured,
+          thumbnail_url: thumbnailUrl || null,
         });
         setMsg({ type: "success", text: "프로그램이 저장되었습니다." });
       } catch {
@@ -135,6 +155,24 @@ export default function ProgramEditClient({
               <textarea rows={5} value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-4 py-3 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-y" />
             </div>
           </div>
+        </div>
+
+        {/* 썸네일 이미지 */}
+        <div className="bg-white border border-border-light rounded-xl p-6">
+          <h2 className="text-sm font-bold text-text mb-4">썸네일 이미지</h2>
+          {thumbnailUrl ? (
+            <div className="relative">
+              <img src={thumbnailUrl} alt="썸네일" className="w-full max-h-60 object-cover rounded-lg" />
+              <button type="button" onClick={() => setThumbnailUrl("")} className="absolute top-2 right-2 bg-white/90 text-text-muted hover:text-error px-2 py-1 rounded text-xs">삭제</button>
+            </div>
+          ) : (
+            <label className="block border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-primary/30 transition-colors">
+              <Upload size={32} className="mx-auto text-text-muted/40 mb-2" />
+              <p className="text-sm text-text-sub">{imageUploading ? "업로드 중..." : "PNG, JPG 이미지를 클릭하여 업로드"}</p>
+              <p className="text-xs text-text-muted mt-1">최대 5MB</p>
+              <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleImageUpload} disabled={imageUploading} className="hidden" />
+            </label>
+          )}
         </div>
 
         {/* 공개 설정 */}

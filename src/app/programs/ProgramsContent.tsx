@@ -98,8 +98,12 @@ export default function ProgramsContent({ categories, programs }: { categories: 
                     href={`/programs/${program.slug}`}
                     className="group rounded-xl border border-border-light overflow-hidden card-hover bg-white"
                   >
-                    <div className="aspect-[16/10] bg-gradient-to-br from-primary/5 to-primary-light/10 flex items-center justify-center">
-                      <BookOpen size={48} className="text-primary/20" />
+                    <div className="aspect-[16/10] bg-gradient-to-br from-primary/5 to-primary-light/10 flex items-center justify-center overflow-hidden">
+                      {program.thumbnail_url ? (
+                        <img src={program.thumbnail_url} alt={program.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      ) : (
+                        <BookOpen size={48} className="text-primary/20" />
+                      )}
                     </div>
                     <div className="p-5">
                       {category && (
