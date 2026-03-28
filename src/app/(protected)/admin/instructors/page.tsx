@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { getMembersForAdmin } from "@/lib/supabase/queries";
-import { User, Eye, EyeOff, Tag } from "lucide-react";
+import { User, Eye, EyeOff, Plus } from "lucide-react";
 
 export default async function AdminInstructorsPage() {
   const members = await getMembersForAdmin();
@@ -7,7 +8,15 @@ export default async function AdminInstructorsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-text mb-6">강사관리</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-text">강사관리</h1>
+        <Link
+          href="/admin/instructors/new"
+          className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-light transition-colors"
+        >
+          <Plus size={16} /> 강사 등록
+        </Link>
+      </div>
 
       <div className="bg-white border border-border-light rounded-xl overflow-hidden">
         <div className="overflow-x-auto">

@@ -258,6 +258,58 @@ export async function deletePartner(id: string) {
   revalidatePath("/admin/partners");
 }
 
+// ─── 강사 등록 (Admin) ───
+
+export async function createInstructor(formData: {
+  name: string;
+  email: string;
+  phone?: string;
+  bio?: string;
+  career_summary?: string;
+  specialties?: string[];
+  video_url?: string;
+  profile_image_url?: string;
+  is_profile_public?: boolean;
+}) {
+  const { createAdminClient } = await import("./admin");
+  const supabase = createAdminClient();
+
+  // admin API로 사용자 생성 (임시 비밀번호)
+  const tempPassword = `KECA_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    email: formData.email,
+    password: tempPassword,
+    email_confirm: true,
+    user_metadata: { name: formData.name, phone: formData.phone || "" },
+  });
+
+  if (authError) throw new Error(authError.message);
+  if (!authData.user) throw new Error("사용자 생성 실패");
+
+  // profiles 테이블 업데이트 (trigger가 기본 row를 생성했을 수 있음)
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .upsert({
+      id: authData.user.id,
+      email: formData.email,
+      name: formData.name,
+      phone: formData.phone || null,
+      role: "instructor",
+      bio: formData.bio || null,
+      career_summary: formData.career_summary || null,
+      specialties: formData.specialties || [],
+      video_url: formData.video_url || null,
+      profile_image_url: formData.profile_image_url || null,
+      is_profile_public: formData.is_profile_public ?? true,
+      approved_at: new Date().toISOString(),
+    }, { onConflict: "id" });
+
+  if (profileError) throw new Error(profileError.message);
+  revalidatePath("/admin/instructors");
+  revalidatePath("/instructors");
+  return authData.user.id;
+}
+
 // ─── 사이트 설정 ───
 
 export async function saveSiteSettings(

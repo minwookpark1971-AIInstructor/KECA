@@ -18,7 +18,8 @@
       "Bash(printf 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdmcWpwYmNqbGRxbnNycXBlaGt0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDYwNTA2NiwiZXhwIjoyMDkwMTgxMDY2fQ.viHLTA5gH-GFI7cu-Yf0Xn6Dx6M02JebR-mRKUYhdaA')",
       "Bash(printf 'https://keca.vercel.app')",
       "Bash(npx tsc:*)",
-      "Bash(npx vercel:*)"
+      "Bash(npx vercel:*)",
+      "Bash(ls \"C:\\\\Users\\\\minwo\\\\Documents\\\\GitHub\\\\KECA\\\\src\\\\app\\\\\\(protected\\)\\\\admin\\\\instructors\")"
     ]
   }
 }
