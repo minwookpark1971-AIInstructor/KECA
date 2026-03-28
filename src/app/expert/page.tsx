@@ -6,28 +6,6 @@ import { Award, GraduationCap, RefreshCw, BookOpen } from "lucide-react";
 
 export const metadata: Metadata = { title: "전문가과정" };
 
-<<<<<<< HEAD
-const courses = [
-  {
-    type: "자격증 과정", icon: Award, items: [
-      { title: "인공지능(AI)교육전문가", desc: "생성형 AI 기반 업무 자동화 설계, 교육 콘텐츠 제작, 데이터 분석 및 AI 활용 교육과정 기획·지도", href: "/certification" },
-    ]
-  },
-  {
-    type: "강사양성 과정", icon: GraduationCap, items: [
-      { title: "AI교육 강사양성", desc: "AI 활용 교육 강사 양성 프로그램", href: "/expert/ai-instructor" },
-      { title: "진로교육 강사양성", desc: "진로·진학 교육 강사 양성", href: "/expert/career-instructor" },
-      { title: "교육컨설팅 강사양성", desc: "교육컨설팅 분야 강사 양성", href: "/expert/consulting-instructor" },
-    ]
-  },
-  {
-    type: "보수교육", icon: RefreshCw, items: [
-      { title: "연간 보수교육", desc: "자격 유지를 위한 연간 보수교육", href: "/expert/annual-continuing" },
-      { title: "역량강화 워크숍", desc: "전문 역량 심화 워크숍", href: "/expert/workshop" },
-    ]
-  },
-];
-=======
 export default async function ExpertPage() {
   const [certPrograms, expertPrograms] = await Promise.all([
     getPrograms({ programType: "certification" }),
@@ -44,7 +22,6 @@ export default async function ExpertPage() {
     { type: "강사양성 과정", icon: GraduationCap, programs: trainingPrograms },
     { type: "보수교육", icon: RefreshCw, programs: continuingPrograms },
   ];
->>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
 
   return (
     <>

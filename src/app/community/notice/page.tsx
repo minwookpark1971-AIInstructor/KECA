@@ -1,14 +1,6 @@
 import { Metadata } from "next";
+import Link from "next/link";
 import { SubpageHero } from "@/components/layout/SubpageHero";
-<<<<<<< HEAD
-import { getPostsByBoard } from "@/lib/supabase/queries";
-import NoticeContent from "./NoticeContent";
-
-export const metadata: Metadata = { title: "공지사항" };
-
-export default async function NoticePage() {
-  const posts = await getPostsByBoard("notice");
-=======
 import { getPostsByBoardPaginated, getPostCount } from "@/lib/supabase/queries";
 import { Pagination } from "@/components/layout/Pagination";
 import { Pin, Eye } from "lucide-react";
@@ -32,15 +24,11 @@ export default async function NoticePage({
   ]);
   const totalPages = Math.ceil(totalCount / PER_PAGE);
 
->>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
   return (
     <>
       <SubpageHero title="공지사항" breadcrumb={[{ label: "커뮤니티" }, { label: "공지사항" }]} />
       <section className="py-16 lg:py-20">
         <div className="container-custom max-w-4xl">
-<<<<<<< HEAD
-          <NoticeContent posts={posts} />
-=======
           <SearchBar basePath="/community/notice" placeholder="공지사항 검색" defaultValue={search} />
 
           <div className="border border-border-light rounded-xl overflow-hidden">
@@ -83,7 +71,6 @@ export default async function NoticePage({
           </div>
 
           <Pagination currentPage={page} totalPages={totalPages} basePath={search ? `/community/notice?q=${search}` : "/community/notice"} />
->>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
         </div>
       </section>
     </>

@@ -3,21 +3,11 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-<<<<<<< HEAD
-import { useRouter } from "next/navigation";
-=======
->>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
 import { Mail, Lock, LogIn } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
-<<<<<<< HEAD
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-=======
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "/mypage";
 
@@ -25,35 +15,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
->>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-<<<<<<< HEAD
-    setError("");
-
-    try {
-      const supabase = createClient();
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (authError) {
-        setError("이메일 또는 비밀번호가 올바르지 않습니다.");
-        return;
-      }
-
-      router.push("/mypage");
-      router.refresh();
-    } catch {
-      setError("로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
-    } finally {
-      setLoading(false);
-    }
-=======
 
     const supabase = createClient();
     const { error: authError } = await supabase.auth.signInWithPassword({
@@ -73,24 +39,21 @@ export default function LoginPage() {
 
     router.push(redirectTo);
     router.refresh();
->>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
   };
 
   return (
     <section className="min-h-[80vh] flex items-center justify-center py-16 px-4">
       <div className="w-full max-w-md">
+        {/* 로고 */}
         <div className="text-center mb-8">
           <Link href="/" className="text-3xl font-extrabold text-primary">KECA</Link>
           <p className="text-sm text-text-sub mt-1">한국교육컨설팅협회 회원 로그인</p>
         </div>
 
+        {/* 로그인 카드 */}
         <div className="bg-white border border-border-light rounded-2xl p-8 shadow-card">
           {error && (
-<<<<<<< HEAD
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-=======
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
->>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
               {error}
             </div>
           )}
@@ -112,15 +75,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-sm font-medium text-text">비밀번호</label>
-                <Link
-                  href="/forgot-password"
-                  className="text-xs text-text-muted hover:text-primary transition-colors"
-                >
-                  비밀번호를 잊으셨나요?
-                </Link>
-              </div>
+              <label className="block text-sm font-medium text-text mb-1.5">비밀번호</label>
               <div className="relative">
                 <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
                 <input

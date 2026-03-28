@@ -4,11 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { SubpageHero } from "@/components/layout/SubpageHero";
-<<<<<<< HEAD
-import { BookOpen, Search } from "lucide-react";
-=======
 import { Cpu, Compass, Briefcase, Users, Target, Shield, Award, BookOpen, Search } from "lucide-react";
->>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
 import { cn } from "@/lib/utils";
 import type { Category, Program } from "@/types";
 
@@ -35,20 +31,6 @@ export default function ProgramsContent({ categories, programs }: { categories: 
   const filteredPrograms = programs
     .filter((p) => p.status === "published")
     .filter((p) => {
-<<<<<<< HEAD
-      if (!activeCategory) return true;
-      const cat = categories.find((c) => c.id === p.category_id);
-      return cat?.slug === activeCategory;
-    })
-    .filter((p) => {
-      if (!searchQuery.trim()) return true;
-      const q = searchQuery.toLowerCase();
-      return (
-        p.title.toLowerCase().includes(q) ||
-        (p.subtitle && p.subtitle.toLowerCase().includes(q)) ||
-        (p.target_audience && p.target_audience.toLowerCase().includes(q))
-      );
-=======
       if (activeCategory) {
         const cat = categories.find((c) => c.id === p.category_id);
         if (cat?.slug !== activeCategory) return false;
@@ -58,7 +40,6 @@ export default function ProgramsContent({ categories, programs }: { categories: 
         return p.title.toLowerCase().includes(q) || p.subtitle?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q);
       }
       return true;
->>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
     });
 
   return (
@@ -72,17 +53,6 @@ export default function ProgramsContent({ categories, programs }: { categories: 
       <section className="py-16 lg:py-20">
         <div className="container-custom">
           {/* 검색 */}
-<<<<<<< HEAD
-          <div className="relative mb-6">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="프로그램 검색..."
-              className="w-full pl-10 pr-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-            />
-=======
           <div className="mb-6 max-w-sm ml-auto">
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
@@ -95,7 +65,6 @@ export default function ProgramsContent({ categories, programs }: { categories: 
                 aria-label="프로그램 검색"
               />
             </div>
->>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
           </div>
 
           {/* 카테고리 탭 */}

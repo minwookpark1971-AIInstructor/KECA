@@ -10,16 +10,11 @@ import {
   Award,
   GraduationCap,
   ChevronRight,
-  ChevronDown,
   Calendar,
   MessageSquare,
   Star,
   BookOpen,
-<<<<<<< HEAD
-  Building2,
-=======
   ChevronDown,
->>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
 } from "lucide-react";
 import { getPostsByBoard, getPrograms, getSchedules, getPartners } from "@/lib/supabase/queries";
 
@@ -59,28 +54,9 @@ export default async function HomePage() {
     getPartners(),
   ]);
 
-<<<<<<< HEAD
-// 목업 파트너
-const partners = [
-  "서울대학교 교육연구소",
-  "한국직업능력연구원",
-  "삼성SDS",
-  "LG인화원",
-  "현대오토에버",
-  "한국교육학술정보원",
-];
-
-// 목업 교육후기
-const reviews = [
-  { title: "AI 교육 덕분에 업무 효율이 크게 올랐습니다", author: "김○○", program: "AI·에듀테크 교육" },
-  { title: "체계적인 커리큘럼이 인상적이었습니다", author: "이○○", program: "교육컨설팅" },
-  { title: "강사님의 실무 경험이 많은 도움이 되었습니다", author: "박○○", program: "리더십·조직교육" },
-];
-=======
   const upcomingSchedules = schedules
     .filter((s) => new Date(s.start_date) >= new Date())
     .slice(0, 3);
->>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
 
   return (
     <>
@@ -114,18 +90,11 @@ const reviews = [
             </div>
           </div>
         </div>
-<<<<<<< HEAD
-        {/* SCROLL 인디케이터 */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 text-white/50">
-          <span className="text-[10px] tracking-[0.2em] uppercase">Scroll</span>
-          <ChevronDown size={20} className="animate-bounce" />
-=======
 
         {/* 스크롤 인디케이터 */}
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/30">
           <span className="text-[10px] tracking-[0.3em] uppercase">Scroll</span>
           <ChevronDown size={16} className="animate-bounce-slow" />
->>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
         </div>
       </section>
 
@@ -345,32 +314,6 @@ const reviews = [
         </div>
       </section>
 
-<<<<<<< HEAD
-      {/* ===== 파트너 섹션 ===== */}
-      <section className="py-14 bg-white border-t border-border-light">
-        <div className="container-custom">
-          <p className="text-center text-sm font-semibold text-text-muted uppercase tracking-wider mb-8">
-            Partners &amp; Affiliates
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            {partners.map((name) => (
-              <div
-                key={name}
-                className="flex items-center justify-center gap-2 px-4 py-4 rounded-xl border border-border-light bg-surface text-center"
-              >
-                <Building2 size={16} className="text-text-muted shrink-0" />
-                <span className="text-xs font-medium text-text-sub">{name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ===== CTA 섹션 ===== */}
-      <section className="py-16 lg:py-20 bg-primary">
-        <div className="container-custom text-center">
-          <h2 className="text-2xl lg:text-3xl font-bold text-white mb-4">
-=======
       {/* ===== 파트너 ===== */}
       {partners.length > 0 && (
         <section className="py-16">
@@ -400,7 +343,6 @@ const reviews = [
         <div className="container-custom text-center relative z-10">
           <p className="text-xs font-semibold text-accent tracking-[0.2em] uppercase mb-6">Join KECA</p>
           <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6 tracking-tight">
->>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
             교육의 미래를 함께 만들어가세요
           </h2>
           <p className="text-white/40 mb-10 max-w-lg mx-auto text-sm leading-relaxed">
