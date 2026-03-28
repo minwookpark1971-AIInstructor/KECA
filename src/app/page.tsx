@@ -231,7 +231,7 @@ export default async function HomePage() {
                 <br />
                 교육 전문 컨설턴트가 최적의 프로그램을 제안해드립니다.
               </p>
-              <Link href="/inquiry" className="btn-primary text-xs">
+              <Link href="/inquiry" className="inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-white/90 text-primary font-semibold text-xs rounded-full transition-colors shadow-sm">
                 교육문의 바로가기 <ArrowRight size={14} />
               </Link>
             </div>
