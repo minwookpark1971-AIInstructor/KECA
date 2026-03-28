@@ -22,11 +22,11 @@ export default async function InstructorDetailPage({ params }: { params: Promise
           <div className="flex flex-col md:flex-row gap-8 mb-10">
             {/* 프로필 이미지 */}
             <div className="shrink-0">
-              <div className="w-40 h-40 rounded-2xl bg-primary/10 flex items-center justify-center overflow-hidden">
+              <div className="w-28 h-28 rounded-2xl bg-primary/10 flex items-center justify-center overflow-hidden">
                 {instructor.profile_image_url ? (
                   <img src={instructor.profile_image_url} alt={instructor.name} className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-primary font-bold text-5xl">{instructor.name[0]}</span>
+                  <span className="text-primary font-bold text-3xl">{instructor.name[0]}</span>
                 )}
               </div>
             </div>
