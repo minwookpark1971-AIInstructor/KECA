@@ -22,7 +22,11 @@
       "Bash(ls \"C:\\\\Users\\\\minwo\\\\Documents\\\\GitHub\\\\KECA\\\\src\\\\app\\\\\\(protected\\)\\\\admin\\\\instructors\")",
       "Bash(node -e \":*)",
       "Bash(node scripts/seed-programs.js)",
-      "Bash(node scripts/seed-expert-programs.js)"
+      "Bash(node scripts/seed-expert-programs.js)",
+      "Bash(pip install:*)",
+      "Bash(python scripts/create-qa-excel.py)",
+      "Bash(ls -la \"C:\\\\Users\\\\minwo\\\\Documents\\\\GitHub\\\\KECA\\\\docs\\\\KECA-QA-\"*.xlsx)",
+      "Bash(ls -la \"C:\\\\Users\\\\minwo\\\\Documents\\\\GitHub\\\\KECA\\\\docs/\"*.xlsx)"
     ]
   }
 }
