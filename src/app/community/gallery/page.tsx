@@ -20,8 +20,12 @@ export default async function GalleryPage() {
                 href={`/community/photo_gallery/${post.id}`}
                 className="group rounded-xl border border-border-light overflow-hidden card-hover bg-white"
               >
-                <div className="aspect-[4/3] bg-gradient-to-br from-surface to-surface-dark flex items-center justify-center">
-                  <ImageIcon size={48} className="text-text-muted/30" />
+                <div className="aspect-[4/3] bg-gradient-to-br from-surface to-surface-dark flex items-center justify-center overflow-hidden">
+                  {post.thumbnail_url ? (
+                    <img src={post.thumbnail_url} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  ) : (
+                    <ImageIcon size={48} className="text-text-muted/30" />
+                  )}
                 </div>
                 <div className="p-4">
                   <h3 className="text-sm font-semibold text-text group-hover:text-primary transition-colors">{post.title}</h3>

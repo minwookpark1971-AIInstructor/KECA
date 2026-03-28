@@ -31,9 +31,15 @@ export default async function ResourcesPage() {
                     <span className="flex items-center gap-1"><Eye size={12} />{res.view_count}</span>
                   </div>
                 </div>
-                <button className="shrink-0 p-2 text-text-muted hover:text-primary transition-colors" title="다운로드 (로그인 필요)">
-                  <Download size={18} />
-                </button>
+                {res.file_url ? (
+                  <a href={res.file_url} target="_blank" rel="noopener noreferrer" className="shrink-0 p-2 text-primary hover:text-primary-light transition-colors" title="다운로드">
+                    <Download size={18} />
+                  </a>
+                ) : (
+                  <span className="shrink-0 p-2 text-text-muted" title="파일 없음">
+                    <Download size={18} />
+                  </span>
+                )}
               </div>
             ))}
           </div>

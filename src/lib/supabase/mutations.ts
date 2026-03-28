@@ -102,6 +102,7 @@ export async function createPost(formData: {
   author_id?: string;
   video_url?: string;
   file_url?: string;
+  thumbnail_url?: string;
 }) {
   const supabase = await createClient();
   const { data, error } = await supabase
