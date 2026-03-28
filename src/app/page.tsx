@@ -10,10 +10,12 @@ import {
   Award,
   GraduationCap,
   ChevronRight,
+  ChevronDown,
   Calendar,
   MessageSquare,
   Star,
   BookOpen,
+  Building2,
 } from "lucide-react";
 
 // 카테고리 위젯 데이터
@@ -42,6 +44,16 @@ const notices = [
   { title: "KECA 연간 교육일정 안내", date: "2026.03.20" },
   { title: "제3회 교육컨설팅 세미나 개최 안내", date: "2026.03.15" },
   { title: "신규 회원 가입 혜택 안내", date: "2026.03.10" },
+];
+
+// 목업 파트너
+const partners = [
+  "서울대학교 교육연구소",
+  "한국직업능력연구원",
+  "삼성SDS",
+  "LG인화원",
+  "현대오토에버",
+  "한국교육학술정보원",
 ];
 
 // 목업 교육후기
@@ -90,6 +102,11 @@ export default function HomePage() {
               </Link>
             </div>
           </div>
+        </div>
+        {/* SCROLL 인디케이터 */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 text-white/50">
+          <span className="text-[10px] tracking-[0.2em] uppercase">Scroll</span>
+          <ChevronDown size={20} className="animate-bounce" />
         </div>
       </section>
 
@@ -321,6 +338,26 @@ export default function HomePage() {
                 </li>
               </ul>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== 파트너 섹션 ===== */}
+      <section className="py-14 bg-white border-t border-border-light">
+        <div className="container-custom">
+          <p className="text-center text-sm font-semibold text-text-muted uppercase tracking-wider mb-8">
+            Partners &amp; Affiliates
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            {partners.map((name) => (
+              <div
+                key={name}
+                className="flex items-center justify-center gap-2 px-4 py-4 rounded-xl border border-border-light bg-surface text-center"
+              >
+                <Building2 size={16} className="text-text-muted shrink-0" />
+                <span className="text-xs font-medium text-text-sub">{name}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>

@@ -8,9 +8,7 @@ export const metadata: Metadata = { title: "전문가과정" };
 const courses = [
   {
     type: "자격증 과정", icon: Award, items: [
-      { title: "인공지능(AI)교육전문가 1급", desc: "생성형 AI 활용 교육 전문가 양성", href: "/expert/ai-edu-expert" },
-      { title: "교육컨설턴트 자격과정", desc: "교육과정 설계 및 컨설팅 전문가", href: "/expert/edu-consultant" },
-      { title: "에듀테크 지도사 과정", desc: "에듀테크 도구 활용 지도 전문가", href: "/expert/edutech-instructor" },
+      { title: "인공지능(AI)교육전문가", desc: "생성형 AI 기반 업무 자동화 설계, 교육 콘텐츠 제작, 데이터 분석 및 AI 활용 교육과정 기획·지도", href: "/certification" },
     ]
   },
   {

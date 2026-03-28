@@ -17,7 +17,9 @@
       "Bash(printf 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdmcWpwYmNqbGRxbnNycXBlaGt0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MDUwNjYsImV4cCI6MjA5MDE4MTA2Nn0.QDWxyjxQoUy4JI_UDiaDNhVLpHtKR1559I153pb7XaU')",
       "Bash(printf 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdmcWpwYmNqbGRxbnNycXBlaGt0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDYwNTA2NiwiZXhwIjoyMDkwMTgxMDY2fQ.viHLTA5gH-GFI7cu-Yf0Xn6Dx6M02JebR-mRKUYhdaA')",
       "Bash(printf 'https://keca.vercel.app')",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Read(//c/Users/USER-PC/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/e20781f8-4cd3-4e44-95f1-ba9f814c3d57/8634197a-b09e-44ef-b655-7e6624f5c52d/skills/xlsx/**)",
+      "Bash(python -c \":*)"
     ]
   }
 }

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { SubpageHero } from "@/components/layout/SubpageHero";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Category, Program } from "@/types";
 
@@ -12,18 +12,29 @@ export default function ProgramsContent({ categories, programs }: { categories: 
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get("category") || "";
   const [activeCategory, setActiveCategory] = useState(initialCategory);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const cat = searchParams.get("category") || "";
     setActiveCategory(cat);
   }, [searchParams]);
 
-  const filteredPrograms = activeCategory
-    ? programs.filter((p) => {
-        const cat = categories.find((c) => c.id === p.category_id);
-        return cat?.slug === activeCategory && p.status === "published";
-      })
-    : programs.filter((p) => p.status === "published");
+  const filteredPrograms = programs
+    .filter((p) => p.status === "published")
+    .filter((p) => {
+      if (!activeCategory) return true;
+      const cat = categories.find((c) => c.id === p.category_id);
+      return cat?.slug === activeCategory;
+    })
+    .filter((p) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        p.title.toLowerCase().includes(q) ||
+        (p.subtitle && p.subtitle.toLowerCase().includes(q)) ||
+        (p.target_audience && p.target_audience.toLowerCase().includes(q))
+      );
+    });
 
   return (
     <>
@@ -35,6 +46,18 @@ export default function ProgramsContent({ categories, programs }: { categories: 
 
       <section className="py-16 lg:py-20">
         <div className="container-custom">
+          {/* 검색 */}
+          <div className="relative mb-6">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="프로그램 검색..."
+              className="w-full pl-10 pr-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+            />
+          </div>
+
           {/* 카테고리 탭 */}
           <div className="flex flex-wrap gap-2 mb-10">
             <button

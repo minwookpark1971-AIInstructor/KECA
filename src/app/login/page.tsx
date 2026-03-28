@@ -1,36 +1,59 @@
 "use client";
 
-import { Metadata } from "next";
 import Link from "next/link";
 import { useState } from "react";
-import { Mail, Lock, LogIn, ArrowRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Mail, Lock, LogIn } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // TODO: Supabase auth.signInWithPassword
-    setTimeout(() => {
-      alert("목업 모드: Supabase 연동 후 실제 로그인이 가능합니다.");
+    setError("");
+
+    try {
+      const supabase = createClient();
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError) {
+        setError("이메일 또는 비밀번호가 올바르지 않습니다.");
+        return;
+      }
+
+      router.push("/mypage");
+      router.refresh();
+    } catch {
+      setError("로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
     <section className="min-h-[80vh] flex items-center justify-center py-16 px-4">
       <div className="w-full max-w-md">
-        {/* 로고 */}
         <div className="text-center mb-8">
           <Link href="/" className="text-3xl font-extrabold text-primary">KECA</Link>
           <p className="text-sm text-text-sub mt-1">한국교육컨설팅협회 회원 로그인</p>
         </div>
 
-        {/* 로그인 카드 */}
         <div className="bg-white border border-border-light rounded-2xl p-8 shadow-card">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-text mb-1.5">이메일</label>
@@ -48,7 +71,15 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text mb-1.5">비밀번호</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-medium text-text">비밀번호</label>
+                <Link
+                  href="/forgot-password"
+                  className="text-xs text-text-muted hover:text-primary transition-colors"
+                >
+                  비밀번호를 잊으셨나요?
+                </Link>
+              </div>
               <div className="relative">
                 <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
                 <input
@@ -79,19 +110,6 @@ export default function LoginPage() {
               </Link>
             </p>
           </div>
-        </div>
-
-        {/* 목업 안내 */}
-        <div className="mt-4 bg-surface rounded-xl p-4 text-center">
-          <p className="text-xs text-text-muted">
-            현재 목업 모드입니다. Supabase 연동 후 실제 인증이 활성화됩니다.
-          </p>
-          <Link
-            href="/mypage"
-            className="inline-flex items-center gap-1 mt-2 text-xs text-primary font-medium hover:underline"
-          >
-            마이페이지 미리보기 <ArrowRight size={12} />
-          </Link>
         </div>
       </div>
     </section>
