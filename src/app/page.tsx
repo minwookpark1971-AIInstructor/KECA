@@ -18,6 +18,15 @@ import {
 } from "lucide-react";
 import { getPostsByBoard, getPrograms, getSchedules, getPartners } from "@/lib/supabase/queries";
 
+const catCardStyles: Record<string, { gradient: string; icon: typeof Cpu }> = {
+  "ai-edutech": { gradient: "from-[#1B2A4A] to-[#2E5090]", icon: Cpu },
+  "career": { gradient: "from-[#064E3B] to-[#10B981]", icon: Compass },
+  "consulting": { gradient: "from-[#4C1D95] to-[#7C3AED]", icon: Briefcase },
+  "leadership": { gradient: "from-[#92400E] to-[#F59E0B]", icon: Users },
+  "competency": { gradient: "from-[#831843] to-[#EC4899]", icon: Target },
+  "mandatory": { gradient: "from-[#374151] to-[#6B7280]", icon: Shield },
+};
+
 const categories = [
   { label: "AI·에듀테크 교육", icon: Cpu, href: "/programs?category=ai-edutech" },
   { label: "진로·진학 컨설팅", icon: Compass, href: "/programs?category=career" },
@@ -153,18 +162,20 @@ export default async function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featuredPrograms.length > 0 ? featuredPrograms.map((program) => (
+            {featuredPrograms.length > 0 ? featuredPrograms.map((program) => {
+              const catSlug = program.category?.slug || "";
+              const cStyle = catCardStyles[catSlug] || { gradient: "from-[#1B2A4A] to-[#C4963C]", icon: Award };
+              const CatIcon = cStyle.icon;
+              return (
               <Link
                 key={program.id}
                 href={`/programs/${program.slug}`}
-                className="group rounded-lg overflow-hidden card-hover img-zoom"
+                className="group rounded-lg overflow-hidden card-hover"
               >
-                <div className="aspect-[16/10] bg-gradient-to-br from-primary/5 to-primary-light/10 flex items-center justify-center">
-                  {program.thumbnail_url ? (
-                    <img src={program.thumbnail_url} alt={program.title} className="w-full h-full object-cover" />
-                  ) : (
-                    <BookOpen size={48} className="text-primary/15" />
-                  )}
+                <div className={`aspect-[16/10] bg-gradient-to-br ${cStyle.gradient} flex flex-col items-center justify-center p-6 relative`}>
+                  <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.04%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]" />
+                  <CatIcon size={36} className="text-white/30 mb-3 relative z-10 group-hover:scale-110 transition-transform duration-300" />
+                  <span className="text-white/50 text-xs font-medium tracking-wider uppercase relative z-10">{program.category?.name || ""}</span>
                 </div>
                 <div className="p-6">
                   {program.category && (
@@ -180,7 +191,8 @@ export default async function HomePage() {
                   </p>
                 </div>
               </Link>
-            )) : (
+              );
+            }) : (
               <p className="col-span-3 text-center text-sm text-text-muted py-12">등록된 추천 프로그램이 없습니다.</p>
             )}
           </div>

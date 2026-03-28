@@ -4,9 +4,18 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { SubpageHero } from "@/components/layout/SubpageHero";
-import { BookOpen, Search } from "lucide-react";
+import { Cpu, Compass, Briefcase, Users, Target, Shield, Award, BookOpen, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Category, Program } from "@/types";
+
+const categoryStyles: Record<string, { gradient: string; icon: React.ElementType }> = {
+  "ai-edutech": { gradient: "from-[#1B2A4A] to-[#2E5090]", icon: Cpu },
+  "career": { gradient: "from-[#064E3B] to-[#10B981]", icon: Compass },
+  "consulting": { gradient: "from-[#4C1D95] to-[#7C3AED]", icon: Briefcase },
+  "leadership": { gradient: "from-[#92400E] to-[#F59E0B]", icon: Users },
+  "competency": { gradient: "from-[#831843] to-[#EC4899]", icon: Target },
+  "mandatory": { gradient: "from-[#374151] to-[#6B7280]", icon: Shield },
+};
 
 export default function ProgramsContent({ categories, programs }: { categories: Category[]; programs: Program[] }) {
   const searchParams = useSearchParams();
@@ -92,18 +101,19 @@ export default function ProgramsContent({ categories, programs }: { categories: 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredPrograms.map((program) => {
                 const category = categories.find((c) => c.id === program.category_id);
+                const catSlug = category?.slug || "";
+                const style = categoryStyles[catSlug] || { gradient: "from-[#1B2A4A] to-[#C4963C]", icon: Award };
+                const Icon = style.icon;
                 return (
                   <Link
                     key={program.id}
                     href={`/programs/${program.slug}`}
-                    className="group rounded-xl border border-border-light overflow-hidden card-hover bg-white"
+                    className="group rounded-lg overflow-hidden card-hover bg-white"
                   >
-                    <div className="aspect-[16/10] bg-gradient-to-br from-primary/5 to-primary-light/10 flex items-center justify-center overflow-hidden">
-                      {program.thumbnail_url ? (
-                        <img src={program.thumbnail_url} alt={program.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                      ) : (
-                        <BookOpen size={48} className="text-primary/20" />
-                      )}
+                    <div className={`aspect-[16/10] bg-gradient-to-br ${style.gradient} flex flex-col items-center justify-center p-6 relative`}>
+                      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.04%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]" />
+                      <Icon size={36} className="text-white/30 mb-3 relative z-10 group-hover:scale-110 transition-transform duration-300" />
+                      <span className="text-white/50 text-xs font-medium tracking-wider uppercase relative z-10">{category?.name || "교육과정"}</span>
                     </div>
                     <div className="p-5">
                       {category && (
