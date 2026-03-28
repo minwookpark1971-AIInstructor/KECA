@@ -303,12 +303,20 @@ export async function createInstructor(formData: {
       specialties: formData.specialties || [],
       video_url: formData.video_url || null,
       profile_image_url: formData.profile_image_url || null,
-      profile_card_url: formData.profile_card_url || null,
       is_profile_public: formData.is_profile_public ?? true,
       approved_at: new Date().toISOString(),
     }, { onConflict: "id" });
 
   if (profileError) throw new Error(profileError.message);
+
+  // profile_card_url 별도 시도 (컬럼 없으면 무시)
+  if (formData.profile_card_url) {
+    await supabase
+      .from("profiles")
+      .update({ profile_card_url: formData.profile_card_url })
+      .eq("id", authData.user.id)
+      .then(() => {});
+  }
   revalidatePath("/admin/instructors");
   revalidatePath("/instructors");
   return authData.user.id;
@@ -330,11 +338,24 @@ export async function updateInstructor(
 ) {
   const { createAdminClient } = await import("./admin");
   const supabase = createAdminClient();
+
+  // profile_card_url은 DB 컬럼이 없을 수 있으므로 분리 처리
+  const { profile_card_url, ...coreFields } = fields;
   const { error } = await supabase
     .from("profiles")
-    .update(fields)
+    .update(coreFields)
     .eq("id", userId);
   if (error) throw new Error(error.message);
+
+  // profile_card_url 별도 시도 (컬럼 없으면 무시)
+  if (profile_card_url !== undefined) {
+    await supabase
+      .from("profiles")
+      .update({ profile_card_url })
+      .eq("id", userId)
+      .then(() => {});
+  }
+
   revalidatePath("/admin/instructors");
   revalidatePath("/instructors");
 }

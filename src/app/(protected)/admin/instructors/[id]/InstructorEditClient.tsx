@@ -101,9 +101,15 @@ export default function InstructorEditClient({ instructor }: { instructor: Profi
         <div className="bg-white border border-border-light rounded-xl p-6">
           <h2 className="text-sm font-bold text-text mb-4 flex items-center gap-2"><FileText size={16} /> 프로필 카드 이미지 (상세 페이지 하단)</h2>
           {cardImageUrl ? (
-            <div className="relative">
-              <img src={cardImageUrl} alt="프로필 카드" className="w-full max-h-80 object-contain rounded-lg border" />
-              <button type="button" onClick={() => setCardImageUrl("")} className="absolute top-2 right-2 bg-white/90 text-text-muted hover:text-error px-2 py-1 rounded text-xs">삭제</button>
+            <div>
+              <img src={cardImageUrl} alt="프로필 카드" className="w-full max-h-80 object-contain rounded-lg border mb-3" />
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 bg-surface text-text px-4 py-2 rounded-lg text-sm font-medium hover:bg-border-light transition-colors cursor-pointer">
+                  <Upload size={14} /> {uploading ? "업로드 중..." : "이미지 변경"}
+                  <input type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f, "instructors/cards", setCardImageUrl); }} disabled={uploading} className="hidden" />
+                </label>
+                <button type="button" onClick={() => setCardImageUrl("")} className="text-xs text-error hover:underline">삭제</button>
+              </div>
             </div>
           ) : (
             <label className="block border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer hover:border-primary/30 transition-colors">
