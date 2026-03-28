@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { getPrograms, getCategories } from "@/lib/supabase/queries";
+import { getAllPrograms, getCategories } from "@/lib/supabase/queries";
 import { Plus, Edit2, Eye, BookOpen } from "lucide-react";
 
 export default async function AdminProgramsPage() {
-  const [programs, categories] = await Promise.all([getPrograms(), getCategories()]);
+  const [programs, categories] = await Promise.all([getAllPrograms(), getCategories()]);
   const getCategoryById = (id: string) => categories.find((c) => c.id === id);
   return (
     <div>

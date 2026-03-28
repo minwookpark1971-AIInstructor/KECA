@@ -19,7 +19,7 @@ export default function LocationPage() {
               <MapPin size={20} className="text-accent mt-0.5 shrink-0" />
               <div>
                 <h4 className="text-sm font-semibold text-text mb-1">주소</h4>
-                <p className="text-sm text-text-sub">서울특별시 강남구</p>
+                <p className="text-sm text-text-sub">서울특별시 도봉구 마들로13길84</p>
               </div>
             </div>
             <div className="flex items-start gap-3 bg-surface rounded-xl p-5">

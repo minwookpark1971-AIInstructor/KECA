@@ -7,12 +7,17 @@ import { Image as ImageIcon, Eye } from "lucide-react";
 export const metadata: Metadata = { title: "교육사진 갤러리" };
 
 export default async function GalleryPage() {
+<<<<<<< HEAD
   const posts = await getPostsByBoard("photo_gallery");
+=======
+  const galleryPosts = await getPostsByBoard("photo_gallery");
+>>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
   return (
     <>
       <SubpageHero title="교육사진 갤러리" breadcrumb={[{ label: "커뮤니티" }, { label: "교육사진 갤러리" }]} />
       <section className="py-16 lg:py-20">
         <div className="container-custom">
+<<<<<<< HEAD
           {posts.length === 0 ? (
             <div className="text-center py-20 text-text-muted">
               등록된 사진이 없습니다.
@@ -27,6 +32,27 @@ export default async function GalleryPage() {
                 >
                   <div className="aspect-[4/3] bg-gradient-to-br from-surface to-surface-dark flex items-center justify-center">
                     <ImageIcon size={48} className="text-text-muted/30" />
+=======
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {galleryPosts.map((post) => (
+              <Link
+                key={post.id}
+                href={`/community/photo_gallery/${post.id}`}
+                className="group rounded-xl border border-border-light overflow-hidden card-hover bg-white"
+              >
+                <div className="aspect-[4/3] bg-gradient-to-br from-surface to-surface-dark flex items-center justify-center overflow-hidden">
+                  {post.thumbnail_url ? (
+                    <img src={post.thumbnail_url} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  ) : (
+                    <ImageIcon size={48} className="text-text-muted/30" />
+                  )}
+                </div>
+                <div className="p-4">
+                  <h3 className="text-sm font-semibold text-text group-hover:text-primary transition-colors">{post.title}</h3>
+                  <div className="flex items-center gap-3 mt-2 text-xs text-text-muted">
+                    <span>{post.created_at}</span>
+                    <span className="flex items-center gap-1"><Eye size={12} />{post.view_count}</span>
+>>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
                   </div>
                   <div className="p-4">
                     <h3 className="text-sm font-semibold text-text group-hover:text-primary transition-colors">{post.title}</h3>

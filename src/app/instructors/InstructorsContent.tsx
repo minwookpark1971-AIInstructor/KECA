@@ -50,6 +50,11 @@ export default function InstructorsContent({ instructors }: { instructors: Profi
           </div>
 
           {/* 강사 카드 그리드 */}
+          {filteredInstructors.length === 0 && (
+            <div className="text-center py-20 text-text-muted">
+              {activeFilter ? `"${activeFilter}" 분야의 강사가 없습니다.` : "등록된 강사가 없습니다."}
+            </div>
+          )}
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredInstructors.map((inst) => (
               <Link
@@ -59,8 +64,12 @@ export default function InstructorsContent({ instructors }: { instructors: Profi
               >
                 <div className="p-6 text-center">
                   {/* 프로필 아바타 */}
-                  <div className="w-24 h-24 mx-auto rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-3xl mb-4">
-                    {inst.name[0]}
+                  <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center overflow-hidden mb-4">
+                    {inst.profile_image_url ? (
+                      <img src={inst.profile_image_url} alt={inst.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-primary font-bold text-xl">{inst.name[0]}</span>
+                    )}
                   </div>
 
                   <h3 className="text-lg font-bold text-text group-hover:text-primary transition-colors">

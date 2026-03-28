@@ -3,28 +3,63 @@
 import Link from "next/link";
 import { useState } from "react";
 import { User, Mail, Phone, Lock, UserPlus, CheckCircle } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { validatePassword, validatePhone, formatPhone } from "@/lib/validation";
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({ name: "", email: "", phone: "", password: "", confirmPassword: "" });
   const [loading, setLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === "phone" ? formatPhone(value) : value,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
+    const pwError = validatePassword(formData.password);
+    if (pwError) { setError(pwError); return; }
     if (formData.password !== formData.confirmPassword) {
-      alert("비밀번호가 일치하지 않습니다.");
+      setError("비밀번호가 일치하지 않습니다.");
       return;
     }
+    const phoneError = validatePhone(formData.phone);
+    if (phoneError) { setError(phoneError); return; }
+
     setLoading(true);
-    // TODO: Supabase auth.signUp
-    setTimeout(() => {
-      alert("목업 모드: Supabase 연동 후 실제 회원가입이 가능합니다.");
+    const supabase = createClient();
+
+    const { error: authError } = await supabase.auth.signUp({
+      email: formData.email,
+      password: formData.password,
+      options: {
+        data: {
+          name: formData.name,
+          phone: formData.phone,
+        },
+      },
+    });
+
+    if (authError) {
+      setError(
+        authError.message === "User already registered"
+          ? "이미 가입된 이메일입니다."
+          : authError.message
+      );
       setLoading(false);
-    }, 1000);
+      return;
+    }
+
+    setSuccess(true);
+    setLoading(false);
   };
 
   const fields = [
@@ -34,6 +69,29 @@ export default function RegisterPage() {
     { name: "password", label: "비밀번호", type: "password", icon: Lock, placeholder: "8자 이상" },
     { name: "confirmPassword", label: "비밀번호 확인", type: "password", icon: Lock, placeholder: "비밀번호를 다시 입력" },
   ];
+
+  if (success) {
+    return (
+      <section className="min-h-[80vh] flex items-center justify-center py-16 px-4">
+        <div className="w-full max-w-md text-center">
+          <div className="bg-white border border-border-light rounded-2xl p-8 shadow-card">
+            <CheckCircle size={48} className="text-green-500 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-text mb-2">회원가입이 완료되었습니다</h2>
+            <p className="text-sm text-text-sub mb-6">
+              입력하신 이메일로 인증 메일이 발송되었습니다.<br />
+              이메일 인증 후 로그인이 가능합니다.
+            </p>
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-light transition-colors"
+            >
+              로그인 페이지로 이동
+            </Link>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="min-h-[80vh] flex items-center justify-center py-16 px-4">
@@ -51,6 +109,12 @@ export default function RegisterPage() {
               회원가입 후 관리자 승인이 완료되면 정회원 서비스를 이용하실 수 있습니다.
             </p>
           </div>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {fields.map((field) => (
@@ -80,8 +144,8 @@ export default function RegisterPage() {
                 className="mt-0.5 accent-primary"
               />
               <span className="text-xs text-text-sub">
-                <Link href="#" className="text-primary hover:underline">이용약관</Link> 및{" "}
-                <Link href="#" className="text-primary hover:underline">개인정보처리방침</Link>에 동의합니다.
+                <Link href="/terms" target="_blank" className="text-primary hover:underline">이용약관</Link> 및{" "}
+                <Link href="/privacy" target="_blank" className="text-primary hover:underline">개인정보처리방침</Link>에 동의합니다.
               </span>
             </label>
 

@@ -6,14 +6,14 @@ import { Calendar, MapPin, Monitor, Clock } from "lucide-react";
 export const metadata: Metadata = { title: "교육일정" };
 
 export default async function SchedulePage() {
-  const mockSchedules = await getSchedules();
+  const schedules = await getSchedules();
   return (
     <>
       <SubpageHero title="교육일정" breadcrumb={[{ label: "커뮤니티" }, { label: "교육일정" }]} />
       <section className="py-16 lg:py-20">
         <div className="container-custom max-w-4xl">
           <div className="space-y-4">
-            {mockSchedules.map((schedule) => {
+            {schedules.map((schedule) => {
               const date = new Date(schedule.start_date);
               const month = date.toLocaleDateString("ko-KR", { month: "short" });
               const day = date.getDate();

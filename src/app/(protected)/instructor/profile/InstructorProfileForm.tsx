@@ -1,25 +1,77 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { SubpageHero } from "@/components/layout/SubpageHero";
-import { Save, Upload, Video, User, Briefcase, Tag, FileText } from "lucide-react";
+import { Save, Upload, Video, User, Briefcase, Tag, FileText, CheckCircle } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/types";
 
 export default function InstructorProfileForm({ instructor }: { instructor: Profile }) {
+  const router = useRouter();
   const [bio, setBio] = useState(instructor.bio || "");
   const [career, setCareer] = useState(instructor.career_summary || "");
   const [specialties, setSpecialties] = useState((instructor.specialties || []).join(", "));
   const [videoUrl, setVideoUrl] = useState(instructor.video_url || "");
   const [isPublic, setIsPublic] = useState(instructor.is_profile_public ?? false);
   const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [profileImageUrl, setProfileImageUrl] = useState(instructor.profile_image_url || "");
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setMsg({ type: "error", text: "이미지 크기는 5MB 이하여야 합니다." });
+      return;
+    }
+
+    setImageUploading(true);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", `instructors/${instructor.id}`);
+
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        setMsg({ type: "error", text: "이미지 업로드 실패: " + data.error });
+      } else {
+        setProfileImageUrl(data.url);
+      }
+    } catch {
+      setMsg({ type: "error", text: "이미지 업로드에 실패했습니다." });
+    }
+    setImageUploading(false);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setMsg(null);
     setSaving(true);
-    setTimeout(() => {
-      alert("목업 모드: 프로필이 저장되었습니다.");
-      setSaving(false);
-    }, 500);
+
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        bio,
+        career_summary: career,
+        specialties: specialties.split(",").map((s) => s.trim()).filter(Boolean),
+        video_url: videoUrl || null,
+        is_profile_public: isPublic,
+        profile_image_url: profileImageUrl || null,
+      })
+      .eq("id", instructor.id);
+
+    if (error) {
+      setMsg({ type: "error", text: "프로필 저장에 실패했습니다." });
+    } else {
+      setMsg({ type: "success", text: "프로필이 저장되었습니다." });
+      router.refresh();
+    }
+    setSaving(false);
   };
 
   return (
@@ -30,6 +82,13 @@ export default function InstructorProfileForm({ instructor }: { instructor: Prof
       />
       <section className="py-16 lg:py-20">
         <div className="container-custom max-w-2xl">
+          {msg && (
+            <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${msg.type === "success" ? "bg-green-50 border border-green-200 text-green-700" : "bg-red-50 border border-red-200 text-red-700"}`}>
+              {msg.type === "success" && <CheckCircle size={16} />}
+              {msg.text}
+            </div>
+          )}
+
           <form onSubmit={handleSave} className="space-y-6">
             {/* 프로필 이미지 */}
             <div className="bg-white border border-border-light rounded-2xl p-6">
@@ -37,16 +96,24 @@ export default function InstructorProfileForm({ instructor }: { instructor: Prof
                 <User size={20} /> 프로필 이미지
               </h2>
               <div className="flex items-center gap-6">
-                <div className="w-24 h-24 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <User size={40} className="text-primary/40" />
+                <div className="w-24 h-24 rounded-2xl bg-primary/10 flex items-center justify-center overflow-hidden">
+                  {profileImageUrl ? (
+                    <img src={profileImageUrl} alt="프로필" className="w-full h-full object-cover" />
+                  ) : (
+                    <User size={40} className="text-primary/40" />
+                  )}
                 </div>
                 <div>
-                  <button
-                    type="button"
-                    className="flex items-center gap-2 bg-surface text-text px-4 py-2 rounded-lg text-sm font-medium hover:bg-border-light transition-colors"
-                  >
-                    <Upload size={14} /> 이미지 업로드
-                  </button>
+                  <label className="flex items-center gap-2 bg-surface text-text px-4 py-2 rounded-lg text-sm font-medium hover:bg-border-light transition-colors cursor-pointer">
+                    <Upload size={14} /> {imageUploading ? "업로드 중..." : "이미지 업로드"}
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={handleImageUpload}
+                      disabled={imageUploading}
+                      className="hidden"
+                    />
+                  </label>
                   <p className="text-xs text-text-muted mt-1.5">PNG, JPG (최대 5MB)</p>
                 </div>
               </div>

@@ -146,7 +146,7 @@ export default async function ProgramDetailPage({ params }: { params: Promise<{ 
               <p className="text-white/60 text-sm mb-5">맞춤 교육 프로그램을 제안해드립니다.</p>
               <Link
                 href="/inquiry"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-accent hover:bg-accent-dark text-white font-semibold rounded-lg transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-white hover:bg-white/90 text-primary font-semibold rounded-lg transition-colors"
               >
                 교육 문의하기 <ArrowRight size={16} />
               </Link>

@@ -7,14 +7,14 @@ import { Star, Eye } from "lucide-react";
 export const metadata: Metadata = { title: "교육후기" };
 
 export default async function ReviewPage() {
-  const mockReviews = await getPostsByBoard("review");
+  const reviews = await getPostsByBoard("review");
   return (
     <>
       <SubpageHero title="교육후기" breadcrumb={[{ label: "커뮤니티" }, { label: "교육후기" }]} />
       <section className="py-16 lg:py-20">
         <div className="container-custom max-w-4xl">
           <div className="grid gap-4">
-            {mockReviews.map((review) => (
+            {reviews.map((review) => (
               <Link
                 key={review.id}
                 href={`/community/review/${review.id}`}

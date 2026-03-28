@@ -1,21 +1,37 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+<<<<<<< HEAD
 import { useRouter } from "next/navigation";
+=======
+>>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
 import { Mail, Lock, LogIn } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
+<<<<<<< HEAD
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+=======
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || "/mypage";
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+>>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
+<<<<<<< HEAD
     setError("");
 
     try {
@@ -37,6 +53,27 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+=======
+
+    const supabase = createClient();
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (authError) {
+      setError(
+        authError.message === "Invalid login credentials"
+          ? "이메일 또는 비밀번호가 올바르지 않습니다."
+          : authError.message
+      );
+      setLoading(false);
+      return;
+    }
+
+    router.push(redirectTo);
+    router.refresh();
+>>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
   };
 
   return (
@@ -49,7 +86,11 @@ export default function LoginPage() {
 
         <div className="bg-white border border-border-light rounded-2xl p-8 shadow-card">
           {error && (
+<<<<<<< HEAD
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+=======
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+>>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
               {error}
             </div>
           )}
@@ -102,7 +143,13 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-border-light text-center">
+          <div className="mt-4 text-center">
+            <Link href="/forgot-password" className="text-xs text-text-muted hover:text-primary transition-colors">
+              비밀번호를 잊으셨나요?
+            </Link>
+          </div>
+
+          <div className="mt-4 pt-6 border-t border-border-light text-center">
             <p className="text-sm text-text-sub">
               아직 회원이 아니신가요?{" "}
               <Link href="/register" className="text-primary font-medium hover:underline">

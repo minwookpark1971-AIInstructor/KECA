@@ -70,6 +70,26 @@ export async function getPrograms(options?: {
   return (data as unknown as Program[]) ?? [];
 }
 
+// 관리자용: 상태와 무관하게 전체 프로그램 조회
+export async function getAllPrograms(): Promise<Program[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("programs")
+    .select("*, categories(*)")
+    .order("sort_order");
+  return (data as unknown as Program[]) ?? [];
+}
+
+export async function getProgramById(id: string): Promise<Program | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("programs")
+    .select("*, categories(*)")
+    .eq("id", id)
+    .single();
+  return data as unknown as Program | null;
+}
+
 export async function getProgramBySlug(slug: string): Promise<Program | null> {
   const supabase = await createClient();
   const { data } = await supabase
@@ -146,6 +166,40 @@ export async function getInstructorPrograms(instructorId: string): Promise<Progr
 }
 
 // ─── 커뮤니티 게시판 ───
+
+export async function getPostCount(boardType: string): Promise<number> {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("posts")
+    .select("*", { count: "exact", head: true })
+    .eq("board_type", boardType)
+    .eq("status", "published");
+  return count ?? 0;
+}
+
+export async function getPostsByBoardPaginated(
+  boardType: string,
+  page: number,
+  perPage: number,
+  search?: string
+): Promise<Post[]> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("posts")
+    .select("*")
+    .eq("board_type", boardType)
+    .eq("status", "published")
+    .order("is_pinned", { ascending: false })
+    .order("created_at", { ascending: false })
+    .range((page - 1) * perPage, page * perPage - 1);
+
+  if (search) {
+    query = query.ilike("title", `%${search}%`);
+  }
+
+  const { data } = await query;
+  return (data as Post[]) ?? [];
+}
 
 export async function getPostsByBoard(
   boardType: string,
@@ -259,4 +313,16 @@ export async function getPartners(): Promise<Partner[]> {
     .eq("is_active", true)
     .order("sort_order");
   return (data as Partner[]) ?? [];
+}
+
+// ─── 사이트 콘텐츠 ───
+
+export async function getSiteContent(key: string): Promise<unknown | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("site_settings")
+    .select("value")
+    .eq("key", key)
+    .single();
+  return data?.value ?? null;
 }

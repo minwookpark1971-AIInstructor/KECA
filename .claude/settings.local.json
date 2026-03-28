@@ -18,8 +18,20 @@
       "Bash(printf 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdmcWpwYmNqbGRxbnNycXBlaGt0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDYwNTA2NiwiZXhwIjoyMDkwMTgxMDY2fQ.viHLTA5gH-GFI7cu-Yf0Xn6Dx6M02JebR-mRKUYhdaA')",
       "Bash(printf 'https://keca.vercel.app')",
       "Bash(npx tsc:*)",
+<<<<<<< HEAD
       "Read(//c/Users/USER-PC/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/e20781f8-4cd3-4e44-95f1-ba9f814c3d57/8634197a-b09e-44ef-b655-7e6624f5c52d/skills/xlsx/**)",
       "Bash(python -c \":*)"
+=======
+      "Bash(npx vercel:*)",
+      "Bash(ls \"C:\\\\Users\\\\minwo\\\\Documents\\\\GitHub\\\\KECA\\\\src\\\\app\\\\\\(protected\\)\\\\admin\\\\instructors\")",
+      "Bash(node -e \":*)",
+      "Bash(node scripts/seed-programs.js)",
+      "Bash(node scripts/seed-expert-programs.js)",
+      "Bash(pip install:*)",
+      "Bash(python scripts/create-qa-excel.py)",
+      "Bash(ls -la \"C:\\\\Users\\\\minwo\\\\Documents\\\\GitHub\\\\KECA\\\\docs\\\\KECA-QA-\"*.xlsx)",
+      "Bash(ls -la \"C:\\\\Users\\\\minwo\\\\Documents\\\\GitHub\\\\KECA\\\\docs/\"*.xlsx)"
+>>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
     ]
   }
 }

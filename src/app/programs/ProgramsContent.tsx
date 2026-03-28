@@ -4,9 +4,22 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { SubpageHero } from "@/components/layout/SubpageHero";
+<<<<<<< HEAD
 import { BookOpen, Search } from "lucide-react";
+=======
+import { Cpu, Compass, Briefcase, Users, Target, Shield, Award, BookOpen, Search } from "lucide-react";
+>>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
 import { cn } from "@/lib/utils";
 import type { Category, Program } from "@/types";
+
+const categoryStyles: Record<string, { gradient: string; icon: React.ElementType }> = {
+  "ai-edutech": { gradient: "from-[#1B2A4A] to-[#2E5090]", icon: Cpu },
+  "career": { gradient: "from-[#064E3B] to-[#10B981]", icon: Compass },
+  "consulting": { gradient: "from-[#4C1D95] to-[#7C3AED]", icon: Briefcase },
+  "leadership": { gradient: "from-[#92400E] to-[#F59E0B]", icon: Users },
+  "competency": { gradient: "from-[#831843] to-[#EC4899]", icon: Target },
+  "mandatory": { gradient: "from-[#374151] to-[#6B7280]", icon: Shield },
+};
 
 export default function ProgramsContent({ categories, programs }: { categories: Category[]; programs: Program[] }) {
   const searchParams = useSearchParams();
@@ -22,6 +35,7 @@ export default function ProgramsContent({ categories, programs }: { categories: 
   const filteredPrograms = programs
     .filter((p) => p.status === "published")
     .filter((p) => {
+<<<<<<< HEAD
       if (!activeCategory) return true;
       const cat = categories.find((c) => c.id === p.category_id);
       return cat?.slug === activeCategory;
@@ -34,6 +48,17 @@ export default function ProgramsContent({ categories, programs }: { categories: 
         (p.subtitle && p.subtitle.toLowerCase().includes(q)) ||
         (p.target_audience && p.target_audience.toLowerCase().includes(q))
       );
+=======
+      if (activeCategory) {
+        const cat = categories.find((c) => c.id === p.category_id);
+        if (cat?.slug !== activeCategory) return false;
+      }
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        return p.title.toLowerCase().includes(q) || p.subtitle?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q);
+      }
+      return true;
+>>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
     });
 
   return (
@@ -47,6 +72,7 @@ export default function ProgramsContent({ categories, programs }: { categories: 
       <section className="py-16 lg:py-20">
         <div className="container-custom">
           {/* 검색 */}
+<<<<<<< HEAD
           <div className="relative mb-6">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
             <input
@@ -56,6 +82,20 @@ export default function ProgramsContent({ categories, programs }: { categories: 
               placeholder="프로그램 검색..."
               className="w-full pl-10 pr-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
             />
+=======
+          <div className="mb-6 max-w-sm ml-auto">
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="프로그램 검색"
+                className="w-full pl-9 pr-4 py-2 border border-border-light rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                aria-label="프로그램 검색"
+              />
+            </div>
+>>>>>>> 263dd1c7d81a75adc07a4c816af1a692986eac76
           </div>
 
           {/* 카테고리 탭 */}
@@ -92,14 +132,24 @@ export default function ProgramsContent({ categories, programs }: { categories: 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredPrograms.map((program) => {
                 const category = categories.find((c) => c.id === program.category_id);
+                const catSlug = category?.slug || "";
+                const style = categoryStyles[catSlug] || { gradient: "from-[#1B2A4A] to-[#C4963C]", icon: Award };
+                const Icon = style.icon;
                 return (
                   <Link
                     key={program.id}
                     href={`/programs/${program.slug}`}
-                    className="group rounded-xl border border-border-light overflow-hidden card-hover bg-white"
+                    className="group rounded-lg overflow-hidden card-hover bg-white"
                   >
-                    <div className="aspect-[16/10] bg-gradient-to-br from-primary/5 to-primary-light/10 flex items-center justify-center">
-                      <BookOpen size={48} className="text-primary/20" />
+                    <div className="aspect-[16/10] bg-white border border-border flex flex-col items-center justify-center p-6 overflow-hidden">
+                      {program.thumbnail_url ? (
+                        <img src={program.thumbnail_url} alt={program.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      ) : (
+                        <>
+                          <Icon size={72} className="text-[#555] mb-3 group-hover:scale-110 transition-transform duration-300" />
+                          <span className="text-[#555] text-base font-semibold tracking-wide">{category?.name || "교육과정"}</span>
+                        </>
+                      )}
                     </div>
                     <div className="p-5">
                       {category && (
