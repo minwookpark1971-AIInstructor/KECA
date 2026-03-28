@@ -55,7 +55,7 @@ export function Footer() {
             <ul className="space-y-3">
               <li className="flex items-start gap-3 text-sm text-white/60">
                 <MapPin size={15} className="mt-0.5 shrink-0 text-accent" />
-                서울특별시 강남구
+                서울특별시 도봉구 마들로13길84
               </li>
               <li className="flex items-start gap-3 text-sm text-white/60">
                 <Mail size={15} className="mt-0.5 shrink-0 text-accent" />
