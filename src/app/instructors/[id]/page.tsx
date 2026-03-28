@@ -22,8 +22,12 @@ export default async function InstructorDetailPage({ params }: { params: Promise
           <div className="flex flex-col md:flex-row gap-8 mb-10">
             {/* 프로필 이미지 */}
             <div className="shrink-0">
-              <div className="w-40 h-40 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-5xl">
-                {instructor.name[0]}
+              <div className="w-40 h-40 rounded-2xl bg-primary/10 flex items-center justify-center overflow-hidden">
+                {instructor.profile_image_url ? (
+                  <img src={instructor.profile_image_url} alt={instructor.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-primary font-bold text-5xl">{instructor.name[0]}</span>
+                )}
               </div>
             </div>
 
@@ -61,15 +65,30 @@ export default async function InstructorDetailPage({ params }: { params: Promise
             </div>
           )}
 
-          {/* 강의 영상 placeholder */}
-          {instructor.video_url && (
-            <div className="mb-10">
-              <h3 className="text-lg font-bold text-text mb-3">강의 영상</h3>
-              <div className="aspect-video bg-surface rounded-xl flex items-center justify-center">
-                <p className="text-text-muted text-sm">강의 영상 영역</p>
+          {/* 강의 영상 */}
+          {instructor.video_url && (() => {
+            const match = instructor.video_url!.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]+)/);
+            const ytId = match ? match[1] : null;
+            return (
+              <div className="mb-10">
+                <h3 className="text-lg font-bold text-text mb-3">강의 영상</h3>
+                {ytId ? (
+                  <div className="aspect-video rounded-xl overflow-hidden">
+                    <iframe
+                      src={`https://www.youtube.com/embed/${ytId}`}
+                      className="w-full h-full"
+                      allowFullScreen
+                      title={`${instructor.name} 강의 영상`}
+                    />
+                  </div>
+                ) : (
+                  <a href={instructor.video_url!} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm">
+                    영상 보기 →
+                  </a>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* 담당 교육프로그램 */}
           {instructorPrograms.length > 0 && (
