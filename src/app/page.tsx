@@ -16,7 +16,7 @@ import {
   BookOpen,
   ChevronDown,
 } from "lucide-react";
-import { getPostsByBoard, getPrograms, getSchedules } from "@/lib/supabase/queries";
+import { getPostsByBoard, getPrograms, getSchedules, getPartners } from "@/lib/supabase/queries";
 
 const categories = [
   { label: "AI·에듀테크 교육", icon: Cpu, href: "/programs?category=ai-edutech" },
@@ -37,11 +37,12 @@ const stats = [
 ];
 
 export default async function HomePage() {
-  const [notices, reviews, featuredPrograms, schedules] = await Promise.all([
+  const [notices, reviews, featuredPrograms, schedules, partners] = await Promise.all([
     getPostsByBoard("notice", 4),
     getPostsByBoard("review", 3),
     getPrograms({ featured: true, limit: 3 }),
     getSchedules(),
+    getPartners(),
   ]);
 
   const upcomingSchedules = schedules
@@ -295,6 +296,29 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ===== 파트너 ===== */}
+      {partners.length > 0 && (
+        <section className="py-16">
+          <div className="container-custom">
+            <div className="text-center mb-10">
+              <p className="section-label">Partners</p>
+              <h2 className="text-2xl font-bold text-text tracking-tight">함께하는 파트너</h2>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-8 lg:gap-12">
+              {partners.map((p) => (
+                <div key={p.id} className="text-center">
+                  {p.logo_url ? (
+                    <img src={p.logo_url} alt={p.name} className="h-10 object-contain grayscale hover:grayscale-0 transition-all opacity-60 hover:opacity-100" />
+                  ) : (
+                    <span className="text-sm text-text-muted font-medium">{p.name}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ===== CTA ===== */}
       <section className="py-24 lg:py-32 bg-primary relative overflow-hidden">

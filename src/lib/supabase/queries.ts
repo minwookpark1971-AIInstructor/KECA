@@ -314,3 +314,15 @@ export async function getPartners(): Promise<Partner[]> {
     .order("sort_order");
   return (data as Partner[]) ?? [];
 }
+
+// ─── 사이트 콘텐츠 ───
+
+export async function getSiteContent(key: string): Promise<unknown | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("site_settings")
+    .select("value")
+    .eq("key", key)
+    .single();
+  return data?.value ?? null;
+}
