@@ -408,3 +408,214 @@ INSERT INTO public.site_settings (key, value) VALUES
   ('hero_slides', '[]'),
   ('partner_logos', '[]'),
   ('quick_menu_links', '{"kakao":"","youtube":"","blog":""}');
+
+-- ============================================================
+-- Storage 버킷 생성
+-- ============================================================
+
+-- 1. profile-images: 강사 프로필 이미지 (PNG, JPG / 5MB)
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'profile-images', 'profile-images', true, 5242880,
+  ARRAY['image/png','image/jpeg','image/webp']
+);
+
+-- 2. program-images: 교육프로그램 이미지 (PNG, JPG / 10MB)
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'program-images', 'program-images', true, 10485760,
+  ARRAY['image/png','image/jpeg','image/webp']
+);
+
+-- 3. post-images: 커뮤니티 게시글 이미지 (PNG, JPG / 10MB)
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'post-images', 'post-images', true, 10485760,
+  ARRAY['image/png','image/jpeg','image/webp']
+);
+
+-- 4. videos: 강의 소개 영상 (MP4 / 100MB)
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'videos', 'videos', true, 104857600,
+  ARRAY['video/mp4','video/webm']
+);
+
+-- 5. documents: 자료실 파일 — 정회원만 읽기 (PDF, DOCX / 20MB)
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'documents', 'documents', false, 20971520,
+  ARRAY['application/pdf','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/zip']
+);
+
+-- 6. partners: 파트너 로고 (PNG, JPG / 2MB)
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'partners', 'partners', true, 2097152,
+  ARRAY['image/png','image/jpeg','image/svg+xml','image/webp']
+);
+
+-- ============================================================
+-- Storage RLS 정책
+-- ============================================================
+
+-- ---- profile-images ----
+-- 누구나 공개 열람
+CREATE POLICY "Public read profile images"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'profile-images');
+
+-- 강사/관리자만 자기 폴더에 업로드
+CREATE POLICY "Instructors upload own profile image"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'profile-images'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+    AND EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role IN ('instructor','admin')
+    )
+  );
+
+-- 강사/관리자만 자기 파일 삭제
+CREATE POLICY "Instructors delete own profile image"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'profile-images'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+    AND EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role IN ('instructor','admin')
+    )
+  );
+
+-- ---- program-images ----
+CREATE POLICY "Public read program images"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'program-images');
+
+CREATE POLICY "Admins upload program images"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'program-images'
+    AND EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
+
+CREATE POLICY "Admins delete program images"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'program-images'
+    AND EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
+
+-- ---- post-images ----
+CREATE POLICY "Public read post images"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'post-images');
+
+CREATE POLICY "Members upload post images"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'post-images'
+    AND EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role IN ('member','instructor','admin')
+    )
+  );
+
+CREATE POLICY "Admins delete post images"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'post-images'
+    AND EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
+
+-- ---- videos ----
+CREATE POLICY "Public read videos"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'videos');
+
+CREATE POLICY "Instructors and admins upload videos"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'videos'
+    AND EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role IN ('instructor','admin')
+    )
+  );
+
+CREATE POLICY "Admins delete videos"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'videos'
+    AND EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
+
+-- ---- documents (비공개 버킷 — 정회원 이상만 다운로드) ----
+CREATE POLICY "Members read documents"
+  ON storage.objects FOR SELECT
+  USING (
+    bucket_id = 'documents'
+    AND EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role IN ('member','instructor','admin')
+    )
+  );
+
+CREATE POLICY "Admins upload documents"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'documents'
+    AND EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
+
+CREATE POLICY "Admins delete documents"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'documents'
+    AND EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
+
+-- ---- partners ----
+CREATE POLICY "Public read partner logos"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'partners');
+
+CREATE POLICY "Admins upload partner logos"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'partners'
+    AND EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
+
+CREATE POLICY "Admins delete partner logos"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'partners'
+    AND EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
