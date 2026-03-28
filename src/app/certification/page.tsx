@@ -97,7 +97,7 @@ export default function CertificationPage() {
           <div className="text-center">
             <Link
               href="/certification/apply"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-sky-500 hover:bg-sky-600 text-white font-semibold rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-lg transition-colors"
             >
               자격증 신청하기 <ArrowRight size={16} />
             </Link>

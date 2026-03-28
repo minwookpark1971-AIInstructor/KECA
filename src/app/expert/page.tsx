@@ -17,8 +17,13 @@ export default async function ExpertPage() {
   const trainingPrograms = expertPrograms.filter((p) => !continuingEduSlugs.includes(p.slug));
   const continuingPrograms = expertPrograms.filter((p) => continuingEduSlugs.includes(p.slug));
 
+  // 자격증 과정: 인공지능(AI)교육전문가만 표시 (고정 항목, /certification 링크)
+  const certFixed = [
+    { id: "cert-ai", slug: "__certification__", title: "인공지능(AI)교육전문가", subtitle: "생성형 AI 기반 업무 자동화 설계, 교육 콘텐츠 제작, 데이터 분석 및 AI 활용 교육과정 기획·지도" },
+  ];
+
   const groups = [
-    { type: "자격증 과정", icon: Award, programs: certPrograms },
+    { type: "자격증 과정", icon: Award, programs: certFixed },
     { type: "강사양성 과정", icon: GraduationCap, programs: trainingPrograms },
     { type: "보수교육", icon: RefreshCw, programs: continuingPrograms },
   ];
@@ -46,7 +51,7 @@ export default async function ExpertPage() {
                   {group.programs.length > 0 ? (
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {group.programs.map((prog) => (
-                        <Link key={prog.id} href={`/programs/${prog.slug}`} className="bg-white border border-border-light rounded-xl p-5 card-hover group">
+                        <Link key={prog.id} href={prog.slug === "__certification__" ? "/certification" : `/programs/${prog.slug}`} className="bg-white border border-border-light rounded-xl p-5 card-hover group">
                           <h3 className="text-base font-semibold text-text group-hover:text-primary transition-colors mb-1">{prog.title}</h3>
                           <p className="text-sm text-text-sub">{prog.subtitle || prog.description?.slice(0, 50)}</p>
                         </Link>

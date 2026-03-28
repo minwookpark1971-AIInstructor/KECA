@@ -89,7 +89,7 @@ export default function StandardsPage() {
           <div className="text-center">
             <Link
               href="/certification/apply"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-accent hover:bg-accent-dark text-white font-semibold rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gray-200 hover:bg-gray-300 text-text font-semibold rounded-lg transition-colors"
             >
               자격증 신청 안내 <ArrowRight size={16} />
             </Link>
