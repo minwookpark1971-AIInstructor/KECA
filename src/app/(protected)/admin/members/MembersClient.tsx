@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { roleLabels, roleBadgeColors } from "@/lib/mock-auth";
-import { UserCheck, UserX, Search } from "lucide-react";
+import { useState, useTransition } from "react";
+import { roleLabels, roleBadgeColors } from "@/lib/utils";
+import { UserCheck, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { approveMember, changeUserRole } from "@/lib/supabase/mutations";
 import type { Profile } from "@/types";
 
 export default function MembersClient({ members }: { members: Profile[] }) {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const filtered = members.filter((u) => {
     if (filter !== "all" && u.role !== filter) return false;
@@ -16,12 +19,37 @@ export default function MembersClient({ members }: { members: Profile[] }) {
     return true;
   });
 
-  const handleApprove = (userId: string) => alert(`목업: ${userId} 승인 처리`);
-  const handleChangeRole = (userId: string, role: string) => alert(`목업: ${userId} → ${role} 변경`);
+  const handleApprove = (userId: string) => {
+    startTransition(async () => {
+      try {
+        await approveMember(userId);
+        setMsg({ type: "success", text: "회원이 승인되었습니다." });
+      } catch {
+        setMsg({ type: "error", text: "승인 처리에 실패했습니다." });
+      }
+    });
+  };
+
+  const handleChangeRole = (userId: string, role: string) => {
+    startTransition(async () => {
+      try {
+        await changeUserRole(userId, role);
+        setMsg({ type: "success", text: "역할이 변경되었습니다." });
+      } catch {
+        setMsg({ type: "error", text: "역할 변경에 실패했습니다." });
+      }
+    });
+  };
 
   return (
     <div>
       <h1 className="text-2xl font-bold text-text mb-6">회원관리</h1>
+
+      {msg && (
+        <div className={`mb-4 p-3 rounded-lg text-sm ${msg.type === "success" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+          {msg.text}
+        </div>
+      )}
 
       {/* 필터 + 검색 */}
       <div className="flex flex-wrap gap-3 mb-6">

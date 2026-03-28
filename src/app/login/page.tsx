@@ -1,23 +1,44 @@
 "use client";
 
-import { Metadata } from "next";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { Mail, Lock, LogIn, ArrowRight } from "lucide-react";
+import { Mail, Lock, LogIn } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || "/mypage";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
-    // TODO: Supabase auth.signInWithPassword
-    setTimeout(() => {
-      alert("목업 모드: Supabase 연동 후 실제 로그인이 가능합니다.");
+
+    const supabase = createClient();
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (authError) {
+      setError(
+        authError.message === "Invalid login credentials"
+          ? "이메일 또는 비밀번호가 올바르지 않습니다."
+          : authError.message
+      );
       setLoading(false);
-    }, 1000);
+      return;
+    }
+
+    router.push(redirectTo);
+    router.refresh();
   };
 
   return (
@@ -31,6 +52,12 @@ export default function LoginPage() {
 
         {/* 로그인 카드 */}
         <div className="bg-white border border-border-light rounded-2xl p-8 shadow-card">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-text mb-1.5">이메일</label>
@@ -71,7 +98,13 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-border-light text-center">
+          <div className="mt-4 text-center">
+            <Link href="/forgot-password" className="text-xs text-text-muted hover:text-primary transition-colors">
+              비밀번호를 잊으셨나요?
+            </Link>
+          </div>
+
+          <div className="mt-4 pt-6 border-t border-border-light text-center">
             <p className="text-sm text-text-sub">
               아직 회원이 아니신가요?{" "}
               <Link href="/register" className="text-primary font-medium hover:underline">
@@ -79,19 +112,6 @@ export default function LoginPage() {
               </Link>
             </p>
           </div>
-        </div>
-
-        {/* 목업 안내 */}
-        <div className="mt-4 bg-surface rounded-xl p-4 text-center">
-          <p className="text-xs text-text-muted">
-            현재 목업 모드입니다. Supabase 연동 후 실제 인증이 활성화됩니다.
-          </p>
-          <Link
-            href="/mypage"
-            className="inline-flex items-center gap-1 mt-2 text-xs text-primary font-medium hover:underline"
-          >
-            마이페이지 미리보기 <ArrowRight size={12} />
-          </Link>
         </div>
       </div>
     </section>

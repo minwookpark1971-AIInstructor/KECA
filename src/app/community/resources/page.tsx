@@ -6,7 +6,7 @@ import { FileText, Download, Eye, Lock } from "lucide-react";
 export const metadata: Metadata = { title: "자료실" };
 
 export default async function ResourcesPage() {
-  const mockResources = await getPostsByBoard("resource");
+  const resources = await getPostsByBoard("resource");
   return (
     <>
       <SubpageHero title="자료실" subtitle="정회원 전용 교육 자료를 다운로드하실 수 있습니다" breadcrumb={[{ label: "커뮤니티" }, { label: "자료실" }]} />
@@ -19,7 +19,7 @@ export default async function ResourcesPage() {
           </div>
 
           <div className="space-y-3">
-            {mockResources.map((res, i) => (
+            {resources.map((res, i) => (
               <div key={res.id} className="flex items-center gap-4 bg-white border border-border-light rounded-xl p-4 hover:border-primary/20 transition-colors">
                 <div className="w-10 h-10 rounded-lg bg-primary/5 flex items-center justify-center shrink-0">
                   <FileText size={20} className="text-primary" />

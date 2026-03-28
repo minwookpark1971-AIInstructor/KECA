@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Menu, X, ChevronDown, User, LogIn } from "lucide-react";
+import { Menu, X, ChevronDown } from "lucide-react";
 import { mainNavigation } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { MobileNav } from "./MobileNav";
+import { AuthStatus } from "./AuthStatus";
 
 export function Header() {
   const pathname = usePathname();
@@ -39,13 +40,7 @@ export function Header() {
         {/* 상단 유틸 바 */}
         <div className="border-b border-border-light">
           <div className="container-custom flex items-center justify-end gap-4 py-2 text-xs text-text-sub">
-            <Link href="/login" className="flex items-center gap-1 hover:text-primary transition-colors">
-              <LogIn size={12} />
-              로그인
-            </Link>
-            <Link href="/register" className="hover:text-primary transition-colors">
-              회원가입
-            </Link>
+            <AuthStatus />
           </div>
         </div>
 
@@ -63,7 +58,7 @@ export function Header() {
             </Link>
 
             {/* 데스크톱 네비게이션 */}
-            <nav className="hidden lg:flex items-center gap-1">
+            <nav className="hidden lg:flex items-center gap-1" aria-label="메인 메뉴">
               {mainNavigation.map((item) => (
                 <div
                   key={item.href}

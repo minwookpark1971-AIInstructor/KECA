@@ -7,14 +7,14 @@ import { Image as ImageIcon, Eye } from "lucide-react";
 export const metadata: Metadata = { title: "교육사진 갤러리" };
 
 export default async function GalleryPage() {
-  const mockGalleryPosts = await getPostsByBoard("photo_gallery");
+  const galleryPosts = await getPostsByBoard("photo_gallery");
   return (
     <>
       <SubpageHero title="교육사진 갤러리" breadcrumb={[{ label: "커뮤니티" }, { label: "교육사진 갤러리" }]} />
       <section className="py-16 lg:py-20">
         <div className="container-custom">
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mockGalleryPosts.map((post) => (
+            {galleryPosts.map((post) => (
               <Link
                 key={post.id}
                 href={`/community/photo_gallery/${post.id}`}

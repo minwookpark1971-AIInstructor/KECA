@@ -6,6 +6,7 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { mainNavigation } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
+import { MobileAuthStatus } from "./AuthStatus";
 
 interface MobileNavProps {
   open: boolean;
@@ -89,22 +90,9 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
             ))}
           </nav>
 
-          {/* 로그인/회원가입 */}
+          {/* 로그인/회원가입 또는 사용자 메뉴 */}
           <div className="mt-8 pt-6 border-t border-border space-y-2">
-            <Link
-              href="/login"
-              onClick={onClose}
-              className="block w-full text-center py-2.5 text-sm font-medium text-primary border border-primary rounded-md hover:bg-primary hover:text-white transition-colors"
-            >
-              로그인
-            </Link>
-            <Link
-              href="/register"
-              onClick={onClose}
-              className="block w-full text-center py-2.5 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-dark transition-colors"
-            >
-              회원가입
-            </Link>
+            <MobileAuthStatus onClose={onClose} />
           </div>
         </div>
       </div>

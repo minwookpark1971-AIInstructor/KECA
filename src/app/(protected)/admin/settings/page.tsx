@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Save, Globe, Mail, CreditCard, MessageCircle } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Save, Globe, Mail, CreditCard, MessageCircle, CheckCircle } from "lucide-react";
+import { saveSiteSettings } from "@/lib/supabase/mutations";
 
 export default function AdminSettingsPage() {
   const [annualFee, setAnnualFee] = useState("100000");
@@ -9,12 +10,36 @@ export default function AdminSettingsPage() {
   const [kakaoUrl, setKakaoUrl] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [blogUrl, setBlogUrl] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const handleSave = () => alert("목업: 설정이 저장되었습니다.");
+  const handleSave = () => {
+    startTransition(async () => {
+      try {
+        await saveSiteSettings([
+          { key: "contact_email", value: contactEmail },
+          { key: "annual_fee", value: Number(annualFee) },
+          { key: "kakao_url", value: kakaoUrl },
+          { key: "youtube_url", value: youtubeUrl },
+          { key: "blog_url", value: blogUrl },
+        ]);
+        setMsg({ type: "success", text: "설정이 저장되었습니다." });
+      } catch {
+        setMsg({ type: "error", text: "설정 저장에 실패했습니다." });
+      }
+    });
+  };
 
   return (
     <div>
       <h1 className="text-2xl font-bold text-text mb-6">사이트 설정</h1>
+
+      {msg && (
+        <div className={`mb-4 p-3 rounded-lg text-sm flex items-center gap-2 ${msg.type === "success" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+          {msg.type === "success" && <CheckCircle size={16} />}
+          {msg.text}
+        </div>
+      )}
 
       <div className="space-y-6 max-w-2xl">
         {/* 기본 설정 */}
@@ -65,8 +90,12 @@ export default function AdminSettingsPage() {
           </div>
         </div>
 
-        <button onClick={handleSave} className="flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-light transition-colors">
-          <Save size={16} /> 설정 저장
+        <button
+          onClick={handleSave}
+          disabled={isPending}
+          className="flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-light transition-colors disabled:opacity-50"
+        >
+          <Save size={16} /> {isPending ? "저장 중..." : "설정 저장"}
         </button>
       </div>
     </div>

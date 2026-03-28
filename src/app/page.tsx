@@ -15,6 +15,7 @@ import {
   Star,
   BookOpen,
 } from "lucide-react";
+import { getPostsByBoard, getPrograms, getSchedules } from "@/lib/supabase/queries";
 
 // 카테고리 위젯 데이터
 const categories = [
@@ -36,22 +37,17 @@ const stats = [
   { value: "98%", label: "교육 만족도" },
 ];
 
-// 목업 공지사항
-const notices = [
-  { title: "2026년 제1기 AI교육전문가 자격과정 모집", date: "2026.03.25" },
-  { title: "KECA 연간 교육일정 안내", date: "2026.03.20" },
-  { title: "제3회 교육컨설팅 세미나 개최 안내", date: "2026.03.15" },
-  { title: "신규 회원 가입 혜택 안내", date: "2026.03.10" },
-];
+export default async function HomePage() {
+  const [notices, reviews, featuredPrograms, schedules] = await Promise.all([
+    getPostsByBoard("notice", 4),
+    getPostsByBoard("review", 3),
+    getPrograms({ featured: true, limit: 3 }),
+    getSchedules(),
+  ]);
 
-// 목업 교육후기
-const reviews = [
-  { title: "AI 교육 덕분에 업무 효율이 크게 올랐습니다", author: "김○○", program: "AI·에듀테크 교육" },
-  { title: "체계적인 커리큘럼이 인상적이었습니다", author: "이○○", program: "교육컨설팅" },
-  { title: "강사님의 실무 경험이 많은 도움이 되었습니다", author: "박○○", program: "리더십·조직교육" },
-];
-
-export default function HomePage() {
+  const upcomingSchedules = schedules
+    .filter((s) => new Date(s.start_date) >= new Date())
+    .slice(0, 3);
   return (
     <>
       {/* ===== 히어로 섹션 ===== */}
@@ -161,48 +157,36 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* 목업 카드 3개 */}
-            {[
-              {
-                title: "생성형 AI 활용 교육",
-                category: "AI·에듀테크",
-                target: "기업 임직원",
-                duration: "4시간",
-              },
-              {
-                title: "교육리더십 워크숍",
-                category: "리더십·조직교육",
-                target: "교육기관 관리자",
-                duration: "8시간(1일)",
-              },
-              {
-                title: "AI 기반 진로진단 프로그램",
-                category: "진로·진학 컨설팅",
-                target: "중·고등학생",
-                duration: "2시간",
-              },
-            ].map((program) => (
+            {featuredPrograms.length > 0 ? featuredPrograms.map((program) => (
               <Link
-                key={program.title}
-                href="/programs"
+                key={program.id}
+                href={`/programs/${program.slug}`}
                 className="group rounded-xl border border-border-light overflow-hidden card-hover"
               >
                 <div className="aspect-[16/10] bg-gradient-to-br from-primary/5 to-primary-light/10 flex items-center justify-center">
-                  <BookOpen size={48} className="text-primary/20" />
+                  {program.thumbnail_url ? (
+                    <img src={program.thumbnail_url} alt={program.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <BookOpen size={48} className="text-primary/20" />
+                  )}
                 </div>
                 <div className="p-5">
-                  <span className="inline-block px-2 py-0.5 text-xs font-medium text-primary bg-primary/5 rounded mb-2">
-                    {program.category}
-                  </span>
+                  {program.category && (
+                    <span className="inline-block px-2 py-0.5 text-xs font-medium text-primary bg-primary/5 rounded mb-2">
+                      {program.category.name}
+                    </span>
+                  )}
                   <h3 className="text-base font-semibold text-text group-hover:text-primary transition-colors">
                     {program.title}
                   </h3>
                   <p className="mt-2 text-xs text-text-sub">
-                    {program.target} · {program.duration}
+                    {program.target_audience || ""}{program.target_audience && program.duration ? " · " : ""}{program.duration || ""}
                   </p>
                 </div>
               </Link>
-            ))}
+            )) : (
+              <p className="col-span-3 text-center text-sm text-text-muted py-8">등록된 추천 프로그램이 없습니다.</p>
+            )}
           </div>
         </div>
       </section>
@@ -223,12 +207,14 @@ export default function HomePage() {
                 </Link>
               </div>
               <ul className="space-y-3">
-                {notices.map((n, i) => (
-                  <li key={i} className="flex items-center justify-between text-sm">
+                {notices.length > 0 ? notices.map((n) => (
+                  <li key={n.id} className="flex items-center justify-between text-sm">
                     <span className="text-text truncate mr-4">{n.title}</span>
-                    <span className="text-text-muted text-xs shrink-0">{n.date}</span>
+                    <span className="text-text-muted text-xs shrink-0">{n.created_at?.slice(0, 10)}</span>
                   </li>
-                ))}
+                )) : (
+                  <li className="text-sm text-text-muted">등록된 공지사항이 없습니다.</li>
+                )}
               </ul>
             </div>
 
@@ -269,14 +255,16 @@ export default function HomePage() {
                 </Link>
               </div>
               <ul className="space-y-3">
-                {reviews.map((r, i) => (
-                  <li key={i} className="text-sm">
+                {reviews.length > 0 ? reviews.map((r) => (
+                  <li key={r.id} className="text-sm">
                     <p className="text-text truncate">{r.title}</p>
                     <p className="text-xs text-text-muted mt-0.5">
-                      {r.author} · {r.program}
+                      {r.created_at?.slice(0, 10)}
                     </p>
                   </li>
-                ))}
+                )) : (
+                  <li className="text-sm text-text-muted">등록된 후기가 없습니다.</li>
+                )}
               </ul>
             </div>
 
@@ -292,33 +280,25 @@ export default function HomePage() {
                 </Link>
               </div>
               <ul className="space-y-3">
-                <li className="flex items-start gap-3 text-sm">
-                  <span className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-primary/5 text-primary text-xs font-bold shrink-0">
-                    4/5
-                  </span>
-                  <div>
-                    <p className="font-medium text-text">AI교육전문가 1급 과정</p>
-                    <p className="text-xs text-text-muted">서울 · 09:00~18:00</p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3 text-sm">
-                  <span className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-primary/5 text-primary text-xs font-bold shrink-0">
-                    4/12
-                  </span>
-                  <div>
-                    <p className="font-medium text-text">교육컨설팅 기초 세미나</p>
-                    <p className="text-xs text-text-muted">온라인 · 14:00~17:00</p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3 text-sm">
-                  <span className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-primary/5 text-primary text-xs font-bold shrink-0">
-                    4/20
-                  </span>
-                  <div>
-                    <p className="font-medium text-text">리더십 워크숍</p>
-                    <p className="text-xs text-text-muted">서울 · 09:00~13:00</p>
-                  </div>
-                </li>
+                {upcomingSchedules.length > 0 ? upcomingSchedules.map((s) => {
+                  const d = new Date(s.start_date);
+                  return (
+                    <li key={s.id} className="flex items-start gap-3 text-sm">
+                      <span className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-primary/5 text-primary text-xs font-bold shrink-0">
+                        {d.getMonth() + 1}/{d.getDate()}
+                      </span>
+                      <div>
+                        <p className="font-medium text-text">{s.title}</p>
+                        <p className="text-xs text-text-muted">
+                          {s.is_online ? "온라인" : s.location || ""}
+                          {s.start_time ? ` · ${s.start_time}~${s.end_time || ""}` : ""}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                }) : (
+                  <li className="text-sm text-text-muted">예정된 일정이 없습니다.</li>
+                )}
               </ul>
             </div>
           </div>

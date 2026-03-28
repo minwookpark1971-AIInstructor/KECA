@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Metadata } from "next";
 import { SubpageHero } from "@/components/layout/SubpageHero";
 import { getCurrentUser } from "@/lib/supabase/queries";
-import { roleLabels, roleBadgeColors } from "@/lib/mock-auth";
+import { roleLabels, roleBadgeColors } from "@/lib/utils";
 import { User, CreditCard, Edit, ChevronRight, Shield, Calendar } from "lucide-react";
 
 export const metadata: Metadata = { title: "마이페이지" };
