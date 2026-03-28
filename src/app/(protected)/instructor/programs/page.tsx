@@ -1,14 +1,16 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Metadata } from "next";
 import { SubpageHero } from "@/components/layout/SubpageHero";
-import { mockPrograms, getCategoryById } from "@/lib/mock-data";
+import { getCurrentUser, getInstructorPrograms } from "@/lib/supabase/queries";
 import { BookOpen, Clock, Users, ChevronRight } from "lucide-react";
 
 export const metadata: Metadata = { title: "배정된 교육프로그램" };
 
-export default function InstructorProgramsPage() {
-  // 목업: 발행된 프로그램 중 일부를 배정된 것으로 표시
-  const assignedPrograms = mockPrograms.filter((p) => p.status === "published").slice(0, 4);
+export default async function InstructorProgramsPage() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const assignedPrograms = await getInstructorPrograms(user.id);
 
   return (
     <>
@@ -21,7 +23,7 @@ export default function InstructorProgramsPage() {
           {assignedPrograms.length > 0 ? (
             <div className="space-y-4">
               {assignedPrograms.map((program) => {
-                const category = getCategoryById(program.category_id || "");
+                const category = (program as unknown as Record<string, unknown>).categories as { name: string } | null;
                 return (
                   <Link
                     key={program.id}

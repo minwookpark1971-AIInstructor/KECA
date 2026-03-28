@@ -1,16 +1,16 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Metadata } from "next";
 import { SubpageHero } from "@/components/layout/SubpageHero";
-import { mockUsers } from "@/lib/mock-auth";
-import { mockPrograms } from "@/lib/mock-data";
+import { getCurrentUser, getInstructorPrograms } from "@/lib/supabase/queries";
 import { User, BookOpen, Edit, Eye, EyeOff, ChevronRight } from "lucide-react";
 
 export const metadata: Metadata = { title: "강사 대시보드" };
 
-export default function InstructorDashboardPage() {
-  // 목업: 강사 사용자
-  const instructor = mockUsers.find((u) => u.role === "instructor")!;
-  const assignedPrograms = mockPrograms.filter((p) => p.status === "published").slice(0, 3);
+export default async function InstructorDashboardPage() {
+  const instructor = await getCurrentUser();
+  if (!instructor) redirect("/login");
+  const assignedPrograms = await getInstructorPrograms(instructor.id);
 
   return (
     <>

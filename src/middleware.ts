@@ -45,6 +45,32 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // 관리자 경로: role 확인
+  if (pathname.startsWith("/admin")) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.role !== "admin") {
+      return NextResponse.redirect(new URL("/mypage", request.url));
+    }
+  }
+
+  // 강사 경로: role 확인
+  if (pathname.startsWith("/instructor")) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.role !== "instructor" && profile?.role !== "admin") {
+      return NextResponse.redirect(new URL("/mypage", request.url));
+    }
+  }
+
   return response;
 }
 

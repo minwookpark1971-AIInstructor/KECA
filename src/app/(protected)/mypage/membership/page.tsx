@@ -1,14 +1,16 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Metadata } from "next";
 import { SubpageHero } from "@/components/layout/SubpageHero";
-import { getMockCurrentUser, getMockPayments } from "@/lib/mock-auth";
+import { getCurrentUser, getPaymentsByUser } from "@/lib/supabase/queries";
 import { CreditCard, CheckCircle, AlertCircle, Receipt, ArrowRight } from "lucide-react";
 
 export const metadata: Metadata = { title: "협회비 납부" };
 
-export default function MembershipPage() {
-  const user = getMockCurrentUser();
-  const payments = getMockPayments(user.id);
+export default async function MembershipPage() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const payments = await getPaymentsByUser(user.id);
   const isPaid = user.role === "member" || user.role === "instructor" || user.role === "admin";
   const isExpiringSoon = user.membership_expires_at
     ? new Date(user.membership_expires_at) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)

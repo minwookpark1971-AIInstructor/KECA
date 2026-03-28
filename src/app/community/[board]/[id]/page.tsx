@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { SubpageHero } from "@/components/layout/SubpageHero";
-import { getPostById } from "@/lib/mock-community";
+import { getPostById } from "@/lib/supabase/queries";
 import { ArrowLeft, Eye, Calendar } from "lucide-react";
 
 const boardNames: Record<string, string> = {
@@ -14,7 +14,7 @@ const boardNames: Record<string, string> = {
 
 export default async function PostDetailPage({ params }: { params: Promise<{ board: string; id: string }> }) {
   const { board, id } = await params;
-  const post = getPostById(id);
+  const post = await getPostById(id);
   if (!post) notFound();
 
   const boardLabel = boardNames[board] || board;

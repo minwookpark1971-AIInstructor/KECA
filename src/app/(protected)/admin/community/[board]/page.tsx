@@ -1,7 +1,4 @@
-"use client";
-
-import { use } from "react";
-import { getPostsByBoard } from "@/lib/mock-community";
+import { getPostsByBoard } from "@/lib/supabase/queries";
 import { Plus, Edit2, Trash2, Eye, Pin } from "lucide-react";
 
 const boardNames: Record<string, string> = {
@@ -12,10 +9,10 @@ const boardNames: Record<string, string> = {
   resource: "자료실",
 };
 
-export default function AdminCommunityBoardPage({ params }: { params: Promise<{ board: string }> }) {
-  const { board } = use(params);
+export default async function AdminCommunityBoardPage({ params }: { params: Promise<{ board: string }> }) {
+  const { board } = await params;
   const boardLabel = boardNames[board] || board;
-  const posts = getPostsByBoard(board);
+  const posts = await getPostsByBoard(board);
 
   return (
     <div>

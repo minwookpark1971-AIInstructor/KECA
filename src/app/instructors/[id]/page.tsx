@@ -1,13 +1,15 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { SubpageHero } from "@/components/layout/SubpageHero";
-import { mockInstructors } from "@/lib/mock-data";
+import { getInstructorById, getInstructorPrograms } from "@/lib/supabase/queries";
 import { BookOpen } from "lucide-react";
 
 export default async function InstructorDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const instructor = mockInstructors.find((i) => i.id === id);
+  const instructor = await getInstructorById(id);
   if (!instructor) notFound();
+
+  const instructorPrograms = await getInstructorPrograms(instructor.id);
 
   return (
     <>
@@ -70,18 +72,25 @@ export default async function InstructorDetailPage({ params }: { params: Promise
           )}
 
           {/* 담당 교육프로그램 */}
-          <div>
-            <h3 className="text-lg font-bold text-text mb-3">담당 교육프로그램</h3>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <Link href="/programs/gen-ai-training" className="flex items-center gap-3 p-4 bg-surface rounded-xl hover:bg-surface-dark transition-colors">
-                <BookOpen size={20} className="text-primary shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-text">생성형 AI 활용 교육</p>
-                  <p className="text-xs text-text-muted">AI·에듀테크</p>
-                </div>
-              </Link>
+          {instructorPrograms.length > 0 && (
+            <div>
+              <h3 className="text-lg font-bold text-text mb-3">담당 교육프로그램</h3>
+              <div className="grid sm:grid-cols-2 gap-4">
+                {instructorPrograms.map((prog) => {
+                  const cat = (prog as unknown as Record<string, unknown>).categories as { name: string } | null;
+                  return (
+                    <Link key={prog.id} href={`/programs/${prog.slug}`} className="flex items-center gap-3 p-4 bg-surface rounded-xl hover:bg-surface-dark transition-colors">
+                      <BookOpen size={20} className="text-primary shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-text">{prog.title}</p>
+                        {cat && <p className="text-xs text-text-muted">{cat.name}</p>}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </section>
     </>

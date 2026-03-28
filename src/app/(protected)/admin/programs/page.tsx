@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { mockPrograms, getCategoryById } from "@/lib/mock-data";
+import { getPrograms, getCategories } from "@/lib/supabase/queries";
 import { Plus, Edit2, Eye, BookOpen } from "lucide-react";
 
-export default function AdminProgramsPage() {
+export default async function AdminProgramsPage() {
+  const [programs, categories] = await Promise.all([getPrograms(), getCategories()]);
+  const getCategoryById = (id: string) => categories.find((c) => c.id === id);
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -28,7 +30,7 @@ export default function AdminProgramsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light">
-              {mockPrograms.map((prog) => {
+              {programs.map((prog) => {
                 const cat = getCategoryById(prog.category_id || "");
                 return (
                   <tr key={prog.id} className="hover:bg-surface/50">

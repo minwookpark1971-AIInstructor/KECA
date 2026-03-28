@@ -1,10 +1,9 @@
-"use client";
-
-import { mockUsers, roleBadgeColors } from "@/lib/mock-auth";
+import { getMembersForAdmin } from "@/lib/supabase/queries";
 import { User, Eye, EyeOff, Tag } from "lucide-react";
 
-export default function AdminInstructorsPage() {
-  const instructors = mockUsers.filter((u) => u.role === "instructor");
+export default async function AdminInstructorsPage() {
+  const members = await getMembersForAdmin();
+  const instructors = members.filter((u) => u.role === "instructor");
 
   return (
     <div>

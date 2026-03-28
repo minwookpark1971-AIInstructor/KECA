@@ -1,8 +1,9 @@
-import { mockPayments, mockUsers } from "@/lib/mock-auth";
+import { getPayments } from "@/lib/supabase/queries";
 import { CreditCard, Receipt } from "lucide-react";
 
-export default function AdminPaymentsPage() {
-  const totalAmount = mockPayments.filter((p) => p.status === "completed").reduce((sum, p) => sum + p.amount, 0);
+export default async function AdminPaymentsPage() {
+  const payments = await getPayments();
+  const totalAmount = payments.filter((p) => p.status === "completed").reduce((sum, p) => sum + p.amount, 0);
 
   return (
     <div>
@@ -12,11 +13,11 @@ export default function AdminPaymentsPage() {
       <div className="grid sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-white border border-border-light rounded-xl p-5 text-center">
           <p className="text-xs text-text-muted">총 결제 건수</p>
-          <p className="text-2xl font-bold text-text mt-1">{mockPayments.length}</p>
+          <p className="text-2xl font-bold text-text mt-1">{payments.length}</p>
         </div>
         <div className="bg-white border border-border-light rounded-xl p-5 text-center">
           <p className="text-xs text-text-muted">완료 건수</p>
-          <p className="text-2xl font-bold text-success mt-1">{mockPayments.filter((p) => p.status === "completed").length}</p>
+          <p className="text-2xl font-bold text-success mt-1">{payments.filter((p) => p.status === "completed").length}</p>
         </div>
         <div className="bg-white border border-border-light rounded-xl p-5 text-center">
           <p className="text-xs text-text-muted">총 결제 금액</p>
@@ -39,11 +40,11 @@ export default function AdminPaymentsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light">
-              {mockPayments.map((p) => {
-                const user = mockUsers.find((u) => u.id === p.user_id);
+              {payments.map((p) => {
+                const profile = (p as unknown as Record<string, unknown>).profiles as { name?: string; email?: string } | null;
                 return (
                   <tr key={p.id} className="hover:bg-surface/50">
-                    <td className="px-4 py-3 font-medium text-text">{user?.name || "-"}</td>
+                    <td className="px-4 py-3 font-medium text-text">{profile?.name || "-"}</td>
                     <td className="px-4 py-3 text-text-sub">{p.payment_type === "annual_membership" ? "연간 협회비" : "자격증 수수료"}</td>
                     <td className="px-4 py-3 text-right font-medium text-text">{p.amount.toLocaleString()}원</td>
                     <td className="px-4 py-3 text-center">

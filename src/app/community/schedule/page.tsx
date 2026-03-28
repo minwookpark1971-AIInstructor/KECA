@@ -1,11 +1,12 @@
 import { Metadata } from "next";
 import { SubpageHero } from "@/components/layout/SubpageHero";
-import { mockSchedules } from "@/lib/mock-community";
+import { getSchedules } from "@/lib/supabase/queries";
 import { Calendar, MapPin, Monitor, Clock } from "lucide-react";
 
 export const metadata: Metadata = { title: "교육일정" };
 
-export default function SchedulePage() {
+export default async function SchedulePage() {
+  const mockSchedules = await getSchedules();
   return (
     <>
       <SubpageHero title="교육일정" breadcrumb={[{ label: "커뮤니티" }, { label: "교육일정" }]} />

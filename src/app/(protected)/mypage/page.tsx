@@ -1,13 +1,16 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Metadata } from "next";
 import { SubpageHero } from "@/components/layout/SubpageHero";
-import { getMockCurrentUser, roleLabels, roleBadgeColors } from "@/lib/mock-auth";
+import { getCurrentUser } from "@/lib/supabase/queries";
+import { roleLabels, roleBadgeColors } from "@/lib/mock-auth";
 import { User, CreditCard, Edit, ChevronRight, Shield, Calendar } from "lucide-react";
 
 export const metadata: Metadata = { title: "마이페이지" };
 
-export default function MyPage() {
-  const user = getMockCurrentUser();
+export default async function MyPage() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
   const roleLabel = roleLabels[user.role] || user.role;
   const badgeColor = roleBadgeColors[user.role] || "bg-gray-100 text-gray-800";
 

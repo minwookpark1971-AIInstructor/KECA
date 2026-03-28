@@ -1,12 +1,13 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { SubpageHero } from "@/components/layout/SubpageHero";
-import { mockNotices } from "@/lib/mock-community";
+import { getPostsByBoard } from "@/lib/supabase/queries";
 import { Pin, Eye } from "lucide-react";
 
 export const metadata: Metadata = { title: "공지사항" };
 
-export default function NoticePage() {
+export default async function NoticePage() {
+  const mockNotices = await getPostsByBoard("notice");
   return (
     <>
       <SubpageHero title="공지사항" breadcrumb={[{ label: "커뮤니티" }, { label: "공지사항" }]} />

@@ -1,8 +1,10 @@
-import { mockPrograms, getCategoryById } from "@/lib/mock-data";
+import { getPrograms, getCategories } from "@/lib/supabase/queries";
 import { Plus, BookOpen } from "lucide-react";
 
-export default function AdminExpertPage() {
-  const expertPrograms = mockPrograms.filter((p) => p.program_type === "expert" || p.program_type === "certification");
+export default async function AdminExpertPage() {
+  const [allPrograms, categories] = await Promise.all([getPrograms(), getCategories()]);
+  const expertPrograms = allPrograms.filter((p) => p.program_type === "expert" || p.program_type === "certification");
+  const getCategoryById = (id: string) => categories.find((c) => c.id === id);
 
   return (
     <div>

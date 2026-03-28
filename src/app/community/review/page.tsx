@@ -1,12 +1,13 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { SubpageHero } from "@/components/layout/SubpageHero";
-import { mockReviews } from "@/lib/mock-community";
+import { getPostsByBoard } from "@/lib/supabase/queries";
 import { Star, Eye } from "lucide-react";
 
 export const metadata: Metadata = { title: "교육후기" };
 
-export default function ReviewPage() {
+export default async function ReviewPage() {
+  const mockReviews = await getPostsByBoard("review");
   return (
     <>
       <SubpageHero title="교육후기" breadcrumb={[{ label: "커뮤니티" }, { label: "교육후기" }]} />

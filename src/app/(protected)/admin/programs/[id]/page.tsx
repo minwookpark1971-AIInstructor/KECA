@@ -1,14 +1,15 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { mockPrograms, getCategoryById } from "@/lib/mock-data";
+import { getPrograms, getCategories } from "@/lib/supabase/queries";
 import { ArrowLeft, Edit2 } from "lucide-react";
 
 export default async function AdminProgramEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const program = mockPrograms.find((p) => p.id === id);
+  const [programs, categories] = await Promise.all([getPrograms(), getCategories()]);
+  const program = programs.find((p) => p.id === id);
   if (!program) notFound();
 
-  const category = getCategoryById(program.category_id || "");
+  const category = categories.find((c) => c.id === (program.category_id || ""));
 
   return (
     <div>

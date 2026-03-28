@@ -1,11 +1,12 @@
 import { Metadata } from "next";
 import { SubpageHero } from "@/components/layout/SubpageHero";
-import { mockVideoPosts } from "@/lib/mock-community";
+import { getPostsByBoard } from "@/lib/supabase/queries";
 import { Play, Eye } from "lucide-react";
 
 export const metadata: Metadata = { title: "영상갤러리" };
 
-export default function VideosPage() {
+export default async function VideosPage() {
+  const mockVideoPosts = await getPostsByBoard("video_gallery");
   return (
     <>
       <SubpageHero title="영상갤러리" breadcrumb={[{ label: "커뮤니티" }, { label: "영상갤러리" }]} />

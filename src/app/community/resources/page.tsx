@@ -1,11 +1,12 @@
 import { Metadata } from "next";
 import { SubpageHero } from "@/components/layout/SubpageHero";
-import { mockResources } from "@/lib/mock-community";
+import { getPostsByBoard } from "@/lib/supabase/queries";
 import { FileText, Download, Eye, Lock } from "lucide-react";
 
 export const metadata: Metadata = { title: "자료실" };
 
-export default function ResourcesPage() {
+export default async function ResourcesPage() {
+  const mockResources = await getPostsByBoard("resource");
   return (
     <>
       <SubpageHero title="자료실" subtitle="정회원 전용 교육 자료를 다운로드하실 수 있습니다" breadcrumb={[{ label: "커뮤니티" }, { label: "자료실" }]} />

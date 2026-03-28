@@ -1,15 +1,16 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { SubpageHero } from "@/components/layout/SubpageHero";
-import { getProgramBySlug, getCategoryById, mockInstructors } from "@/lib/mock-data";
+import { getProgramBySlug, getProgramInstructors } from "@/lib/supabase/queries";
 import { Clock, Users, BookOpen, ArrowRight, CheckCircle, ChevronDown } from "lucide-react";
 
 export default async function ProgramDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const program = getProgramBySlug(slug);
+  const program = await getProgramBySlug(slug);
   if (!program) notFound();
 
-  const category = getCategoryById(program.category_id || "");
+  const category = (program as unknown as Record<string, unknown>).categories as { id: string; name: string; slug: string } | null;
+  const instructors = await getProgramInstructors(program.id);
 
   return (
     <>
@@ -125,7 +126,7 @@ export default async function ProgramDetailPage({ params }: { params: Promise<{ 
             <div className="mb-10">
               <h2 className="text-xl font-bold text-text mb-4">담당 강사진</h2>
               <div className="grid sm:grid-cols-3 gap-4">
-                {mockInstructors.slice(0, 2).map((inst) => (
+                {instructors.slice(0, 2).map((inst) => (
                   <Link key={inst.id} href={`/instructors/${inst.id}`} className="flex items-center gap-3 p-4 bg-surface rounded-xl hover:bg-surface-dark transition-colors">
                     <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
                       {inst.name[0]}

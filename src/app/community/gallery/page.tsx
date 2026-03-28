@@ -1,12 +1,13 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { SubpageHero } from "@/components/layout/SubpageHero";
-import { mockGalleryPosts } from "@/lib/mock-community";
+import { getPostsByBoard } from "@/lib/supabase/queries";
 import { Image as ImageIcon, Eye } from "lucide-react";
 
 export const metadata: Metadata = { title: "교육사진 갤러리" };
 
-export default function GalleryPage() {
+export default async function GalleryPage() {
+  const mockGalleryPosts = await getPostsByBoard("photo_gallery");
   return (
     <>
       <SubpageHero title="교육사진 갤러리" breadcrumb={[{ label: "커뮤니티" }, { label: "교육사진 갤러리" }]} />

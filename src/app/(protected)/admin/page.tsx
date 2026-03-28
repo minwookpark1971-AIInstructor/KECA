@@ -1,8 +1,6 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { mockUsers, roleLabels } from "@/lib/mock-auth";
-import { mockPrograms } from "@/lib/mock-data";
-import { mockSchedules, mockNotices } from "@/lib/mock-community";
+import { getMembersForAdmin, getPrograms, getSchedules, getPostsByBoard, getPayments } from "@/lib/supabase/queries";
 import {
   Users, UserCheck, UserX, GraduationCap, BookOpen,
   CreditCard, CalendarDays, Bell, ArrowRight,
@@ -10,11 +8,19 @@ import {
 
 export const metadata: Metadata = { title: "관리자 대시보드" };
 
-export default function AdminDashboardPage() {
-  const totalMembers = mockUsers.length;
-  const pendingMembers = mockUsers.filter((u) => u.role === "pending").length;
-  const instructors = mockUsers.filter((u) => u.role === "instructor").length;
-  const publishedPrograms = mockPrograms.filter((p) => p.status === "published").length;
+export default async function AdminDashboardPage() {
+  const [members, programs, schedules, notices, payments] = await Promise.all([
+    getMembersForAdmin(),
+    getPrograms(),
+    getSchedules(),
+    getPostsByBoard("notice", 5),
+    getPayments(),
+  ]);
+
+  const totalMembers = members.length;
+  const pendingMembers = members.filter((u) => u.role === "pending").length;
+  const instructors = members.filter((u) => u.role === "instructor").length;
+  const publishedPrograms = programs.length;
 
   const statCards = [
     { label: "전체 회원", value: totalMembers, icon: Users, color: "bg-blue-50 text-blue-600", href: "/admin/members" },
@@ -61,7 +67,7 @@ export default function AdminDashboardPage() {
           </div>
           {pendingMembers > 0 ? (
             <div className="space-y-2">
-              {mockUsers.filter((u) => u.role === "pending").map((user) => (
+              {members.filter((u) => u.role === "pending").map((user) => (
                 <div key={user.id} className="flex items-center justify-between py-2 border-b border-border-light last:border-0">
                   <div>
                     <p className="text-sm font-medium text-text">{user.name}</p>
@@ -87,7 +93,7 @@ export default function AdminDashboardPage() {
             </Link>
           </div>
           <div className="space-y-2">
-            {mockNotices.slice(0, 4).map((notice) => (
+            {notices.slice(0, 4).map((notice) => (
               <div key={notice.id} className="flex items-center justify-between py-2 border-b border-border-light last:border-0">
                 <p className="text-sm text-text truncate flex-1 mr-4">{notice.title}</p>
                 <span className="text-xs text-text-muted shrink-0">{notice.created_at}</span>
@@ -107,7 +113,7 @@ export default function AdminDashboardPage() {
             </Link>
           </div>
           <div className="space-y-2">
-            {mockSchedules.slice(0, 4).map((s) => (
+            {schedules.slice(0, 4).map((s) => (
               <div key={s.id} className="flex items-center justify-between py-2 border-b border-border-light last:border-0">
                 <p className="text-sm text-text truncate flex-1 mr-4">{s.title}</p>
                 <span className="text-xs text-text-muted shrink-0">{s.start_date}</span>
@@ -128,11 +134,11 @@ export default function AdminDashboardPage() {
           </div>
           <div className="grid grid-cols-2 gap-4 text-center py-4">
             <div>
-              <p className="text-2xl font-bold text-text">2</p>
+              <p className="text-2xl font-bold text-text">{payments.length}</p>
               <p className="text-xs text-text-muted mt-1">총 결제 건수</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-accent">200,000원</p>
+              <p className="text-2xl font-bold text-accent">{payments.filter((p) => p.status === "completed").reduce((sum, p) => sum + p.amount, 0).toLocaleString()}원</p>
               <p className="text-xs text-text-muted mt-1">총 결제 금액</p>
             </div>
           </div>

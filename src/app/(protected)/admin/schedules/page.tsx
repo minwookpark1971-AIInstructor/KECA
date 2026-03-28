@@ -1,7 +1,8 @@
-import { mockSchedules } from "@/lib/mock-community";
+import { getSchedules } from "@/lib/supabase/queries";
 import { Plus, Edit2, Trash2, Calendar, MapPin, Monitor, Clock } from "lucide-react";
 
-export default function AdminSchedulesPage() {
+export default async function AdminSchedulesPage() {
+  const schedules = await getSchedules();
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -12,7 +13,7 @@ export default function AdminSchedulesPage() {
       </div>
 
       <div className="space-y-3">
-        {mockSchedules.map((s) => (
+        {schedules.map((s) => (
           <div key={s.id} className="bg-white border border-border-light rounded-xl p-5 flex items-center gap-4">
             <div className="w-12 h-12 rounded-lg bg-primary/5 flex flex-col items-center justify-center shrink-0">
               <span className="text-[10px] text-primary">{new Date(s.start_date).toLocaleDateString("ko", { month: "short" })}</span>

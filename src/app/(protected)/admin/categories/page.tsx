@@ -1,7 +1,8 @@
-import { mockCategories } from "@/lib/mock-data";
+import { getCategories } from "@/lib/supabase/queries";
 import { FolderOpen, Plus, Edit2, Trash2 } from "lucide-react";
 
-export default function AdminCategoriesPage() {
+export default async function AdminCategoriesPage() {
+  const categories = await getCategories();
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -12,7 +13,7 @@ export default function AdminCategoriesPage() {
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {mockCategories.map((cat, i) => (
+        {categories.map((cat, i) => (
           <div key={cat.id} className="bg-white border border-border-light rounded-xl p-5">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
