@@ -3,9 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, Upload, User, Mail, Phone, FileText, Briefcase, Tag, Video, Eye } from "lucide-react";
+import { ArrowLeft, Save, Upload, User, Mail, FileText, Briefcase, Tag, Video, Eye } from "lucide-react";
 import { createInstructor } from "@/lib/supabase/mutations";
-import { createClient } from "@/lib/supabase/client";
 
 export default function NewInstructorPage() {
   const router = useRouter();
@@ -33,22 +32,22 @@ export default function NewInstructorPage() {
 
     setImageUploading(true);
     setError(null);
-    const supabase = createClient();
-    const ext = file.name.split(".").pop();
-    const filePath = `instructors/${Date.now()}/profile.${ext}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from("images")
-      .upload(filePath, file, { upsert: true });
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", "instructors");
 
-    if (uploadError) {
-      setError("이미지 업로드에 실패했습니다: " + uploadError.message);
-      setImageUploading(false);
-      return;
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        setError("이미지 업로드 실패: " + data.error);
+      } else {
+        setProfileImageUrl(data.url);
+      }
+    } catch {
+      setError("이미지 업로드에 실패했습니다.");
     }
-
-    const { data: urlData } = supabase.storage.from("images").getPublicUrl(filePath);
-    setProfileImageUrl(urlData.publicUrl);
     setImageUploading(false);
   };
 

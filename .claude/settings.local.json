@@ -19,7 +19,8 @@
       "Bash(printf 'https://keca.vercel.app')",
       "Bash(npx tsc:*)",
       "Bash(npx vercel:*)",
-      "Bash(ls \"C:\\\\Users\\\\minwo\\\\Documents\\\\GitHub\\\\KECA\\\\src\\\\app\\\\\\(protected\\)\\\\admin\\\\instructors\")"
+      "Bash(ls \"C:\\\\Users\\\\minwo\\\\Documents\\\\GitHub\\\\KECA\\\\src\\\\app\\\\\\(protected\\)\\\\admin\\\\instructors\")",
+      "Bash(node -e \":*)"
     ]
   }
 }

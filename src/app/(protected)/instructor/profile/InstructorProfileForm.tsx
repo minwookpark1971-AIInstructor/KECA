@@ -28,22 +28,22 @@ export default function InstructorProfileForm({ instructor }: { instructor: Prof
     }
 
     setImageUploading(true);
-    const supabase = createClient();
-    const ext = file.name.split(".").pop();
-    const filePath = `instructors/${instructor.id}/profile.${ext}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from("images")
-      .upload(filePath, file, { upsert: true });
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", `instructors/${instructor.id}`);
 
-    if (uploadError) {
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        setMsg({ type: "error", text: "이미지 업로드 실패: " + data.error });
+      } else {
+        setProfileImageUrl(data.url);
+      }
+    } catch {
       setMsg({ type: "error", text: "이미지 업로드에 실패했습니다." });
-      setImageUploading(false);
-      return;
     }
-
-    const { data: urlData } = supabase.storage.from("images").getPublicUrl(filePath);
-    setProfileImageUrl(urlData.publicUrl);
     setImageUploading(false);
   };
 
