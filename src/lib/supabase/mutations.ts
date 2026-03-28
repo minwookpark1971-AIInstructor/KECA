@@ -349,6 +349,40 @@ export async function deleteInstructor(userId: string) {
   revalidatePath("/instructors");
 }
 
+// ─── 카테고리 ───
+
+export async function createCategory(formData: {
+  name: string;
+  slug: string;
+  description?: string;
+  icon_name?: string;
+  sort_order?: number;
+}) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("categories")
+    .insert({ ...formData, is_active: true, sort_order: formData.sort_order ?? 99 });
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/categories");
+  revalidatePath("/programs");
+}
+
+export async function updateCategory(id: string, fields: Record<string, unknown>) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("categories").update(fields).eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/categories");
+  revalidatePath("/programs");
+}
+
+export async function deleteCategory(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("categories").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/categories");
+  revalidatePath("/programs");
+}
+
 // ─── 사이트 설정 ───
 
 export async function saveSiteSettings(
