@@ -1,6 +1,13 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend() {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) {
+    console.warn("RESEND_API_KEY is not set. Emails will not be sent.");
+    return null;
+  }
+  return new Resend(key);
+}
 
 const FROM_EMAIL = "KECA <noreply@keca.or.kr>";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "info@keca.or.kr";
@@ -14,6 +21,8 @@ export async function sendInquiryNotification(inquiry: {
   message: string;
 }) {
   try {
+    const resend = getResend();
+    if (!resend) return;
     await resend.emails.send({
       from: FROM_EMAIL,
       to: ADMIN_EMAIL,
@@ -39,6 +48,8 @@ export async function sendInquiryNotification(inquiry: {
 // 문의 접수 확인 (문의자에게)
 export async function sendInquiryConfirmation(to: string, companyName: string) {
   try {
+    const resend = getResend();
+    if (!resend) return;
     await resend.emails.send({
       from: FROM_EMAIL,
       to,
@@ -59,6 +70,8 @@ export async function sendInquiryConfirmation(to: string, companyName: string) {
 // 회원 승인 알림
 export async function sendApprovalNotification(to: string, name: string) {
   try {
+    const resend = getResend();
+    if (!resend) return;
     await resend.emails.send({
       from: FROM_EMAIL,
       to,
@@ -86,6 +99,8 @@ export async function sendPaymentConfirmation(
   expiresAt: string
 ) {
   try {
+    const resend = getResend();
+    if (!resend) return;
     await resend.emails.send({
       from: FROM_EMAIL,
       to,
