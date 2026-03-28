@@ -90,6 +90,16 @@ export default async function InstructorDetailPage({ params }: { params: Promise
             );
           })()}
 
+          {/* 프로필 카드 이미지 */}
+          {instructor.profile_card_url && (
+            <div className="mb-10">
+              <h3 className="text-lg font-bold text-text mb-3">프로필</h3>
+              <div className="rounded-xl overflow-hidden border border-border-light">
+                <img src={instructor.profile_card_url} alt={`${instructor.name} 프로필`} className="w-full object-contain" />
+              </div>
+            </div>
+          )}
+
           {/* 담당 교육프로그램 */}
           {instructorPrograms.length > 0 && (
             <div>

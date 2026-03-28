@@ -271,6 +271,7 @@ export async function createInstructor(formData: {
   specialties?: string[];
   video_url?: string;
   profile_image_url?: string;
+  profile_card_url?: string;
   is_profile_public?: boolean;
 }) {
   const { createAdminClient } = await import("./admin");
@@ -302,6 +303,7 @@ export async function createInstructor(formData: {
       specialties: formData.specialties || [],
       video_url: formData.video_url || null,
       profile_image_url: formData.profile_image_url || null,
+      profile_card_url: formData.profile_card_url || null,
       is_profile_public: formData.is_profile_public ?? true,
       approved_at: new Date().toISOString(),
     }, { onConflict: "id" });
@@ -310,6 +312,41 @@ export async function createInstructor(formData: {
   revalidatePath("/admin/instructors");
   revalidatePath("/instructors");
   return authData.user.id;
+}
+
+export async function updateInstructor(
+  userId: string,
+  fields: {
+    name?: string;
+    phone?: string;
+    bio?: string;
+    career_summary?: string;
+    specialties?: string[];
+    video_url?: string | null;
+    profile_image_url?: string | null;
+    profile_card_url?: string | null;
+    is_profile_public?: boolean;
+  }
+) {
+  const { createAdminClient } = await import("./admin");
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update(fields)
+    .eq("id", userId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/instructors");
+  revalidatePath("/instructors");
+}
+
+export async function deleteInstructor(userId: string) {
+  const { createAdminClient } = await import("./admin");
+  const supabase = createAdminClient();
+  // profiles 삭제 (cascade로 auth.users도 삭제)
+  const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+  if (authError) throw new Error(authError.message);
+  revalidatePath("/admin/instructors");
+  revalidatePath("/instructors");
 }
 
 // ─── 사이트 설정 ───

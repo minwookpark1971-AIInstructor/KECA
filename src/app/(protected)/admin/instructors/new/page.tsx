@@ -21,6 +21,26 @@ export default function NewInstructorPage() {
   const [specialties, setSpecialties] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [isPublic, setIsPublic] = useState(true);
+  const [cardImageUrl, setCardImageUrl] = useState("");
+  const [cardUploading, setCardUploading] = useState(false);
+
+  const handleCardUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { setError("이미지 크기는 10MB 이하여야 합니다."); return; }
+    setCardUploading(true);
+    setError(null);
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("folder", "instructors/cards");
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) { setError("업로드 실패: " + data.error); }
+      else { setCardImageUrl(data.url); }
+    } catch { setError("이미지 업로드에 실패했습니다."); }
+    setCardUploading(false);
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -71,6 +91,7 @@ export default function NewInstructorPage() {
           specialties: specialties ? specialties.split(",").map((s) => s.trim()).filter(Boolean) : undefined,
           video_url: videoUrl || undefined,
           profile_image_url: profileImageUrl || undefined,
+          profile_card_url: cardImageUrl || undefined,
           is_profile_public: isPublic,
         });
         router.push("/admin/instructors");
@@ -121,6 +142,26 @@ export default function NewInstructorPage() {
               <p className="text-xs text-text-muted mt-1.5">PNG, JPG (최대 5MB)</p>
             </div>
           </div>
+        </div>
+
+        {/* 프로필 카드 이미지 (상세 페이지 하단 표시) */}
+        <div className="bg-white border border-border-light rounded-xl p-6">
+          <h2 className="text-sm font-bold text-text mb-4 flex items-center gap-2">
+            <FileText size={16} /> 프로필 카드 이미지 (상세 페이지 하단 표시)
+          </h2>
+          {cardImageUrl ? (
+            <div className="relative">
+              <img src={cardImageUrl} alt="프로필 카드" className="w-full max-h-80 object-contain rounded-lg border" />
+              <button type="button" onClick={() => setCardImageUrl("")} className="absolute top-2 right-2 bg-white/90 text-text-muted hover:text-error px-2 py-1 rounded text-xs">삭제</button>
+            </div>
+          ) : (
+            <label className="block border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer hover:border-primary/30 transition-colors">
+              <Upload size={28} className="mx-auto text-text-muted/40 mb-2" />
+              <p className="text-sm text-text-sub">{cardUploading ? "업로드 중..." : "프로필 카드 이미지 업로드"}</p>
+              <p className="text-xs text-text-muted mt-1">이력서/프로필 카드 이미지 (최대 10MB)</p>
+              <input type="file" accept="image/*" onChange={handleCardUpload} disabled={cardUploading} className="hidden" />
+            </label>
+          )}
         </div>
 
         {/* 기본 정보 */}

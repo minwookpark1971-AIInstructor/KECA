@@ -15,6 +15,7 @@ export interface Profile {
 
   // 강사 전용
   profile_image_url?: string;
+  profile_card_url?: string;
   bio?: string;
   career_summary?: string;
   specialties?: string[];
