@@ -10,11 +10,11 @@ import {
 
 // ─── 회원 관리 ───
 
-export async function approveMember(userId: string) {
+export async function approveMember(userId: string, role: string = "approved") {
   const supabase = await createClient();
   const { error } = await supabase
     .from("profiles")
-    .update({ role: "approved", approved_at: new Date().toISOString() })
+    .update({ role, approved_at: new Date().toISOString() })
     .eq("id", userId);
   if (error) throw new Error(error.message);
 
@@ -37,6 +37,14 @@ export async function changeUserRole(userId: string, role: string) {
     .from("profiles")
     .update({ role })
     .eq("id", userId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/members");
+}
+
+export async function deleteMember(userId: string) {
+  const { createAdminClient } = await import("./admin");
+  const supabase = createAdminClient();
+  const { error } = await supabase.auth.admin.deleteUser(userId);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/members");
 }

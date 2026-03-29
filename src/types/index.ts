@@ -3,7 +3,7 @@
 // ============================================================
 
 // ----- 사용자 역할 -----
-export type UserRole = "pending" | "approved" | "member" | "instructor" | "admin";
+export type UserRole = "pending" | "approved" | "associate" | "member" | "instructor" | "admin";
 
 // ----- Profiles -----
 export interface Profile {

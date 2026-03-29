@@ -2,9 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { roleLabels, roleBadgeColors } from "@/lib/utils";
-import { UserCheck, Search } from "lucide-react";
+import { UserCheck, Search, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { approveMember, changeUserRole } from "@/lib/supabase/mutations";
+import { approveMember, changeUserRole, deleteMember } from "@/lib/supabase/mutations";
 import type { Profile } from "@/types";
 
 export default function MembersClient({ members }: { members: Profile[] }) {
@@ -12,6 +12,8 @@ export default function MembersClient({ members }: { members: Profile[] }) {
   const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  // pending 회원별 승인 역할 선택 상태
+  const [approveRoles, setApproveRoles] = useState<Record<string, string>>({});
 
   const filtered = members.filter((u) => {
     if (filter !== "all" && u.role !== filter) return false;
@@ -19,11 +21,14 @@ export default function MembersClient({ members }: { members: Profile[] }) {
     return true;
   });
 
+  const getApproveRole = (userId: string) => approveRoles[userId] || "associate";
+
   const handleApprove = (userId: string) => {
+    const role = getApproveRole(userId);
     startTransition(async () => {
       try {
-        await approveMember(userId);
-        setMsg({ type: "success", text: "회원이 승인되었습니다." });
+        await approveMember(userId, role);
+        setMsg({ type: "success", text: `회원이 ${roleLabels[role] || role}(으)로 승인되었습니다.` });
       } catch {
         setMsg({ type: "error", text: "승인 처리에 실패했습니다." });
       }
@@ -37,6 +42,18 @@ export default function MembersClient({ members }: { members: Profile[] }) {
         setMsg({ type: "success", text: "역할이 변경되었습니다." });
       } catch {
         setMsg({ type: "error", text: "역할 변경에 실패했습니다." });
+      }
+    });
+  };
+
+  const handleDelete = (userId: string, userName: string) => {
+    if (!confirm(`"${userName}" 회원을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+    startTransition(async () => {
+      try {
+        await deleteMember(userId);
+        setMsg({ type: "success", text: "회원이 삭제되었습니다." });
+      } catch {
+        setMsg({ type: "error", text: "회원 삭제에 실패했습니다." });
       }
     });
   };
@@ -58,6 +75,7 @@ export default function MembersClient({ members }: { members: Profile[] }) {
             { key: "all", label: "전체" },
             { key: "pending", label: "승인대기" },
             { key: "approved", label: "승인완료" },
+            { key: "associate", label: "준회원" },
             { key: "member", label: "정회원" },
             { key: "instructor", label: "강사" },
           ].map((f) => (
@@ -110,27 +128,61 @@ export default function MembersClient({ members }: { members: Profile[] }) {
                       {roleLabels[user.role]}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-text-muted hidden md:table-cell">{user.created_at}</td>
-                  <td className="px-4 py-3 text-center">
-                    {user.role === "pending" ? (
-                      <button
-                        onClick={() => handleApprove(user.id)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-success/10 text-success text-xs font-medium rounded-md hover:bg-success/20 transition-colors"
-                      >
-                        <UserCheck size={12} /> 승인
-                      </button>
-                    ) : (
-                      <select
-                        value={user.role}
-                        onChange={(e) => handleChangeRole(user.id, e.target.value)}
-                        className="text-xs border border-border-light rounded-md px-2 py-1 focus:outline-none"
-                      >
-                        <option value="approved">승인완료</option>
-                        <option value="member">정회원</option>
-                        <option value="instructor">강사</option>
-                        <option value="admin">관리자</option>
-                      </select>
-                    )}
+                  <td className="px-4 py-3 text-text-muted hidden md:table-cell">
+                    {new Date(user.created_at).toLocaleDateString("ko")}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-1.5">
+                      {user.role === "pending" ? (
+                        <>
+                          {/* 역할 선택 드롭다운 */}
+                          <select
+                            value={getApproveRole(user.id)}
+                            onChange={(e) =>
+                              setApproveRoles((prev) => ({ ...prev, [user.id]: e.target.value }))
+                            }
+                            className="text-xs border border-border-light rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                          >
+                            <option value="associate">준회원</option>
+                            <option value="member">정회원</option>
+                            <option value="instructor">강사</option>
+                          </select>
+                          {/* 승인 버튼 */}
+                          <button
+                            onClick={() => handleApprove(user.id)}
+                            disabled={isPending}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-success/10 text-success text-xs font-medium rounded-md hover:bg-success/20 transition-colors disabled:opacity-50"
+                          >
+                            <UserCheck size={12} /> 승인
+                          </button>
+                        </>
+                      ) : (
+                        /* 역할 변경 드롭다운 */
+                        <select
+                          value={user.role}
+                          onChange={(e) => handleChangeRole(user.id, e.target.value)}
+                          disabled={isPending}
+                          className="text-xs border border-border-light rounded-md px-2 py-1 focus:outline-none disabled:opacity-50"
+                        >
+                          <option value="approved">승인완료</option>
+                          <option value="associate">준회원</option>
+                          <option value="member">정회원</option>
+                          <option value="instructor">강사</option>
+                          <option value="admin">관리자</option>
+                        </select>
+                      )}
+                      {/* 삭제 버튼 (admin은 삭제 불가) */}
+                      {user.role !== "admin" && (
+                        <button
+                          onClick={() => handleDelete(user.id, user.name)}
+                          disabled={isPending}
+                          className="p-1 text-text-muted hover:text-error rounded transition-colors disabled:opacity-50"
+                          title="회원 삭제"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
