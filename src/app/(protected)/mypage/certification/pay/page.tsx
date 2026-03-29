@@ -80,6 +80,11 @@ export default function CertificationPaymentPage() {
         orderName: "KECA 자격증 응시료",
         successUrl: `${window.location.origin}/mypage/certification/pay`,
         failUrl: `${window.location.origin}/mypage/certification/pay?error=payment_failed`,
+        card: {
+          keyin: {
+            selectableCardTypes: ["PERSONAL", "CORPORATE"],
+          },
+        },
       });
     } catch (err) {
       if (err instanceof Error && err.message.includes("사용자가")) {

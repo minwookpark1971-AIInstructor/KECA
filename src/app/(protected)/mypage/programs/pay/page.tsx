@@ -93,6 +93,11 @@ export default function ProgramPaymentPage() {
         orderName: `KECA ${programName}`,
         successUrl: returnUrl.toString(),
         failUrl: `${returnUrl.toString()}&error=payment_failed`,
+        card: {
+          keyin: {
+            selectableCardTypes: ["PERSONAL", "CORPORATE"],
+          },
+        },
       });
     } catch (err) {
       if (err instanceof Error && err.message.includes("사용자가")) {
