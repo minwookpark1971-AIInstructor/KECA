@@ -9,7 +9,8 @@ import { createClient } from "@/lib/supabase/client";
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") || "/mypage";
+  const explicitRedirect = searchParams.get("redirect");
+  const redirectTo = explicitRedirect || "/mypage";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,7 +23,7 @@ export default function LoginPage() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -37,7 +38,20 @@ export default function LoginPage() {
       return;
     }
 
-    router.push(redirectTo);
+    // 명시적 redirect가 없으면 role 확인 후 admin은 /admin으로 이동
+    let destination = redirectTo;
+    if (!explicitRedirect && data.user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", data.user.id)
+        .single();
+      if (profile?.role === "admin") {
+        destination = "/admin";
+      }
+    }
+
+    router.push(destination);
     router.refresh();
   };
 
