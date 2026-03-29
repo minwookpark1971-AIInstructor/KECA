@@ -49,15 +49,16 @@ export function Header() {
           "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
           isTransparent
             ? "bg-transparent"
-            : "bg-white shadow-[0_1px_0_rgba(0,0,0,0.06)]"
+            : "header-glass shadow-md"
         )}
       >
         <div className="container-custom">
-          <div className="flex items-center justify-between h-20">
+          <div className={cn("flex items-center justify-between transition-all duration-300", scrolled && !isTransparent ? "h-16" : "h-20")}>
             {/* 로고 */}
             <Link href="/" className="flex items-center gap-3">
               <span className={cn(
-                "text-2xl font-extrabold tracking-tight transition-colors duration-300",
+                "font-extrabold tracking-tight transition-all duration-300",
+                scrolled && !isTransparent ? "text-xl" : "text-2xl",
                 isTransparent ? "text-white" : "text-primary"
               )}>
                 KECA

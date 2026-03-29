@@ -18,7 +18,7 @@
   /* Text */
   --color-text: #1A1A1A;
   --color-text-sub: #555555;
-  --color-text-muted: #999999;
+  --color-text-muted: #888888;
 
   /* Status */
   --color-success: #10B981;
@@ -117,8 +117,13 @@ body {
 }
 
 .card-hover:hover {
-  box-shadow: var(--shadow-card-hover);
-  transform: translateY(-3px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+  transform: translateY(-4px);
+}
+
+.card-hover:active {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-card);
 }
 
 /* Image hover zoom */
@@ -154,6 +159,10 @@ body {
   transform: scale(1.02);
 }
 
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
 .btn-secondary {
   display: inline-flex;
   align-items: center;
@@ -172,6 +181,10 @@ body {
   background: var(--color-primary);
   color: white;
   transform: scale(1.02);
+}
+
+.btn-secondary:active {
+  transform: scale(0.98);
 }
 
 /* Fade in animation */
@@ -222,6 +235,58 @@ body {
   margin-bottom: 0.5rem;
 }
 
+/* Section title — 섹션 대제목 */
+.section-title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+@media (min-width: 1024px) {
+  .section-title {
+    font-size: 2.25rem;
+  }
+}
+
+/* Section description — 섹션 보조 설명 */
+.section-desc {
+  font-size: 1rem;
+  color: var(--color-text-sub);
+  margin-top: 0.75rem;
+  max-width: 42rem;
+}
+
+@media (min-width: 1024px) {
+  .section-desc {
+    font-size: 1.125rem;
+  }
+}
+
+/* Header glassmorphism */
+.header-glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Scrollbar hide — 모바일 카로셀용 */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Focus visible — 접근성 */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 /* ===== Hero gradient animation ===== */
 @keyframes gradientShift {
   0%, 100% { background-position: 0% 50%; }
@@ -270,29 +335,4 @@ body {
   z-index: 2;
 }
 
-/* ===== QuickMenu tooltips ===== */
-.quick-btn {
-  position: relative;
-}
-
-.quick-tooltip {
-  position: absolute;
-  right: calc(100% + 10px);
-  top: 50%;
-  transform: translateY(-50%) translateX(4px);
-  white-space: nowrap;
-  font-size: 0.7rem;
-  font-weight: 500;
-  background: rgba(26, 26, 26, 0.9);
-  color: white;
-  padding: 4px 10px;
-  border-radius: 6px;
-  opacity: 0;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  pointer-events: none;
-}
-
-.quick-btn:hover .quick-tooltip {
-  opacity: 1;
-  transform: translateY(-50%) translateX(0);
-}
+/* ===== QuickMenu — FAB Speed Dial (styles in component) ===== */
