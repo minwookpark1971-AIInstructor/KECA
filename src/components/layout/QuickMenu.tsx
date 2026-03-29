@@ -57,12 +57,13 @@ export function QuickMenu() {
             href={item.href}
             {...(item.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
             className={cn(
-              "flex items-center justify-center w-11 h-11 rounded-full text-white shadow-lg transition-all",
+              "quick-btn flex items-center justify-center w-11 h-11 rounded-full text-white shadow-lg transition-all",
               item.color
             )}
             aria-label={item.label}
           >
             <Icon size={18} />
+            <span className="quick-tooltip">{item.label}</span>
           </Component>
         );
       })}
@@ -70,10 +71,11 @@ export function QuickMenu() {
       {/* 맨 위로 */}
       <button
         onClick={scrollToTop}
-        className="flex items-center justify-center w-11 h-11 rounded-full bg-text/80 hover:bg-text text-white shadow-lg transition-all"
+        className="quick-btn flex items-center justify-center w-11 h-11 rounded-full bg-text/80 hover:bg-text text-white shadow-lg transition-all"
         aria-label="맨 위로"
       >
         <ArrowUp size={18} />
+        <span className="quick-tooltip">맨 위로</span>
       </button>
     </div>
   );

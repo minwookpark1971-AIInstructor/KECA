@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { SubpageHero } from "@/components/layout/SubpageHero";
-import { Send, CheckCircle } from "lucide-react";
+import { Send, CheckCircle, MapPin, Mail, Clock } from "lucide-react";
 import { createInquiry } from "@/lib/supabase/mutations";
 import type { Category } from "@/types";
 
@@ -62,10 +62,42 @@ export default function InquiryContent({ categories }: { categories: Category[] 
         breadcrumb={[{ label: "교육문의" }]}
       />
       <section className="py-16 lg:py-20">
-        <div className="container-custom max-w-3xl">
+        <div className="container-custom max-w-5xl">
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
           )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-8 lg:gap-12">
+            {/* 연락처 사이드바 */}
+            <div className="bg-surface rounded-xl p-6 lg:p-8 lg:sticky lg:top-28 h-fit">
+              <h3 className="text-lg font-bold text-text mb-6">연락처 정보</h3>
+              <div className="space-y-5">
+                <div className="flex items-start gap-3">
+                  <MapPin size={16} className="text-accent shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-text-muted mb-0.5">주소</p>
+                    <p className="text-sm text-text-sub">서울특별시 도봉구 마들로13길84</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Mail size={16} className="text-accent shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-text-muted mb-0.5">이메일</p>
+                    <a href="mailto:info@keca.or.kr" className="text-sm text-primary hover:underline">info@keca.or.kr</a>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Clock size={16} className="text-accent shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-text-muted mb-0.5">운영시간</p>
+                    <p className="text-sm text-text-sub">평일 09:00 - 18:00</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 문의 폼 */}
+            <div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* 기관 유형 */}
@@ -151,6 +183,8 @@ export default function InquiryContent({ categories }: { categories: Category[] 
               {isPending ? "제출 중..." : "교육문의 제출"}
             </button>
           </form>
+            </div>
+          </div>
         </div>
       </section>
     </>

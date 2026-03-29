@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Menu, X, ChevronDown } from "lucide-react";
 import { mainNavigation } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
@@ -14,7 +14,17 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const leaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isHome = pathname === "/";
+
+  const handleMenuEnter = useCallback((label: string) => {
+    if (leaveTimeout.current) { clearTimeout(leaveTimeout.current); leaveTimeout.current = null; }
+    setActiveMenu(label);
+  }, []);
+
+  const handleMenuLeave = useCallback(() => {
+    leaveTimeout.current = setTimeout(() => setActiveMenu(null), 150);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -66,8 +76,8 @@ export function Header() {
                 <div
                   key={item.href}
                   className="relative"
-                  onMouseEnter={() => setActiveMenu(item.label)}
-                  onMouseLeave={() => setActiveMenu(null)}
+                  onMouseEnter={() => handleMenuEnter(item.label)}
+                  onMouseLeave={handleMenuLeave}
                 >
                   <Link
                     href={item.href}
@@ -87,8 +97,13 @@ export function Header() {
                   </Link>
 
                   {/* 드롭다운 */}
-                  {item.children && activeMenu === item.label && (
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 min-w-[220px] z-50">
+                  {item.children && (
+                    <div className={cn(
+                      "absolute top-full left-1/2 -translate-x-1/2 pt-2 min-w-[220px] z-50 transition-all duration-200 ease-out",
+                      activeMenu === item.label
+                        ? "opacity-100 visible translate-y-0 pointer-events-auto"
+                        : "opacity-0 invisible -translate-y-1 pointer-events-none"
+                    )}>
                       <div className="bg-white rounded-lg shadow-lg border border-border-light py-2">
                         {item.children.map((child) => (
                           <Link

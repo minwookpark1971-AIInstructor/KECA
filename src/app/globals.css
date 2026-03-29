@@ -102,14 +102,7 @@ body {
   }
 }
 
-/* Subpage hero */
-.subpage-hero {
-  background: var(--color-primary);
-  color: white;
-  padding: 6rem 0 3.5rem;
-  position: relative;
-}
-
+/* Subpage hero — 기본 배경 (그라디언트 버전은 하단에 재정의) */
 .subpage-hero::after {
   content: "";
   position: absolute;
@@ -227,4 +220,79 @@ body {
   text-transform: uppercase;
   color: var(--color-accent);
   margin-bottom: 0.5rem;
+}
+
+/* ===== Hero gradient animation ===== */
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.hero-gradient {
+  background: linear-gradient(135deg, #111D35 0%, #1B2A4A 30%, #2E5090 70%, #1B2A4A 100%);
+  background-size: 300% 300%;
+  animation: gradientShift 12s ease-in-out infinite;
+}
+
+@keyframes heroFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-30px, 20px) scale(1.05); }
+}
+
+.hero-glow {
+  position: absolute;
+  top: 15%;
+  right: 5%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(196, 150, 60, 0.06) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: heroFloat 10s ease-in-out infinite;
+}
+
+/* ===== Subpage hero gradient ===== */
+.subpage-hero {
+  background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 60%, var(--color-primary-light) 100%);
+  color: white;
+  padding: 6rem 0 3.5rem;
+  position: relative;
+}
+
+.subpage-hero::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-accent), transparent 60%);
+  z-index: 2;
+}
+
+/* ===== QuickMenu tooltips ===== */
+.quick-btn {
+  position: relative;
+}
+
+.quick-tooltip {
+  position: absolute;
+  right: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%) translateX(4px);
+  white-space: nowrap;
+  font-size: 0.7rem;
+  font-weight: 500;
+  background: rgba(26, 26, 26, 0.9);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+
+.quick-btn:hover .quick-tooltip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
 }

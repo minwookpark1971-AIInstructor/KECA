@@ -110,13 +110,17 @@ export default function ProgramsContent({ categories, programs }: { categories: 
                     href={`/programs/${program.slug}`}
                     className="group rounded-lg overflow-hidden card-hover bg-white"
                   >
-                    <div className="aspect-[16/10] bg-white border border-border flex flex-col items-center justify-center p-6 overflow-hidden">
+                    <div className={`aspect-[16/10] flex flex-col items-center justify-center p-6 overflow-hidden ${
+                      program.thumbnail_url
+                        ? "bg-white border border-border"
+                        : `bg-gradient-to-br ${style.gradient}`
+                    }`}>
                       {program.thumbnail_url ? (
                         <img src={program.thumbnail_url} alt={program.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                       ) : (
                         <>
-                          <Icon size={72} className="text-[#555] mb-3 group-hover:scale-110 transition-transform duration-300" />
-                          <span className="text-[#555] text-base font-semibold tracking-wide">{category?.name || "교육과정"}</span>
+                          <Icon size={48} className="text-white/80 mb-3 group-hover:scale-110 transition-transform duration-300" />
+                          <span className="text-white/70 text-sm font-medium tracking-wide">{category?.name || "교육과정"}</span>
                         </>
                       )}
                     </div>
