@@ -7,9 +7,14 @@ import { cn } from "@/lib/utils";
 import { AdminHeader } from "@/components/layout/AdminHeader";
 import {
   LayoutDashboard, Users, GraduationCap, BookOpen, FolderOpen,
+<<<<<<< Updated upstream
   MessageSquare, HelpCircle, CreditCard, Building2,
   Settings, Award, ChevronDown,
   Megaphone, CalendarDays, Star, Image, Video, FolderArchive, SlidersHorizontal,
+=======
+  MessageSquare, CalendarDays, HelpCircle, CreditCard, Building2,
+  Settings, Award, FileText, Star, ImageIcon, Video, FileArchive,
+>>>>>>> Stashed changes
 } from "lucide-react";
 
 type SidebarItem =
@@ -25,6 +30,7 @@ const sidebarItems: SidebarItem[] = [
   { label: "교육분야", href: "/admin/categories", icon: FolderOpen },
   { label: "교육프로그램", href: "/admin/programs", icon: BookOpen },
   { label: "전문가과정", href: "/admin/expert", icon: Award },
+<<<<<<< Updated upstream
   { type: "divider" },
   {
     label: "커뮤니티", icon: MessageSquare,
@@ -38,6 +44,16 @@ const sidebarItems: SidebarItem[] = [
       { label: "메뉴 관리", href: "/admin/community/settings", icon: SlidersHorizontal },
     ],
   },
+=======
+  { type: "divider" as const },
+  { label: "커뮤니티", type: "group" as const },
+  { label: "공지사항", href: "/admin/community/notice", icon: FileText },
+  { label: "교육후기", href: "/admin/community/review", icon: Star },
+  { label: "사진갤러리", href: "/admin/community/photo_gallery", icon: ImageIcon },
+  { label: "영상갤러리", href: "/admin/community/video_gallery", icon: Video },
+  { label: "자료실", href: "/admin/community/resource", icon: FileArchive },
+  { label: "교육일정", href: "/admin/schedules", icon: CalendarDays },
+>>>>>>> Stashed changes
   { label: "교육문의", href: "/admin/inquiries", icon: HelpCircle },
   { type: "divider" },
   { label: "결제 내역", href: "/admin/payments", icon: CreditCard },
@@ -82,7 +98,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-surface">
+<<<<<<< Updated upstream
       <AdminHeader />
+=======
+      {/* 사이드바 */}
+      <aside className="fixed left-0 top-0 bottom-0 w-60 bg-white border-r border-border-light overflow-y-auto hidden lg:block z-40">
+        <div className="p-4">
+          <Link href="/admin" className="flex items-center gap-2 px-3 py-2 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+              <Settings size={16} className="text-white" />
+            </div>
+            <span className="text-sm font-bold text-primary">관리자</span>
+          </Link>
+>>>>>>> Stashed changes
 
       {/* 사이드바 — top-14 = AdminHeader 높이(h-14) */}
       <aside className="fixed left-0 top-14 bottom-0 w-60 bg-white border-r border-border-light overflow-y-auto hidden lg:block z-40">
@@ -92,6 +120,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               if ("type" in item) {
                 return <div key={i} className="my-2 border-t border-border-light" />;
               }
+<<<<<<< Updated upstream
 
               // 확장형 메뉴 (children 있음)
               if ("children" in item) {
@@ -144,6 +173,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               }
 
               // 일반 메뉴 항목
+=======
+              if ("type" in item && item.type === "group") {
+                return <p key={i} className="px-3 pt-4 pb-1 text-[10px] font-semibold text-text-muted uppercase tracking-wider">{item.label}</p>;
+              }
+>>>>>>> Stashed changes
               const navItem = item as { label: string; href: string; icon: React.ElementType };
               const isActive = isItemActive(navItem.href);
               return (
