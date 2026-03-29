@@ -53,7 +53,7 @@ export default async function ExpertPage() {
                       {group.programs.map((prog) => (
                         <Link key={prog.id} href={prog.slug === "__certification__" ? "/certification" : `/programs/${prog.slug}`} className="bg-white border border-border-light rounded-xl p-5 card-hover group">
                           <h3 className="text-base font-semibold text-text group-hover:text-primary transition-colors mb-1">{prog.title}</h3>
-                          <p className="text-sm text-text-sub">{prog.subtitle || prog.description?.slice(0, 50)}</p>
+                          <p className="text-sm text-text-sub">{prog.subtitle || ("description" in prog ? (prog as { description?: string }).description?.slice(0, 50) : "")}</p>
                         </Link>
                       ))}
                     </div>

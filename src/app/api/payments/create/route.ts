@@ -12,18 +12,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
     }
 
-    const { amount, paymentType } = await request.json();
+    const { amount, paymentType, programId } = await request.json();
     const orderId = `KECA_${user.id.slice(0, 8)}_${Date.now()}`;
 
     // payments 테이블에 pending 레코드 생성
-    const { error } = await supabase.from("payments").insert({
+    const insertData: Record<string, unknown> = {
       user_id: user.id,
       payment_type: paymentType || "annual_membership",
       amount,
       currency: "KRW",
       toss_order_id: orderId,
       status: "pending",
-    });
+    };
+
+    // program_fee인 경우 metadata에 programId 저장
+    if (paymentType === "program_fee" && programId) {
+      insertData.metadata = { programId };
+    }
+
+    const { error } = await supabase.from("payments").insert(insertData);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

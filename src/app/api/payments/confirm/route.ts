@@ -58,37 +58,42 @@ export async function POST(request: Request) {
       console.error("Payment DB update failed:", payError);
     }
 
-    // 회원 등급 자동 승격: approved → member
-    // orderId 형식: KECA_{userId8chars}_{timestamp}
+    // 결제 타입별 후처리
     const { data: paymentData } = await supabase
       .from("payments")
-      .select("user_id")
+      .select("user_id, payment_type")
       .eq("toss_order_id", orderId)
       .single();
 
     if (paymentData) {
-      await supabase
-        .from("profiles")
-        .update({
-          role: "member",
-          membership_paid_at: now,
-          membership_expires_at: oneYearLater,
-        })
-        .eq("id", paymentData.user_id)
-        .in("role", ["pending", "approved"]);
-
-      // 결제 완료 이메일 발송
       const { data: profile } = await supabase
         .from("profiles")
         .select("email, name")
         .eq("id", paymentData.user_id)
         .single();
+
+      if (paymentData.payment_type === "annual_membership") {
+        // 회원 등급 자동 승격: pending/approved → member
+        await supabase
+          .from("profiles")
+          .update({
+            role: "member",
+            membership_paid_at: now,
+            membership_expires_at: oneYearLater,
+          })
+          .eq("id", paymentData.user_id)
+          .in("role", ["pending", "approved"]);
+      }
+
+      // 결제 완료 이메일 발송 (모든 타입 공통)
       if (profile) {
         sendPaymentConfirmation(
           profile.email,
           profile.name,
           amount,
-          oneYearLater.slice(0, 10)
+          paymentData.payment_type === "annual_membership"
+            ? oneYearLater.slice(0, 10)
+            : ""
         );
       }
     }

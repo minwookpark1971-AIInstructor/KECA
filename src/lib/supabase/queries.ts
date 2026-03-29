@@ -315,6 +315,15 @@ export async function getPartners(): Promise<Partner[]> {
   return (data as Partner[]) ?? [];
 }
 
+export async function getAllPartners(): Promise<Partner[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("partners")
+    .select("*")
+    .order("sort_order");
+  return (data as Partner[]) ?? [];
+}
+
 // ─── 사이트 콘텐츠 ───
 
 export async function getSiteContent(key: string): Promise<unknown | null> {

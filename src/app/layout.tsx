@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
-import { QuickMenu } from "@/components/layout/QuickMenu";
+import { ConditionalLayout } from "@/components/layout/ConditionalLayout";
 import { ToastProvider } from "@/components/layout/Toast";
 
 export const metadata: Metadata = {
@@ -49,10 +47,7 @@ export default function RootLayout({
           <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[200] focus:bg-primary focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm">
             본문으로 건너뛰기
           </a>
-          <Header />
-          <main id="main-content" className="min-h-screen">{children}</main>
-          <Footer />
-          <QuickMenu />
+          <ConditionalLayout>{children}</ConditionalLayout>
         </ToastProvider>
       </body>
     </html>

@@ -1,7 +1,5 @@
-import { getSchedules } from "@/lib/supabase/queries";
-import SchedulesClient from "./SchedulesClient";
+import { redirect } from "next/navigation";
 
-export default async function AdminSchedulesPage() {
-  const schedules = await getSchedules();
-  return <SchedulesClient schedules={schedules} />;
+export default function AdminSchedulesPage() {
+  redirect("/admin/community/schedule");
 }

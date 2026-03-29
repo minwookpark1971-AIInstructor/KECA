@@ -173,7 +173,7 @@ export interface Schedule {
 }
 
 // ----- 결제 -----
-export type PaymentType = "annual_membership" | "certification_fee";
+export type PaymentType = "annual_membership" | "certification_fee" | "program_fee";
 export type PaymentStatus = "pending" | "completed" | "failed" | "cancelled" | "refunded";
 
 export interface Payment {

@@ -200,6 +200,7 @@ export async function createSchedule(formData: {
     .from("schedules")
     .insert({ ...formData, status: formData.status || "scheduled" });
   if (error) throw new Error(error.message);
+  revalidatePath("/admin/community/schedule");
   revalidatePath("/admin/schedules");
   revalidatePath("/community/schedule");
 }
@@ -214,6 +215,7 @@ export async function updateSchedule(
     .update(fields)
     .eq("id", id);
   if (error) throw new Error(error.message);
+  revalidatePath("/admin/community/schedule");
   revalidatePath("/admin/schedules");
   revalidatePath("/community/schedule");
 }
@@ -222,6 +224,7 @@ export async function deleteSchedule(id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("schedules").delete().eq("id", id);
   if (error) throw new Error(error.message);
+  revalidatePath("/admin/community/schedule");
   revalidatePath("/admin/schedules");
 }
 
