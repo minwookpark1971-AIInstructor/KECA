@@ -1,5 +1,7 @@
 import { Metadata } from "next";
+import Link from "next/link";
 import { SubpageHero } from "@/components/layout/SubpageHero";
+import { CreditCard, ArrowRight } from "lucide-react";
 
 export const metadata: Metadata = { title: "자격증 신청안내" };
 
@@ -29,13 +31,39 @@ export default function ApplyPage() {
             </div>
             <div>
               <h2 className="text-xl font-bold text-text mb-4">응시료</h2>
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="bg-surface rounded-xl p-5"><p className="text-xs text-text-muted">필기시험</p><p className="text-lg font-bold text-text">50,000원</p></div>
-                <div className="bg-surface rounded-xl p-5"><p className="text-xs text-text-muted">실기시험</p><p className="text-lg font-bold text-text">80,000원</p></div>
+              <div className="grid sm:grid-cols-2 gap-4 mb-4">
+                <div className="bg-surface rounded-xl p-5">
+                  <p className="text-xs text-text-muted">온라인시험수강료</p>
+                  <p className="text-lg font-bold text-text">70,000원</p>
+                </div>
+                <div className="bg-surface rounded-xl p-5">
+                  <p className="text-xs text-text-muted">시험학습교재</p>
+                  <p className="text-lg font-bold text-text">30,000원</p>
+                </div>
+              </div>
+              <div className="bg-primary/5 border border-primary/10 rounded-xl p-5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-text-muted">합계</p>
+                  <p className="text-xl font-bold text-primary">100,000원</p>
+                </div>
+                <p className="text-xs text-text-muted">카드결제 가능</p>
               </div>
             </div>
             <div className="bg-primary/5 border border-primary/10 rounded-xl p-6">
               <p className="text-sm text-text-sub">자격증 신청 및 문의는 <strong className="text-text">info@keca.or.kr</strong>로 연락주시기 바랍니다.</p>
+            </div>
+
+            {/* 응시료 결제 버튼 */}
+            <div className="text-center pt-2">
+              <Link
+                href="/mypage/certification/pay"
+                className="inline-flex items-center gap-2 px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-lg transition-colors text-base"
+              >
+                <CreditCard size={20} />
+                응시료 결제하기
+                <ArrowRight size={16} />
+              </Link>
+              <p className="text-xs text-text-muted mt-3">* 로그인 후 결제가 가능합니다.</p>
             </div>
           </div>
         </div>

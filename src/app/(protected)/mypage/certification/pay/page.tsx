@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { SubpageHero } from "@/components/layout/SubpageHero";
 import { CreditCard, Shield, CheckCircle, ArrowLeft, Loader2, Award } from "lucide-react";
 
-const CERTIFICATION_FEE = 200000;
+const CERTIFICATION_FEE = 100000;
 const CLIENT_KEY = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
 
 export default function CertificationPaymentPage() {
@@ -128,22 +128,41 @@ export default function CertificationPaymentPage() {
                 <p className="text-sm opacity-90">KECA 자격증 응시료</p>
               </div>
               <p className="text-3xl font-bold mt-1">{CERTIFICATION_FEE.toLocaleString()}원</p>
-              <p className="text-xs opacity-60 mt-1">교육컨설턴트 자격증 시험 응시</p>
+              <p className="text-xs opacity-60 mt-1">인공지능(AI)교육전문가 자격시험 응시</p>
             </div>
 
-            <div className="p-6 space-y-3">
-              <h3 className="text-sm font-semibold text-text mb-3">자격증 혜택</h3>
-              {[
-                "교육컨설턴트 공인 자격증 취득",
-                "KECA 공인 강사 등록 자격",
-                "자격증 발급 및 경력 인증",
-                "전문가 네트워크 참여 기회",
-              ].map((benefit) => (
-                <div key={benefit} className="flex items-center gap-2 text-sm text-text-sub">
-                  <CheckCircle size={14} className="text-amber-500 shrink-0" />
-                  {benefit}
+            <div className="p-6 space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold text-text mb-3">결제 내역</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-text-sub">온라인시험수강료</span>
+                    <span className="text-text font-medium">70,000원</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-text-sub">시험학습교재</span>
+                    <span className="text-text font-medium">30,000원</span>
+                  </div>
+                  <div className="border-t border-border-light pt-2 flex justify-between text-sm">
+                    <span className="font-semibold text-text">합계</span>
+                    <span className="font-bold text-primary">{CERTIFICATION_FEE.toLocaleString()}원</span>
+                  </div>
                 </div>
-              ))}
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-text mb-3">자격증 혜택</h3>
+                {[
+                  "교육컨설턴트 공인 자격증 취득",
+                  "KECA 공인 강사 등록 자격",
+                  "자격증 발급 및 경력 인증",
+                  "전문가 네트워크 참여 기회",
+                ].map((benefit) => (
+                  <div key={benefit} className="flex items-center gap-2 text-sm text-text-sub">
+                    <CheckCircle size={14} className="text-amber-500 shrink-0" />
+                    {benefit}
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="p-6 pt-0">

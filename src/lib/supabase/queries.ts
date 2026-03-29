@@ -7,6 +7,7 @@ import type {
   Schedule,
   Payment,
   Inquiry,
+  Enrollment,
   Partner,
 } from "@/types";
 
@@ -322,6 +323,27 @@ export async function getAllPartners(): Promise<Partner[]> {
     .select("*")
     .order("sort_order");
   return (data as Partner[]) ?? [];
+}
+
+// ─── 수강 신청 ───
+
+export async function getEnrollmentsByUser(userId: string): Promise<Enrollment[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("enrollments")
+    .select("*, program:programs(id, title, slug, thumbnail_url, duration)")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  return (data as Enrollment[]) ?? [];
+}
+
+export async function getEnrollmentsForAdmin(): Promise<Enrollment[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("enrollments")
+    .select("*, program:programs(id, title, slug), profile:profiles(id, name, email)")
+    .order("created_at", { ascending: false });
+  return (data as Enrollment[]) ?? [];
 }
 
 // ─── 사이트 콘텐츠 ───

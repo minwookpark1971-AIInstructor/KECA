@@ -173,16 +173,30 @@ export async function createInquiry(formData: {
   contact_email: string;
   contact_phone: string;
   preferred_category_id?: string;
+  preferred_program_id?: string;
   estimated_participants?: string;
   preferred_date?: string;
   budget_range?: string;
   message: string;
+  user_id?: string;
 }) {
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: inquiry, error } = await supabase
     .from("inquiries")
-    .insert({ ...formData, status: "new" });
+    .insert({ ...formData, status: "new" })
+    .select("id")
+    .single();
   if (error) throw new Error(error.message);
+
+  // 로그인 사용자 + 프로그램 선택 시 수강 신청도 자동 생성
+  if (formData.user_id && formData.preferred_program_id) {
+    await supabase.from("enrollments").insert({
+      user_id: formData.user_id,
+      program_id: formData.preferred_program_id,
+      inquiry_id: inquiry.id,
+      status: "pending",
+    });
+  }
 
   // 이메일 알림 발송 (관리자 + 문의자)
   sendInquiryNotification(formData);
@@ -413,6 +427,47 @@ export async function deleteCategory(id: string) {
   if (error) throw new Error(error.message);
   revalidatePath("/admin/categories");
   revalidatePath("/programs");
+}
+
+// ─── 수강 신청 ───
+
+export async function createEnrollment(
+  userId: string,
+  programId: string,
+  inquiryId?: string
+) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("enrollments").insert({
+    user_id: userId,
+    program_id: programId,
+    inquiry_id: inquiryId || null,
+    status: "pending",
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function approveEnrollment(id: string, fee: number, adminNote?: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("enrollments")
+    .update({
+      status: "approved",
+      fee,
+      admin_note: adminNote || null,
+      approved_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/inquiries");
+}
+
+export async function updateEnrollmentStatus(id: string, status: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("enrollments")
+    .update({ status })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
 }
 
 // ─── 사이트 설정 ───

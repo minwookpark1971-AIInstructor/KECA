@@ -193,6 +193,24 @@ export interface Payment {
   created_at: string;
 }
 
+// ----- 수강 신청 -----
+export type EnrollmentStatus = "pending" | "approved" | "paid" | "completed" | "cancelled";
+
+export interface Enrollment {
+  id: string;
+  user_id: string;
+  program_id: string;
+  inquiry_id?: string;
+  status: EnrollmentStatus;
+  fee?: number;
+  payment_id?: string;
+  admin_note?: string;
+  approved_at?: string;
+  created_at: string;
+  program?: Program;
+  profile?: Profile;
+}
+
 // ----- 파트너 -----
 export interface Partner {
   id: string;

@@ -1,12 +1,21 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { SubpageHero } from "@/components/layout/SubpageHero";
 import { Send, CheckCircle, MapPin, Mail, Clock } from "lucide-react";
 import { createInquiry } from "@/lib/supabase/mutations";
-import type { Category } from "@/types";
+import { createClient } from "@/lib/supabase/client";
+import type { Category, Program } from "@/types";
 
-export default function InquiryContent({ categories }: { categories: Category[] }) {
+export default function InquiryContent({ categories, programs }: { categories: Category[]; programs?: Program[] }) {
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setUserId(user.id);
+    });
+  }, []);
   const [submitted, setSubmitted] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -26,10 +35,12 @@ export default function InquiryContent({ categories }: { categories: Category[] 
           contact_email: fd.get("contact_email") as string,
           contact_phone: fd.get("contact_phone") as string,
           preferred_category_id: (fd.get("category_id") as string) || undefined,
+          preferred_program_id: (fd.get("program_id") as string) || undefined,
           estimated_participants: (fd.get("participants") as string) || undefined,
           preferred_date: (fd.get("preferred_date") as string) || undefined,
           budget_range: (fd.get("budget") as string) || undefined,
           message: fd.get("message") as string,
+          user_id: userId || undefined,
         });
         setSubmitted(true);
       } catch {
@@ -146,8 +157,13 @@ export default function InquiryContent({ categories }: { categories: Category[] 
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-text mb-1.5">예상 인원</label>
-                <input name="participants" type="text" placeholder="예: 30명" className="w-full px-4 py-2.5 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                <label className="block text-sm font-medium text-text mb-1.5">관심 교육과정</label>
+                <select name="program_id" className="w-full px-4 py-2.5 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                  <option value="">선택 (선택사항)</option>
+                  {programs?.map((p) => (
+                    <option key={p.id} value={p.id}>{p.title}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
