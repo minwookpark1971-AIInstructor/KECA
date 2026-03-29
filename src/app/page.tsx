@@ -12,7 +12,7 @@ import {
   ChevronRight,
   ChevronDown,
 } from "lucide-react";
-import { getPostsByBoard, getPrograms, getSchedules, getPartners } from "@/lib/supabase/queries";
+import { getPostsByBoard, getPrograms, getSchedules, getPartners, getSiteContent } from "@/lib/supabase/queries";
 import { ScrollReveal } from "@/components/layout/ScrollReveal";
 import { CounterStats } from "@/components/home/CounterStats";
 import { NewsTabs } from "@/components/home/NewsTabs";
@@ -45,12 +45,13 @@ const stats = [
 ];
 
 export default async function HomePage() {
-  const [notices, reviews, featuredPrograms, schedules, partners] = await Promise.all([
+  const [notices, reviews, featuredPrograms, schedules, partners, heroImageUrl] = await Promise.all([
     getPostsByBoard("notice", 4),
     getPostsByBoard("review", 3),
     getPrograms({ featured: true, limit: 3 }),
     getSchedules(),
     getPartners(),
+    getSiteContent("hero_image_url") as Promise<string | null>,
   ]);
 
   const upcomingSchedules = schedules
@@ -61,10 +62,24 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* ===== 히어로 — 풀스크린, 애니메이션 그라디언트 ===== */}
-      <section className="relative min-h-[100vh] flex items-center hero-gradient overflow-hidden -mt-20" aria-label="메인 배너">
+      {/* ===== 히어로 — 풀스크린 ===== */}
+      <section
+        className={`relative min-h-[100vh] flex items-center overflow-hidden -mt-20 ${heroImageUrl ? "" : "hero-gradient"}`}
+        aria-label="메인 배너"
+      >
+        {/* 배경: 업로드 이미지 또는 그라디언트 */}
+        {heroImageUrl ? (
+          <>
+            <div
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+              style={{ backgroundImage: `url(${heroImageUrl})` }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#1B2A4A]/90 via-[#1B2A4A]/75 to-[#1B2A4A]/50" />
+          </>
+        ) : (
+          <div className="hero-glow" />
+        )}
         <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.03%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]" />
-        <div className="hero-glow" />
         <div className="container-custom relative z-10 pt-20">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold text-accent tracking-[0.2em] uppercase mb-8 animate-fade-in-up">
