@@ -43,6 +43,7 @@ export const mainNavigation: MenuItem[] = [
       { label: "검정기준 및 과목", href: "/certification/standards" },
       { label: "자격증 신청안내", href: "/certification/apply" },
       { label: "배출현황", href: "/certification/graduates" },
+      { label: "온라인 자격시험", href: "/certification/online-exam" },
     ],
   },
   {
