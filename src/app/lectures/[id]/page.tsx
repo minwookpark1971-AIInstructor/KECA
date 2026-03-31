@@ -134,6 +134,7 @@ export default async function LectureDetailPage({ params }: { params: Promise<{ 
                   pending: "접수 대기",
                   deposit_pending: "예치금 결제 대기",
                   submitted: "접수 완료",
+                  reviewing: "심사중",
                   selected: "강사확정 (보증금 결제 필요)",
                   confirmed: "최종확정",
                   standby: "예비강사",
@@ -141,6 +142,19 @@ export default async function LectureDetailPage({ params }: { params: Promise<{ 
                   cancelled: "취소",
                 }[existingApplication.status] ?? existingApplication.status}
               </p>
+              {existingApplication.status === "pending" && (
+                <div className="mt-3">
+                  <p className="text-sm text-amber-600 mb-2">서류 제출이 필요합니다.</p>
+                  <a href={`/mypage/applications/${existingApplication.id}`} className="text-sm text-primary font-medium hover:underline">
+                    서류 제출하러 가기 →
+                  </a>
+                </div>
+              )}
+              {["pending", "submitted", "reviewing"].includes(existingApplication.status) && (
+                <a href={`/mypage/applications/${existingApplication.id}`} className="mt-2 inline-block text-xs text-text-muted hover:text-primary">
+                  지원 상세 보기
+                </a>
+              )}
             </div>
           ) : !user ? (
             <div className="text-center">

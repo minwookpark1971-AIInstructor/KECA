@@ -12,6 +12,8 @@ import type {
   Lecture,
   LectureStatus,
   Application,
+  StatusHistory,
+  Notification,
 } from "@/types";
 
 // ─── 카테고리 ───
@@ -419,4 +421,39 @@ export async function getApplicationById(id: string): Promise<Application | null
     .eq("id", id)
     .single();
   return data as unknown as Application | null;
+}
+
+// ─── 상태 변경 이력 ───
+
+export async function getStatusHistory(applicationId: string): Promise<StatusHistory[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("application_status_history")
+    .select("*, changer:profiles(id, name)")
+    .eq("application_id", applicationId)
+    .order("changed_at", { ascending: false });
+  return (data as unknown as StatusHistory[]) ?? [];
+}
+
+// ─── 알림 ───
+
+export async function getNotifications(userId: string): Promise<Notification[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("notifications")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(20);
+  return (data as unknown as Notification[]) ?? [];
+}
+
+export async function getUnreadNotificationCount(userId: string): Promise<number> {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("notifications")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("is_read", false);
+  return count ?? 0;
 }

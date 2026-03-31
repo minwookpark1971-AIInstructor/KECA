@@ -635,6 +635,329 @@ export async function selectApplicants(lectureId: string, selectedIds: string[],
   revalidatePath("/mypage/applications");
 }
 
+// ─── 개별 상태 변경 ───
+
+export async function updateApplicationStatus(
+  applicationId: string,
+  newStatus: string,
+  adminId: string,
+  options?: { standby_rank?: number; rejection_reason?: string; memo?: string }
+) {
+  const supabase = createAdminClient();
+  const now = new Date().toISOString();
+
+  // 현재 상태 조회
+  const { data: app, error: fetchError } = await supabase
+    .from("applications")
+    .select("status, lecture_id, applicant_id")
+    .eq("id", applicationId)
+    .single();
+  if (fetchError || !app) throw new Error("지원 정보를 찾을 수 없습니다.");
+
+  const previousStatus = app.status;
+
+  // 상태 업데이트
+  const updates: Record<string, unknown> = {
+    status: newStatus,
+    status_changed_at: now,
+    status_changed_by: adminId,
+    updated_at: now,
+    is_result_read: false,
+  };
+  if (newStatus === "selected") updates.selected_at = now;
+  if (newStatus === "rejected") {
+    updates.rejected_at = now;
+    if (options?.rejection_reason) updates.rejection_reason = options.rejection_reason;
+  }
+  if (newStatus === "standby" && options?.standby_rank != null) {
+    updates.standby_rank = options.standby_rank;
+  }
+  if (newStatus !== "standby") updates.standby_rank = null;
+  if (newStatus !== "rejected") updates.rejection_reason = null;
+
+  const { error: updateError } = await supabase
+    .from("applications")
+    .update(updates)
+    .eq("id", applicationId);
+  if (updateError) throw new Error(updateError.message);
+
+  // 이력 기록
+  await supabase.from("application_status_history").insert({
+    application_id: applicationId,
+    previous_status: previousStatus,
+    new_status: newStatus,
+    changed_by: adminId,
+    changed_at: now,
+    memo: options?.memo ?? null,
+  });
+
+  // 알림 생성 (결과 통보 대상 상태만)
+  if (["selected", "standby", "rejected"].includes(newStatus)) {
+    const { data: lecture } = await supabase
+      .from("lectures")
+      .select("title")
+      .eq("id", app.lecture_id)
+      .single();
+    const lectureTitle = lecture?.title ?? "강의";
+
+    const messages: Record<string, { title: string; message: string }> = {
+      selected: {
+        title: `[${lectureTitle}] 강사로 확정되었습니다`,
+        message: "축하합니다! 강사로 선발되셨습니다. 상세 내용을 확인해주세요.",
+      },
+      standby: {
+        title: `[${lectureTitle}] 예비강사로 선정되었습니다`,
+        message: "예비강사로 선정되었습니다. 확정 강사 변동 시 안내드리겠습니다.",
+      },
+      rejected: {
+        title: `[${lectureTitle}] 선발 결과 안내`,
+        message: "아쉽게도 이번 강의에 선발되지 않았습니다. 다음 기회에 함께하길 바랍니다.",
+      },
+    };
+
+    const msg = messages[newStatus];
+    if (msg) {
+      await supabase.from("notifications").insert({
+        user_id: app.applicant_id,
+        type: "application_status_changed",
+        title: msg.title,
+        message: msg.message,
+        reference_id: applicationId,
+        reference_url: `/mypage/applications/${applicationId}`,
+      });
+    }
+  }
+
+  revalidatePath(`/admin/lectures/${app.lecture_id}/applicants`);
+  revalidatePath("/mypage/applications");
+}
+
+// ─── 일괄 상태 변경 ───
+
+export async function bulkUpdateApplicationStatus(
+  lectureId: string,
+  changes: { id: string; status: string; standby_rank?: number; rejection_reason?: string }[],
+  adminId: string
+) {
+  for (const change of changes) {
+    await updateApplicationStatus(change.id, change.status, adminId, {
+      standby_rank: change.standby_rank,
+      rejection_reason: change.rejection_reason,
+    });
+  }
+  revalidatePath(`/admin/lectures/${lectureId}/applicants`);
+  revalidatePath("/mypage/applications");
+}
+
+// ─── 알림 관리 ───
+
+export async function markNotificationRead(notificationId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("notifications")
+    .update({ is_read: true })
+    .eq("id", notificationId);
+  if (error) throw new Error(error.message);
+}
+
+export async function markAllNotificationsRead(userId: string) {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("notifications")
+    .update({ is_read: true })
+    .eq("user_id", userId)
+    .eq("is_read", false);
+  if (error) throw new Error(error.message);
+}
+
+export async function markApplicationResultRead(applicationId: string) {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("applications")
+    .update({ is_result_read: true })
+    .eq("id", applicationId);
+  if (error) throw new Error(error.message);
+}
+
+// ─── 지원 삭제 ───
+
+export async function deleteApplication(applicationId: string, userId: string, isAdmin: boolean = false) {
+  const supabase = createAdminClient();
+
+  const { data: app, error: fetchError } = await supabase
+    .from("applications")
+    .select("status, applicant_id, lecture_id, document_urls")
+    .eq("id", applicationId)
+    .single();
+  if (fetchError || !app) throw new Error("지원 정보를 찾을 수 없습니다.");
+
+  // 권한 확인
+  if (!isAdmin && app.applicant_id !== userId) {
+    throw new Error("본인의 지원만 삭제할 수 있습니다.");
+  }
+
+  // 회원은 cancelled 상태만 삭제 가능, 관리자는 모든 상태 삭제 가능
+  if (!isAdmin && app.status !== "cancelled") {
+    throw new Error("취소된 지원만 삭제할 수 있습니다.");
+  }
+
+  // Storage에서 첨부 파일 삭제
+  const docs = (app.document_urls as { name: string; url: string }[]) ?? [];
+  for (const doc of docs) {
+    const path = doc.url.split("/portfolios/")[1];
+    if (path) {
+      await supabase.storage.from("portfolios").remove([decodeURIComponent(path)]).catch(() => {});
+    }
+  }
+
+  // 이력 삭제
+  await supabase
+    .from("application_status_history")
+    .delete()
+    .eq("application_id", applicationId);
+
+  // 알림 삭제
+  await supabase
+    .from("notifications")
+    .delete()
+    .eq("reference_id", applicationId);
+
+  // 지원 레코드 삭제
+  const { error } = await supabase
+    .from("applications")
+    .delete()
+    .eq("id", applicationId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/mypage/applications");
+  revalidatePath(`/admin/lectures/${app.lecture_id}/applicants`);
+}
+
+// ─── 지원 취소 ───
+
+export async function cancelApplication(applicationId: string, userId: string) {
+  const supabase = createAdminClient();
+  const now = new Date().toISOString();
+
+  const { data: app, error: fetchError } = await supabase
+    .from("applications")
+    .select("status, lecture_id, applicant_id")
+    .eq("id", applicationId)
+    .single();
+  if (fetchError || !app) throw new Error("지원 정보를 찾을 수 없습니다.");
+  if (app.applicant_id !== userId) throw new Error("본인의 지원만 취소할 수 있습니다.");
+  if (!["pending", "submitted", "reviewing"].includes(app.status)) {
+    throw new Error("현재 상태에서는 지원을 취소할 수 없습니다.");
+  }
+
+  const { error } = await supabase
+    .from("applications")
+    .update({ status: "cancelled", updated_at: now, status_changed_at: now })
+    .eq("id", applicationId);
+  if (error) throw new Error(error.message);
+
+  // 이력 기록
+  await supabase.from("application_status_history").insert({
+    application_id: applicationId,
+    previous_status: app.status,
+    new_status: "cancelled",
+    changed_by: userId,
+    changed_at: now,
+    memo: "지원자 본인 취소",
+  });
+
+  revalidatePath("/mypage/applications");
+  revalidatePath(`/admin/lectures/${app.lecture_id}/applicants`);
+}
+
+// ─── 서류 관리 ───
+
+export async function updateApplicationDocuments(
+  applicationId: string,
+  userId: string,
+  documentUrls: { name: string; url: string }[],
+  coverLetter: string,
+  autoSubmit: boolean = false
+) {
+  const supabase = createAdminClient();
+
+  const { data: app, error: fetchError } = await supabase
+    .from("applications")
+    .select("status, applicant_id, lecture_id")
+    .eq("id", applicationId)
+    .single();
+  if (fetchError || !app) throw new Error("지원 정보를 찾을 수 없습니다.");
+  if (app.applicant_id !== userId) throw new Error("본인의 지원만 수정할 수 있습니다.");
+  if (!["pending", "submitted"].includes(app.status)) {
+    throw new Error("현재 상태에서는 서류를 수정할 수 없습니다.");
+  }
+
+  const updates: Record<string, unknown> = {
+    document_urls: documentUrls,
+    cover_letter: coverLetter,
+    portfolio_url: documentUrls.length > 0 ? documentUrls[0].url : null,
+    updated_at: new Date().toISOString(),
+  };
+
+  // pending 상태에서 서류 첨부 시 자동으로 submitted 전환
+  if (autoSubmit && app.status === "pending" && (documentUrls.length > 0 || coverLetter.trim())) {
+    updates.status = "submitted";
+  }
+
+  const { error } = await supabase
+    .from("applications")
+    .update(updates)
+    .eq("id", applicationId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/mypage/applications/${applicationId}`);
+  revalidatePath("/mypage/applications");
+  revalidatePath(`/admin/lectures/${app.lecture_id}/applicants`);
+}
+
+export async function deleteApplicationFile(
+  applicationId: string,
+  userId: string,
+  fileUrl: string
+) {
+  const supabase = createAdminClient();
+
+  const { data: app, error: fetchError } = await supabase
+    .from("applications")
+    .select("status, applicant_id, document_urls, lecture_id")
+    .eq("id", applicationId)
+    .single();
+  if (fetchError || !app) throw new Error("지원 정보를 찾을 수 없습니다.");
+  if (app.applicant_id !== userId) throw new Error("본인의 서류만 삭제할 수 있습니다.");
+  if (!["pending", "submitted"].includes(app.status)) {
+    throw new Error("현재 상태에서는 서류를 삭제할 수 없습니다.");
+  }
+
+  // Storage에서 파일 삭제
+  const path = fileUrl.split("/portfolios/")[1];
+  if (path) {
+    await supabase.storage.from("portfolios").remove([decodeURIComponent(path)]);
+  }
+
+  // document_urls에서 해당 파일 제거
+  const currentDocs = (app.document_urls as { name: string; url: string }[]) ?? [];
+  const updatedDocs = currentDocs.filter((d) => d.url !== fileUrl);
+
+  const { error } = await supabase
+    .from("applications")
+    .update({
+      document_urls: updatedDocs,
+      portfolio_url: updatedDocs.length > 0 ? updatedDocs[0].url : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", applicationId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/mypage/applications/${applicationId}`);
+  revalidatePath("/mypage/applications");
+  revalidatePath(`/admin/lectures/${app.lecture_id}/applicants`);
+}
+
 // ─── 사이트 설정 ───
 
 export async function saveSiteSettings(

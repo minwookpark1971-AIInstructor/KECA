@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { LogIn, LogOut, User, Settings } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/types";
+import { NotificationBell } from "./NotificationBell";
 
 export function AuthStatus() {
   const router = useRouter();
@@ -70,7 +71,8 @@ export function AuthStatus() {
   }
 
   return (
-    <div className="relative">
+    <div className="relative flex items-center gap-3">
+      <NotificationBell userId={user.id} />
       <button
         onClick={() => setMenuOpen(!menuOpen)}
         className="flex items-center gap-1.5 hover:text-primary transition-colors"

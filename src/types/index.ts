@@ -269,6 +269,7 @@ export type ApplicationStatus =
   | "pending"
   | "deposit_pending"
   | "submitted"
+  | "reviewing"
   | "selected"
   | "confirmed"
   | "standby"
@@ -287,8 +288,38 @@ export interface Application {
   selected_at?: string;
   rejected_at?: string;
   admin_note?: string;
+  standby_rank?: number;
+  rejection_reason?: string;
+  status_changed_at?: string;
+  status_changed_by?: string;
+  is_result_read?: boolean;
   created_at: string;
   updated_at: string;
   lecture?: Lecture;
   applicant?: Profile;
+}
+
+// ----- 상태 변경 이력 -----
+export interface StatusHistory {
+  id: string;
+  application_id: string;
+  previous_status: ApplicationStatus | null;
+  new_status: ApplicationStatus;
+  changed_by: string;
+  changed_at: string;
+  memo?: string;
+  changer?: Profile;
+}
+
+// ----- 알림 -----
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: string;
+  title: string;
+  message?: string;
+  reference_id?: string;
+  reference_url?: string;
+  is_read: boolean;
+  created_at: string;
 }
