@@ -134,7 +134,8 @@ export default async function LectureDetailPage({ params }: { params: Promise<{ 
                   pending: "접수 대기",
                   deposit_pending: "예치금 결제 대기",
                   submitted: "접수 완료",
-                  selected: "선발됨",
+                  selected: "강사확정",
+                  standby: "예비강사",
                   rejected: "미선발",
                   cancelled: "취소",
                 }[existingApplication.status] ?? existingApplication.status}

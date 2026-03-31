@@ -551,7 +551,7 @@ export async function updateApplication(id: string, fields: Record<string, unkno
   if (error) throw new Error(error.message);
 }
 
-export async function selectApplicants(lectureId: string, selectedIds: string[]) {
+export async function selectApplicants(lectureId: string, selectedIds: string[], standbyIds: string[] = []) {
   const supabase = createAdminClient();
   const { sendLectureSelectedNotification, sendLectureRejectedNotification } = await import("@/lib/kakao");
 
@@ -563,7 +563,7 @@ export async function selectApplicants(lectureId: string, selectedIds: string[])
     .single();
   const lectureTitle = lectureData?.title ?? "강의";
 
-  // 선발된 지원자 상태 업데이트
+  // 1. 강사확정 처리
   if (selectedIds.length > 0) {
     const { error: selectError } = await supabase
       .from("applications")
@@ -573,32 +573,49 @@ export async function selectApplicants(lectureId: string, selectedIds: string[])
     if (selectError) throw new Error(selectError.message);
   }
 
-  // 나머지 지원자 미선발 처리
+  // 2. 예비강사 처리
+  if (standbyIds.length > 0) {
+    const { error: standbyError } = await supabase
+      .from("applications")
+      .update({ status: "standby", updated_at: new Date().toISOString() })
+      .in("id", standbyIds)
+      .eq("lecture_id", lectureId);
+    if (standbyError) throw new Error(standbyError.message);
+  }
+
+  // 3. 미선발 처리 (나머지 submitted 지원자)
+  const excludeIds = [...selectedIds, ...standbyIds];
+  const rejectNote = "이번 강의에 함께하지 못하게 되어 죄송합니다. 다음 기회에 꼭 함께하길 바랍니다. 예치금은 3영업일 이내 환불됩니다.";
+
   let rejectQuery = supabase
     .from("applications")
-    .update({ status: "rejected", rejected_at: new Date().toISOString() })
+    .update({
+      status: "rejected",
+      rejected_at: new Date().toISOString(),
+      admin_note: rejectNote,
+    })
     .eq("lecture_id", lectureId)
     .eq("status", "submitted");
 
-  if (selectedIds.length > 0) {
-    rejectQuery = rejectQuery.not("id", "in", `(${selectedIds.join(",")})`);
+  if (excludeIds.length > 0) {
+    rejectQuery = rejectQuery.not("id", "in", `(${excludeIds.join(",")})`);
   }
 
   const { error: rejectError } = await rejectQuery;
   if (rejectError) throw new Error(rejectError.message);
 
-  // 강의 상태를 closed로 변경
+  // 4. 강의 상태를 closed로 변경
   await supabase
     .from("lectures")
     .update({ status: "closed", updated_at: new Date().toISOString() })
     .eq("id", lectureId);
 
-  // 카카오 알림톡 발송 (비동기, 실패해도 무관)
+  // 5. 카카오 알림톡 발송 (비동기, 실패해도 무관)
   const { data: allApps } = await supabase
     .from("applications")
     .select("id, applicant_id, status, profiles:applicant_id(phone)")
     .eq("lecture_id", lectureId)
-    .in("status", ["selected", "rejected"]);
+    .in("status", ["selected", "standby", "rejected"]);
 
   if (allApps) {
     for (const app of allApps) {
@@ -609,11 +626,13 @@ export async function selectApplicants(lectureId: string, selectedIds: string[])
       } else if (app.status === "rejected") {
         sendLectureRejectedNotification(phone, lectureTitle).catch(() => {});
       }
+      // standby는 별도 알림 (추후 카카오 템플릿 추가 시)
     }
   }
 
   revalidatePath(`/admin/lectures/${lectureId}/applicants`);
   revalidatePath("/admin/lectures");
+  revalidatePath("/mypage/applications");
 }
 
 // ─── 사이트 설정 ───
