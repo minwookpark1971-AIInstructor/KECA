@@ -278,6 +278,7 @@ export interface Application {
   lecture_id: string;
   applicant_id: string;
   portfolio_url?: string;
+  document_urls?: { name: string; url: string }[];
   cover_letter?: string;
   deposit_payment_id?: string;
   status: ApplicationStatus;

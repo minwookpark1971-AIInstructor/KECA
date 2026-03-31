@@ -149,7 +149,22 @@ export default function ApplicantsClient({ lecture, applications }: Props) {
                       </span>
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell">
-                      {app.portfolio_url ? (
+                      {app.document_urls && app.document_urls.length > 0 ? (
+                        <div className="space-y-1">
+                          {app.document_urls.map((doc: { name: string; url: string }, i: number) => (
+                            <a
+                              key={i}
+                              href={doc.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block text-xs text-primary underline truncate max-w-[140px]"
+                              title={doc.name}
+                            >
+                              {doc.name}
+                            </a>
+                          ))}
+                        </div>
+                      ) : app.portfolio_url ? (
                         <a
                           href={app.portfolio_url}
                           target="_blank"
