@@ -7,6 +7,7 @@ const boardNames: Record<string, string> = {
   photo_gallery: "교육사진 갤러리",
   video_gallery: "영상갤러리",
   resource: "자료실",
+  lecture: "강의공고",
 };
 
 export default async function AdminCommunityBoardPage({ params }: { params: Promise<{ board: string }> }) {

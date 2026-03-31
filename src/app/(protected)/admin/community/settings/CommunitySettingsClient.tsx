@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SlidersHorizontal, GripVertical, Eye, EyeOff, Megaphone, CalendarDays, Star, Image, Video, FolderArchive } from "lucide-react";
+import { SlidersHorizontal, GripVertical, Eye, EyeOff, Megaphone, CalendarDays, Star, Image, Video, FolderArchive, Mic2 } from "lucide-react";
 import Link from "next/link";
 import type { ReactElement } from "react";
 
@@ -21,6 +21,7 @@ const defaultBoards: BoardConfig[] = [
   { slug: "photo_gallery", name: "교육사진 갤러리", boardType: "photo", icon: <Image size={16} />, description: "교육 현장 사진 갤러리", active: true },
   { slug: "video_gallery", name: "영상갤러리", boardType: "video", icon: <Video size={16} />, description: "교육 영상 갤러리", active: true },
   { slug: "resource", name: "자료실", boardType: "file", icon: <FolderArchive size={16} />, description: "교육 자료 다운로드", active: true },
+  { slug: "lecture", name: "강의공고", boardType: "general", icon: <Mic2 size={16} />, description: "강사 섭외 및 강의 공고", active: true },
 ];
 
 export default function CommunitySettingsClient() {
@@ -37,7 +38,7 @@ export default function CommunitySettingsClient() {
 
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
         <p className="text-sm text-amber-800">
-          현재 커뮤니티 메뉴는 기본 6개 메뉴로 구성되어 있습니다.
+          현재 커뮤니티 메뉴는 기본 7개 메뉴로 구성되어 있습니다.
           각 메뉴의 게시물은 해당 관리 페이지에서 등록/수정/삭제할 수 있습니다.
         </p>
       </div>

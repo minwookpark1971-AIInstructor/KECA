@@ -55,6 +55,7 @@ export const mainNavigation: MenuItem[] = [
     children: [
       { label: "공지사항", href: "/community/notice" },
       { label: "교육일정", href: "/community/schedule" },
+      { label: "강의공고", href: "/lectures" },
       { label: "교육후기", href: "/community/review" },
       { label: "교육사진 갤러리", href: "/community/gallery" },
       { label: "영상갤러리", href: "/community/videos" },

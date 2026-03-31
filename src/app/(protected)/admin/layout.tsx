@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Users, GraduationCap, BookOpen, FolderOpen,
   MessageSquare, HelpCircle, CreditCard, Building2,
   Settings, Award, ChevronDown,
-  Megaphone, CalendarDays, Star, Image, Video, FolderArchive, SlidersHorizontal,
+  Megaphone, CalendarDays, Star, Image, Video, FolderArchive, Mic2, SlidersHorizontal,
 } from "lucide-react";
 
 type SidebarItem =
@@ -35,6 +35,7 @@ const sidebarItems: SidebarItem[] = [
       { label: "교육사진 갤러리", href: "/admin/community/photo_gallery", icon: Image },
       { label: "영상갤러리", href: "/admin/community/video_gallery", icon: Video },
       { label: "자료실", href: "/admin/community/resource", icon: FolderArchive },
+      { label: "강의공고", href: "/admin/community/lecture", icon: Mic2 },
       { label: "메뉴 관리", href: "/admin/community/settings", icon: SlidersHorizontal },
     ],
   },

@@ -124,7 +124,7 @@ export interface Inquiry {
 }
 
 // ----- 커뮤니티 게시판 -----
-export type BoardType = "notice" | "review" | "photo_gallery" | "video_gallery" | "resource";
+export type BoardType = "notice" | "review" | "photo_gallery" | "video_gallery" | "resource" | "lecture";
 export type PostStatus = "draft" | "published" | "archived";
 
 export interface Post {
