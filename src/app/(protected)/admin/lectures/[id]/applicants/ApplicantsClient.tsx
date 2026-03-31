@@ -530,7 +530,7 @@ export default function ApplicantsClient({ lecture, applications, adminId, statu
                             {canPreview && (
                               <button onClick={() => { setPreviewUrl(doc.url); setPreviewName(doc.name); }} className="text-xs text-primary hover:underline shrink-0">미리보기</button>
                             )}
-                            <a href={doc.url} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                            <a href={doc.url} target="_blank" rel="noopener noreferrer" download={doc.name} className="shrink-0">
                               <ExternalLink size={14} className="text-text-muted hover:text-primary" />
                             </a>
                           </div>

@@ -25,23 +25,33 @@ export async function POST(request: Request) {
       status: "pending",
     };
 
-    // program_fee인 경우 metadata에 programId 저장
+    // metadata 저장 (010 마이그레이션 적용 후 동작)
+    const metadataPayload: Record<string, string> = {};
     if (paymentType === "program_fee" && programId) {
-      insertData.metadata = { programId };
+      metadataPayload.programId = programId;
     }
-
-    // deposit인 경우 metadata에 applicationId 저장
     if (paymentType === "deposit" && applicationId) {
-      insertData.metadata = { applicationId };
+      metadataPayload.applicationId = applicationId;
+    }
+    if (Object.keys(metadataPayload).length > 0) {
+      insertData.metadata = metadataPayload;
     }
 
-    const { error } = await supabase.from("payments").insert(insertData);
+    // 먼저 metadata 포함하여 시도
+    let { error } = await supabase.from("payments").insert(insertData);
+
+    // metadata 컬럼이 없으면 metadata 제외하고 재시도
+    if (error && insertData.metadata) {
+      const { metadata: _, ...withoutMetadata } = insertData;
+      const retry = await supabase.from("payments").insert(withoutMetadata);
+      error = retry.error;
+    }
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ orderId });
+    return NextResponse.json({ orderId, applicationId });
   } catch {
     return NextResponse.json({ error: "서버 오류" }, { status: 500 });
   }

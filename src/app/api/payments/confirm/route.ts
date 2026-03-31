@@ -4,7 +4,7 @@ import { sendPaymentConfirmation } from "@/lib/email";
 
 export async function POST(request: Request) {
   try {
-    const { paymentKey, orderId, amount } = await request.json();
+    const { paymentKey, orderId, amount, applicationId: bodyApplicationId } = await request.json();
 
     // 토스페이먼츠 결제 승인 요청
     const secretKey = process.env.TOSS_SECRET_KEY;
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     // 결제 타입별 후처리
     const { data: paymentData } = await supabase
       .from("payments")
-      .select("user_id, payment_type")
+      .select("id, user_id, payment_type, metadata")
       .eq("toss_order_id", orderId)
       .single();
 
@@ -86,29 +86,30 @@ export async function POST(request: Request) {
       }
 
       if (paymentData.payment_type === "deposit") {
-        // metadata에서 applicationId 조회
-        const { data: paymentRow } = await supabase
-          .from("payments")
-          .select("id, metadata")
-          .eq("toss_order_id", orderId)
-          .single();
-        const meta = paymentRow?.metadata as { applicationId?: string } | null;
-        const applicationId = meta?.applicationId;
-        if (paymentRow && applicationId) {
-          // 강사확정(selected) 후 보증금 결제 → 최종확정(confirmed)
-          await supabase
+        // applicationId: metadata에서 가져오거나 body에서 fallback
+        const meta = paymentData.metadata as { applicationId?: string } | null;
+        const applicationId = meta?.applicationId || bodyApplicationId;
+
+        if (applicationId) {
+          const { error: appError } = await supabase
             .from("applications")
             .update({
               status: "confirmed",
-              deposit_payment_id: paymentRow.id,
+              deposit_payment_id: paymentData.id,
               updated_at: now,
             })
             .eq("id", applicationId)
             .eq("status", "selected");
+
+          if (appError) {
+            console.error("Application status update failed:", appError);
+          }
+        } else {
+          console.error("Deposit payment confirmed but applicationId not found. orderId:", orderId);
         }
       }
 
-      // 결제 완료 이메일 발송 (모든 타입 공통)
+      // 결제 완료 이메일 발송 (결제 유형별 분기)
       if (profile) {
         sendPaymentConfirmation(
           profile.email,
@@ -116,7 +117,8 @@ export async function POST(request: Request) {
           amount,
           paymentData.payment_type === "annual_membership"
             ? oneYearLater.slice(0, 10)
-            : ""
+            : "",
+          paymentData.payment_type
         );
       }
     }

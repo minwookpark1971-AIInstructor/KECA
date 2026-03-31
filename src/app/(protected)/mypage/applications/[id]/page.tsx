@@ -177,7 +177,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
                 <span className="text-text-sub/60 block mb-1">제출 서류 ({app.document_urls.length}건)</span>
                 <div className="space-y-1">
                   {app.document_urls.map((doc, i) => (
-                    <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
+                    <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer" download={doc.name} className="flex items-center gap-2 text-sm text-primary hover:underline">
                       <FileText size={14} /> {doc.name}
                     </a>
                   ))}

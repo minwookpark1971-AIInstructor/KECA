@@ -37,7 +37,7 @@ export default function DepositPayPage() {
       const res = await fetch("/api/payments/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentKey: pk, orderId: oid, amount: amt }),
+        body: JSON.stringify({ paymentKey: pk, orderId: oid, amount: amt, applicationId }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -139,7 +139,7 @@ export default function DepositPayPage() {
           )}
 
           <div className="bg-white border border-border-light rounded-2xl overflow-hidden shadow-card">
-            <div className="bg-gradient-to-r from-green-600 to-green-500 p-6 text-white">
+            <div className="bg-gradient-to-r from-gray-700 to-gray-600 p-6 text-white">
               <p className="text-sm opacity-80">강사 보증금</p>
               <p className="text-3xl font-bold mt-1">{DEPOSIT_AMOUNT.toLocaleString()}원</p>
               <p className="text-xs opacity-60 mt-1">{decodeURIComponent(lectureTitle)}</p>
@@ -158,7 +158,7 @@ export default function DepositPayPage() {
               <button
                 onClick={handlePayment}
                 disabled={loading || !applicationId}
-                className="w-full flex items-center justify-center gap-2 bg-green-600 text-white py-3 rounded-xl font-semibold text-sm hover:bg-green-700 transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 bg-gray-700 text-white py-3 rounded-xl font-semibold text-sm hover:bg-gray-800 transition-colors disabled:opacity-50"
               >
                 {loading ? (
                   <><Loader2 size={18} className="animate-spin" /> 처리 중...</>

@@ -108,12 +108,12 @@ export default async function ApplicationsPage() {
                     </div>
                   )}
 
-                  {/* 강사확정 → 보증금 결제 버튼 */}
+                  {/* 강사확정 → 보증금 결제 안내 */}
                   {app.status === "selected" && (
                     <div className="mx-4 sm:mx-5 mb-4">
                       <span className="flex items-center justify-center gap-2 w-full py-3 bg-primary text-white rounded-lg text-sm font-semibold">
                         <CreditCard size={16} />
-                        보증금 결제하기 (30,000원)
+                        상세 보기에서 보증금 결제하기 (30,000원)
                       </span>
                     </div>
                   )}

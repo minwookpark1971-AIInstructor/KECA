@@ -96,24 +96,45 @@ export async function sendPaymentConfirmation(
   to: string,
   name: string,
   amount: number,
-  expiresAt: string
+  expiresAt: string,
+  paymentType: string = "annual_membership"
 ) {
   try {
     const resend = getResend();
     if (!resend) return;
+
+    const isDeposit = paymentType === "deposit";
+    const subject = isDeposit
+      ? "[KECA] 보증금 결제가 완료되었습니다"
+      : "[KECA] 협회비 결제가 완료되었습니다";
+
+    const bodyRows = isDeposit
+      ? `<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">결제 금액</td><td style="padding:8px;border:1px solid #ddd;">${amount.toLocaleString()}원</td></tr>
+         <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">결제 유형</td><td style="padding:8px;border:1px solid #ddd;">강사 보증금</td></tr>`
+      : `<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">결제 금액</td><td style="padding:8px;border:1px solid #ddd;">${amount.toLocaleString()}원</td></tr>
+         <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">유효 기간</td><td style="padding:8px;border:1px solid #ddd;">${expiresAt}까지</td></tr>
+         <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">회원 등급</td><td style="padding:8px;border:1px solid #ddd;">정회원</td></tr>`;
+
+    const heading = isDeposit
+      ? `${name}님, 보증금 결제가 완료되었습니다.`
+      : `${name}님, 협회비 결제가 완료되었습니다.`;
+
+    const ctaUrl = isDeposit
+      ? `${process.env.NEXT_PUBLIC_SITE_URL}/mypage/applications`
+      : `${process.env.NEXT_PUBLIC_SITE_URL}/mypage`;
+    const ctaLabel = isDeposit ? "지원이력 바로가기" : "마이페이지 바로가기";
+
     await resend.emails.send({
       from: FROM_EMAIL,
       to,
-      subject: "[KECA] 협회비 결제가 완료되었습니다",
+      subject,
       html: `
-        <h2>${name}님, 협회비 결제가 완료되었습니다.</h2>
+        <h2>${heading}</h2>
         <table style="border-collapse:collapse;width:100%;max-width:400px;">
-          <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">결제 금액</td><td style="padding:8px;border:1px solid #ddd;">${amount.toLocaleString()}원</td></tr>
-          <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">유효 기간</td><td style="padding:8px;border:1px solid #ddd;">${expiresAt}까지</td></tr>
-          <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">회원 등급</td><td style="padding:8px;border:1px solid #ddd;">정회원</td></tr>
+          ${bodyRows}
         </table>
         <br/>
-        <a href="${process.env.NEXT_PUBLIC_SITE_URL}/mypage" style="display:inline-block;background:#2563eb;color:white;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">마이페이지 바로가기</a>
+        <a href="${ctaUrl}" style="display:inline-block;background:#2563eb;color:white;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">${ctaLabel}</a>
         <br/><br/>
         <p style="color:#888;font-size:12px;">한국교육컨설팅협회 KECA</p>
       `,
