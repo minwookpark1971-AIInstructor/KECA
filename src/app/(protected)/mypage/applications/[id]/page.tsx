@@ -11,7 +11,7 @@ export const metadata = { title: "지원 상세" };
 
 const statusLabels: Record<ApplicationStatus, { label: string; cls: string }> = {
   pending: { label: "대기중", cls: "bg-gray-100 text-gray-500" },
-  deposit_pending: { label: "예치금 결제 대기", cls: "bg-yellow-100 text-yellow-600" },
+  deposit_pending: { label: "보증금 결제 대기", cls: "bg-yellow-100 text-yellow-600" },
   submitted: { label: "접수완료", cls: "bg-blue-100 text-blue-600" },
   reviewing: { label: "심사중", cls: "bg-yellow-100 text-yellow-700" },
   selected: { label: "강사확정", cls: "bg-green-100 text-green-700" },

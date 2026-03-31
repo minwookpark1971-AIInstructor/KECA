@@ -585,7 +585,7 @@ export async function selectApplicants(lectureId: string, selectedIds: string[],
 
   // 3. 미선발 처리 (나머지 submitted 지원자)
   const excludeIds = [...selectedIds, ...standbyIds];
-  const rejectNote = "이번 강의에 함께하지 못하게 되어 죄송합니다. 다음 기회에 꼭 함께하길 바랍니다. 예치금은 3영업일 이내 환불됩니다.";
+  const rejectNote = "이번 강의에 함께하지 못하게 되어 죄송합니다. 다음 기회에 꼭 함께하길 바랍니다. 보증금은 3영업일 이내 환불됩니다.";
 
   let rejectQuery = supabase
     .from("applications")

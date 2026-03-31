@@ -133,7 +133,7 @@ export default async function LectureDetailPage({ params }: { params: Promise<{ 
                 현재 지원 상태:{" "}
                 {{
                   pending: "접수 대기",
-                  deposit_pending: "예치금 결제 대기",
+                  deposit_pending: "보증금 결제 대기",
                   submitted: "접수 완료",
                   reviewing: "심사중",
                   selected: "강사확정 (보증금 결제 필요)",
@@ -187,7 +187,7 @@ export default async function LectureDetailPage({ params }: { params: Promise<{ 
             </div>
           ) : (
             <div className="text-center">
-              <p className="text-sm text-text-sub mb-1">지원 예치금: <strong className="text-text">30,000원</strong></p>
+              <p className="text-sm text-text-sub mb-1">지원 보증금: <strong className="text-text">30,000원</strong></p>
               <p className="text-xs text-text-sub mb-4">미선발 시 100% 환불됩니다.</p>
               <ApplyModal lecture={lecture} user={user} />
             </div>

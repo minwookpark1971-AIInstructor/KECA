@@ -2,7 +2,7 @@ import { getCurrentUser, getPaymentsByUser } from "@/lib/supabase/queries";
 import { getApplicationsByUser } from "@/lib/supabase/queries";
 import { redirect } from "next/navigation";
 
-export const metadata = { title: "예치금 관리" };
+export const metadata = { title: "보증금 관리" };
 
 const depositStatusMap: Record<string, { label: string; cls: string }> = {
   pending: { label: "결제 대기", cls: "bg-yellow-100 text-yellow-600" },
@@ -28,16 +28,16 @@ export default async function DepositsPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
-      <h1 className="text-2xl font-bold text-text mb-2">예치금 관리</h1>
+      <h1 className="text-2xl font-bold text-text mb-2">보증금 관리</h1>
       <p className="text-sm text-text-sub mb-6">
-        강사 지원 시 납부한 예치금 내역입니다. 미선발 시 3영업일 이내 전액 환불됩니다.
+        강사 지원 시 납부한 보증금 내역입니다. 미선발 시 3영업일 이내 전액 환불됩니다.
       </p>
 
       {/* 환불 정책 안내 */}
       <div className="bg-blue-50 rounded-xl p-4 mb-6 text-sm text-blue-700">
-        <strong className="block mb-1">예치금 환불 정책</strong>
+        <strong className="block mb-1">보증금 환불 정책</strong>
         <ul className="list-disc list-inside space-y-1 text-blue-600">
-          <li>선발된 경우: 예치금은 강사료에서 차감됩니다.</li>
+          <li>선발된 경우: 보증금은 강사료에서 차감됩니다.</li>
           <li>미선발된 경우: 선발 발표일로부터 3영업일 이내 전액 환불됩니다.</li>
           <li>지원 취소 시: 서류 제출 완료 전까지만 취소 가능합니다.</li>
         </ul>
@@ -45,7 +45,7 @@ export default async function DepositsPage() {
 
       {deposits.length === 0 ? (
         <div className="bg-white rounded-xl border border-border-light p-12 text-center text-text-sub">
-          예치금 결제 내역이 없습니다.
+          보증금 결제 내역이 없습니다.
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-border-light overflow-hidden">

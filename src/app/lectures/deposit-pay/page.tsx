@@ -88,7 +88,7 @@ export default function DepositPayPage() {
       <div className="text-center max-w-md">
         <CheckCircle size={64} className="text-green-500 mx-auto mb-4" />
         <h2 className="text-xl font-bold text-text mb-2">지원이 완료되었습니다!</h2>
-        <p className="text-text-sub mb-2">예치금 결제가 완료되어 지원이 접수되었습니다.</p>
+        <p className="text-text-sub mb-2">보증금 결제가 완료되어 지원이 접수되었습니다.</p>
         <p className="text-sm text-text-sub mb-6">선발 결과는 카카오 알림톡 및 이메일로 안내드립니다.</p>
         <div className="flex gap-3 justify-center">
           <Link

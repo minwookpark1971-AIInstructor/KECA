@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     }
 
     if (!application.deposit_payment_id) {
-      return NextResponse.json({ error: "환불할 예치금 결제 없음" }, { status: 400 });
+      return NextResponse.json({ error: "환불할 보증금 결제 없음" }, { status: 400 });
     }
 
     // 결제 정보 조회
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
           Authorization: `Basic ${Buffer.from(`${secretKey}:`).toString("base64")}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ cancelReason: "강사 미선발 예치금 환불" }),
+        body: JSON.stringify({ cancelReason: "강사 미선발 보증금 환불" }),
       }
     );
 

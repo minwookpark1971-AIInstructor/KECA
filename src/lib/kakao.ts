@@ -76,7 +76,7 @@ export async function sendLectureSelectedNotification(
 
 /**
  * 미선발 알림
- * 템플릿: "강의공고 #{강의명} 지원 결과, 이번에는 함께하지 못하게 되었습니다. 예치금은 3영업일 이내 환불됩니다."
+ * 템플릿: "강의공고 #{강의명} 지원 결과, 이번에는 함께하지 못하게 되었습니다. 보증금은 3영업일 이내 환불됩니다."
  */
 export async function sendLectureRejectedNotification(
   phone: string,
