@@ -2,6 +2,7 @@ import { getCurrentUser, getApplicationsByUser } from "@/lib/supabase/queries";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { ApplicationStatus } from "@/types";
+import { CreditCard } from "lucide-react";
 
 export const metadata = { title: "지원이력" };
 
@@ -10,6 +11,7 @@ const statusLabels: Record<ApplicationStatus, { label: string; cls: string }> = 
   deposit_pending: { label: "예치금 결제 대기", cls: "bg-yellow-100 text-yellow-600" },
   submitted: { label: "접수완료", cls: "bg-blue-100 text-blue-600" },
   selected: { label: "강사확정", cls: "bg-green-100 text-green-700" },
+  confirmed: { label: "최종확정", cls: "bg-emerald-100 text-emerald-700" },
   standby: { label: "예비강사", cls: "bg-amber-100 text-amber-600" },
   rejected: { label: "미선발", cls: "bg-red-100 text-red-500" },
   cancelled: { label: "취소", cls: "bg-gray-100 text-gray-400" },
@@ -17,8 +19,12 @@ const statusLabels: Record<ApplicationStatus, { label: string; cls: string }> = 
 
 const resultMessages: Partial<Record<ApplicationStatus, { msg: string; cls: string }>> = {
   selected: {
-    msg: "축하합니다! 강사로 선발되셨습니다. 담당자가 곧 연락드리겠습니다.",
+    msg: "축하합니다! 강사로 선발되셨습니다. 보증금 결제를 완료하시면 최종 확정됩니다.",
     cls: "bg-green-50 border-green-200 text-green-700",
+  },
+  confirmed: {
+    msg: "보증금 결제가 완료되어 최종 확정되었습니다. 담당자가 곧 연락드리겠습니다.",
+    cls: "bg-emerald-50 border-emerald-200 text-emerald-700",
   },
   standby: {
     msg: "예비강사로 선정되었습니다. 강사 변동 시 우선 연락드리겠습니다.",
@@ -80,12 +86,8 @@ export default async function ApplicationsPage() {
                       <span className="text-base font-semibold text-text">(삭제된 공고)</span>
                     )}
                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-text-sub">
-                      {app.lecture?.lecture_date && (
-                        <span>강의일: {app.lecture.lecture_date}</span>
-                      )}
-                      {app.lecture?.location && (
-                        <span>장소: {app.lecture.location}</span>
-                      )}
+                      {app.lecture?.lecture_date && <span>강의일: {app.lecture.lecture_date}</span>}
+                      {app.lecture?.location && <span>장소: {app.lecture.location}</span>}
                       <span>지원일: {new Date(app.created_at).toLocaleDateString("ko-KR")}</span>
                     </div>
                   </div>
@@ -94,21 +96,31 @@ export default async function ApplicationsPage() {
                   </span>
                 </div>
 
-                {/* 결과 메시지 (선발/예비/미선발 시) */}
+                {/* 결과 메시지 */}
                 {result && (
                   <div className={`mx-4 sm:mx-5 mb-4 p-3 rounded-lg border text-sm ${result.cls}`}>
                     {app.status === "rejected" ? rejectedMsg : result.msg}
                   </div>
                 )}
 
-                {/* 예치금 결제 안내 */}
+                {/* 강사확정 → 보증금 결제 버튼 */}
+                {app.status === "selected" && (
+                  <div className="mx-4 sm:mx-5 mb-4">
+                    <Link
+                      href={`/mypage/applications/deposit-pay?applicationId=${app.id}&lectureTitle=${encodeURIComponent(app.lecture?.title || "강의")}`}
+                      className="flex items-center justify-center gap-2 w-full py-3 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors"
+                    >
+                      <CreditCard size={16} />
+                      보증금 결제하기 (30,000원)
+                    </Link>
+                  </div>
+                )}
+
+                {/* 하위호환: 기존 deposit_pending 상태 */}
                 {app.status === "deposit_pending" && (
                   <div className="mx-4 sm:mx-5 mb-4 p-3 rounded-lg border bg-yellow-50 border-yellow-200 text-sm text-yellow-700 flex items-center justify-between">
                     <span>예치금 결제가 필요합니다.</span>
-                    <Link
-                      href={`/lectures/${app.lecture_id}`}
-                      className="text-xs font-medium text-primary underline"
-                    >
+                    <Link href={`/lectures/${app.lecture_id}`} className="text-xs font-medium text-primary underline">
                       결제하기 →
                     </Link>
                   </div>

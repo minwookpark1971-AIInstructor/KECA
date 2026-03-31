@@ -95,10 +95,16 @@ export async function POST(request: Request) {
         const meta = paymentRow?.metadata as { applicationId?: string } | null;
         const applicationId = meta?.applicationId;
         if (paymentRow && applicationId) {
+          // 강사확정(selected) 후 보증금 결제 → 최종확정(confirmed)
           await supabase
             .from("applications")
-            .update({ status: "submitted", deposit_payment_id: paymentRow.id })
-            .eq("id", applicationId);
+            .update({
+              status: "confirmed",
+              deposit_payment_id: paymentRow.id,
+              updated_at: now,
+            })
+            .eq("id", applicationId)
+            .eq("status", "selected");
         }
       }
 

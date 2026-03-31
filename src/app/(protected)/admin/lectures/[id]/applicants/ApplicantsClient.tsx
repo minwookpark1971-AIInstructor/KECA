@@ -11,6 +11,7 @@ const statusMap: Record<Application["status"], { label: string; cls: string }> =
   deposit_pending: { label: "결제대기", cls: "bg-yellow-100 text-yellow-600" },
   submitted: { label: "접수완료", cls: "bg-blue-100 text-blue-600" },
   selected: { label: "강사확정", cls: "bg-green-100 text-green-700" },
+  confirmed: { label: "최종확정", cls: "bg-emerald-100 text-emerald-700" },
   standby: { label: "예비강사", cls: "bg-amber-100 text-amber-600" },
   rejected: { label: "미선발", cls: "bg-red-100 text-red-400" },
   cancelled: { label: "취소", cls: "bg-gray-100 text-gray-400" },

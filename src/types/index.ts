@@ -270,6 +270,7 @@ export type ApplicationStatus =
   | "deposit_pending"
   | "submitted"
   | "selected"
+  | "confirmed"
   | "standby"
   | "rejected"
   | "cancelled";
