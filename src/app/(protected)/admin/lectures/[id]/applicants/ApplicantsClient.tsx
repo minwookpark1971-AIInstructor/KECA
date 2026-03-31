@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { updateApplicationStatus, bulkUpdateApplicationStatus, selectApplicants, updateApplication, deleteApplication } from "@/lib/supabase/mutations";
 import type { Application, ApplicationStatus, Lecture, StatusHistory } from "@/types";
@@ -86,13 +86,13 @@ export default function ApplicantsClient({ lecture, applications, adminId, statu
     if (allChecked) setCheckedIds(new Set());
     else setCheckedIds(new Set(applications.map((a) => a.id)));
   }
-  function toggleCheck(id: string) {
+  const toggleCheck = useCallback((id: string) => {
     setCheckedIds((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
-  }
+  }, []);
 
   // ─── 개별 상태 변경 (드롭다운) ───
   async function handleStatusChange(app: Application, newStatus: ApplicationStatus) {
