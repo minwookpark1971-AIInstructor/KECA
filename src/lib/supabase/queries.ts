@@ -402,11 +402,12 @@ export async function getApplicationsByLecture(lectureId: string): Promise<Appli
 
 export async function getApplicationsByUser(userId: string): Promise<Application[]> {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("applications")
     .select("*, lecture:lectures(id, title, lecture_date, location, status)")
     .eq("applicant_id", userId)
     .order("created_at", { ascending: false });
+  if (error) return [];
   return (data as unknown as Application[]) ?? [];
 }
 

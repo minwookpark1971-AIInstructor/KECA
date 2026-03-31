@@ -19,8 +19,12 @@ export default async function LectureDetailPage({ params }: { params: Promise<{ 
   // 이미 지원했는지 확인
   let existingApplication = null;
   if (user) {
-    const apps = await getApplicationsByUser(user.id);
-    existingApplication = apps.find((a) => a.lecture_id === lecture.id) ?? null;
+    try {
+      const apps = await getApplicationsByUser(user.id);
+      existingApplication = apps.find((a) => a.lecture_id === lecture.id) ?? null;
+    } catch {
+      // applications 테이블 접근 실패 시 무시 (RLS 등)
+    }
   }
 
   const isOpen = lecture.status === "open";
