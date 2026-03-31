@@ -19,6 +19,9 @@ export async function approveMember(userId: string, role: string = "approved") {
     .eq("id", userId);
   if (error) throw new Error(error.message);
 
+  // 이메일 인증 자동 확인 (승인 시 로그인 가능하도록)
+  await supabase.auth.admin.updateUserById(userId, { email_confirm: true });
+
   // 승인 알림 이메일 발송
   const { data: profile } = await supabase
     .from("profiles")
