@@ -10,15 +10,12 @@ import {
   Award,
   GraduationCap,
   ChevronRight,
-  Calendar,
-  MessageSquare,
-  Star,
-  BookOpen,
   ChevronDown,
 } from "lucide-react";
-import { getPostsByBoard, getPrograms, getSchedules, getPartners } from "@/lib/supabase/queries";
+import { getPostsByBoard, getPrograms, getSchedules, getPartners, getSiteContent } from "@/lib/supabase/queries";
 import { ScrollReveal } from "@/components/layout/ScrollReveal";
 import { CounterStats } from "@/components/home/CounterStats";
+import { NewsTabs } from "@/components/home/NewsTabs";
 
 const catCardStyles: Record<string, { gradient: string; icon: typeof Cpu }> = {
   "ai-edutech": { gradient: "from-[#1B2A4A] to-[#2E5090]", icon: Cpu },
@@ -30,14 +27,14 @@ const catCardStyles: Record<string, { gradient: string; icon: typeof Cpu }> = {
 };
 
 const categories = [
-  { label: "AI·에듀테크 교육", icon: Cpu, href: "/programs?category=ai-edutech" },
-  { label: "진로·진학 컨설팅", icon: Compass, href: "/programs?category=career" },
-  { label: "교육컨설팅", icon: Briefcase, href: "/programs?category=consulting" },
-  { label: "리더십·조직교육", icon: Users, href: "/programs?category=leadership" },
-  { label: "직무역량 강화", icon: Target, href: "/programs?category=competency" },
-  { label: "법정의무교육", icon: Shield, href: "/programs?category=mandatory" },
-  { label: "전문가과정", icon: Award, href: "/expert" },
-  { label: "강사진", icon: GraduationCap, href: "/instructors" },
+  { label: "AI·에듀테크 교육", desc: "AI와 에듀테크를 활용한 미래형 교육 설계", icon: Cpu, href: "/programs?category=ai-edutech" },
+  { label: "진로·진학 컨설팅", desc: "학생 맞춤형 진로·진학 컨설팅 서비스", icon: Compass, href: "/programs?category=career" },
+  { label: "교육컨설팅", desc: "기업·기관 대상 전문 교육컨설팅", icon: Briefcase, href: "/programs?category=consulting" },
+  { label: "리더십·조직교육", desc: "조직 성과를 높이는 리더십 교육", icon: Users, href: "/programs?category=leadership" },
+  { label: "직무역량 강화", desc: "실무 중심의 직무역량 개발 프로그램", icon: Target, href: "/programs?category=competency" },
+  { label: "법정의무교육", desc: "법정 필수 이수 교육과정 제공", icon: Shield, href: "/programs?category=mandatory" },
+  { label: "전문가과정", desc: "자격증·전문가 양성 심화과정", icon: Award, href: "/expert" },
+  { label: "강사진", desc: "검증된 전문 강사진 소개", icon: GraduationCap, href: "/instructors" },
 ];
 
 const stats = [
@@ -48,12 +45,13 @@ const stats = [
 ];
 
 export default async function HomePage() {
-  const [notices, reviews, featuredPrograms, schedules, partners] = await Promise.all([
+  const [notices, reviews, featuredPrograms, schedules, partners, heroImageUrl] = await Promise.all([
     getPostsByBoard("notice", 4),
     getPostsByBoard("review", 3),
     getPrograms({ featured: true, limit: 3 }),
     getSchedules(),
     getPartners(),
+    getSiteContent("hero_image_url") as Promise<string | null>,
   ]);
 
   const upcomingSchedules = schedules
@@ -64,10 +62,24 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* ===== 히어로 — 풀스크린, 애니메이션 그라디언트 ===== */}
-      <section className="relative min-h-[100vh] flex items-center hero-gradient overflow-hidden -mt-20">
+      {/* ===== 히어로 — 풀스크린 ===== */}
+      <section
+        className={`relative min-h-[100vh] flex items-center overflow-hidden -mt-20 ${heroImageUrl ? "" : "hero-gradient"}`}
+        aria-label="메인 배너"
+      >
+        {/* 배경: 업로드 이미지 또는 그라디언트 */}
+        {heroImageUrl ? (
+          <>
+            <div
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+              style={{ backgroundImage: `url(${heroImageUrl})` }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#1B2A4A]/90 via-[#1B2A4A]/75 to-[#1B2A4A]/50" />
+          </>
+        ) : (
+          <div className="hero-glow" />
+        )}
         <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.03%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]" />
-        <div className="hero-glow" />
         <div className="container-custom relative z-10 pt-20">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold text-accent tracking-[0.2em] uppercase mb-8 animate-fade-in-up">
@@ -104,29 +116,32 @@ export default async function HomePage() {
       </section>
 
       {/* ===== 카테고리 위젯 ===== */}
-      <section className="py-20 lg:py-28">
+      <section className="py-20 lg:py-28" aria-label="교육 분야">
         <div className="container-custom">
           <ScrollReveal>
             <div className="text-center mb-14">
               <p className="section-label">Education Programs</p>
-              <h2 className="text-3xl lg:text-4xl font-bold text-text tracking-tight">
+              <h2 className="section-title">
                 KECA 핵심 교육 분야
               </h2>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 lg:gap-6">
+            <div className="-mx-4 px-4 sm:mx-0 sm:px-0 flex overflow-x-auto snap-x snap-mandatory scrollbar-hide gap-3 sm:grid sm:grid-cols-4 sm:overflow-visible sm:gap-4 lg:gap-6">
               {categories.map((cat) => {
                 const Icon = cat.icon;
                 return (
                   <Link
                     key={cat.label}
                     href={cat.href}
-                    className="group flex flex-col items-center gap-4 p-8 rounded-lg hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-all text-center"
+                    className="group flex flex-col items-center gap-3 p-6 lg:p-8 rounded-xl border border-transparent hover:border-border-light hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-all text-center shrink-0 w-[140px] snap-start sm:w-auto sm:shrink"
                   >
-                    <div className="w-14 h-14 rounded-full bg-primary/5 flex items-center justify-center group-hover:bg-primary/10 group-hover:scale-110 transition-all">
-                      <Icon size={24} className="text-primary group-hover:text-accent transition-colors" />
+                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center group-hover:from-primary group-hover:to-primary-light group-hover:scale-110 transition-all">
+                      <Icon size={24} className="text-primary group-hover:text-white transition-colors" />
                     </div>
-                    <span className="text-sm font-medium text-text group-hover:text-primary transition-colors">
+                    <span className="text-sm font-semibold text-text group-hover:text-primary transition-colors">
                       {cat.label}
+                    </span>
+                    <span className="text-xs text-text-muted leading-snug opacity-0 group-hover:opacity-100 max-h-0 group-hover:max-h-10 overflow-hidden transition-all duration-300">
+                      {cat.desc}
                     </span>
                   </Link>
                 );
@@ -151,7 +166,7 @@ export default async function HomePage() {
               <div className="flex items-end justify-between mb-12">
                 <div>
                   <p className="section-label">Featured Programs</p>
-                  <h2 className="text-3xl lg:text-4xl font-bold text-text tracking-tight">추천 교육</h2>
+                  <h2 className="section-title">추천 교육</h2>
                 </div>
                 <Link
                   href="/programs"
@@ -161,7 +176,7 @@ export default async function HomePage() {
                 </Link>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="-mx-4 px-4 md:mx-0 md:px-0 flex overflow-x-auto snap-x snap-mandatory scrollbar-hide gap-5 md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible md:gap-8">
                 {featuredPrograms.map((program) => {
                   const catSlug = program.category?.slug || "";
                   const cStyle = catCardStyles[catSlug] || { gradient: "from-[#1B2A4A] to-[#C4963C]", icon: Award };
@@ -170,34 +185,47 @@ export default async function HomePage() {
                     <Link
                       key={program.id}
                       href={`/programs/${program.slug}`}
-                      className="group rounded-lg overflow-hidden card-hover"
+                      className="group rounded-xl overflow-hidden card-hover bg-white border border-border-light shrink-0 w-[300px] snap-start md:w-auto md:shrink"
                     >
-                      <div className={`aspect-[16/10] flex flex-col items-center justify-center p-6 overflow-hidden ${
-                        program.thumbnail_url
-                          ? "bg-white border border-border"
-                          : `bg-gradient-to-br ${cStyle.gradient}`
+                      <div className={`aspect-[16/10] relative flex flex-col items-center justify-center overflow-hidden ${
+                        program.thumbnail_url ? "" : `bg-gradient-to-br ${cStyle.gradient}`
                       }`}>
                         {program.thumbnail_url ? (
                           <img src={program.thumbnail_url} alt={program.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                         ) : (
                           <>
-                            <CatIcon size={48} className="text-white/80 mb-3 group-hover:scale-110 transition-transform duration-300" />
-                            <span className="text-white/70 text-sm font-medium tracking-wide">{program.category?.name || ""}</span>
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,rgba(255,255,255,0.15),transparent_60%)]" />
+                            <CatIcon size={56} className="text-white/30 mb-3 group-hover:scale-110 group-hover:text-white/50 transition-all duration-300" />
+                            <span className="text-white/60 text-sm font-medium tracking-wide">{program.category?.name || ""}</span>
                           </>
                         )}
+                        {program.status === "published" && (
+                          <span className="absolute top-3 right-3 px-2.5 py-1 bg-white/90 text-xs font-semibold text-primary rounded-full backdrop-blur-sm">
+                            모집중
+                          </span>
+                        )}
                       </div>
-                      <div className="p-6">
+                      <div className="p-5">
                         {program.category && (
                           <span className="text-xs font-medium text-accent mb-2 block">
                             {program.category.name}
                           </span>
                         )}
-                        <h3 className="text-base font-semibold text-text group-hover:text-primary transition-colors">
+                        <h3 className="text-base font-semibold text-text group-hover:text-primary transition-colors leading-snug">
                           {program.title}
                         </h3>
-                        <p className="mt-2 text-xs text-text-muted">
-                          {program.target_audience || ""}{program.target_audience && program.duration ? " · " : ""}{program.duration || ""}
-                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {program.target_audience && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/5 text-primary">
+                              {program.target_audience}
+                            </span>
+                          )}
+                          {program.duration && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent/10 text-accent-dark">
+                              {program.duration}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </Link>
                   );
@@ -208,115 +236,20 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ===== 뉴스 & 일정 (2x2) — 콘텐츠 있을 때만 표시 ===== */}
+      {/* ===== 뉴스 & 일정 — 탭 UI ===== */}
       {hasNewsContent && (
         <section className="py-20 lg:py-28 bg-surface">
           <div className="container-custom">
             <ScrollReveal>
               <div className="text-center mb-14">
                 <p className="section-label">News & Events</p>
-                <h2 className="text-3xl lg:text-4xl font-bold text-text tracking-tight">소식 & 일정</h2>
+                <h2 className="section-title">소식 & 일정</h2>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-                {/* 공지사항 */}
-                {notices.length > 0 && (
-                  <div className="bg-white rounded-lg p-8">
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-lg font-bold text-text flex items-center gap-2">
-                        <MessageSquare size={18} className="text-primary" />
-                        공지사항
-                      </h3>
-                      <Link href="/community/notice" className="text-xs text-text-muted hover:text-primary transition-colors">
-                        더보기 &rarr;
-                      </Link>
-                    </div>
-                    <ul className="space-y-4">
-                      {notices.map((n) => (
-                        <li key={n.id} className="flex items-center justify-between text-sm">
-                          <span className="text-text truncate mr-4">{n.title}</span>
-                          <span className="text-text-muted text-xs shrink-0">{n.created_at?.slice(0, 10)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* 교육문의 — 항상 표시 */}
-                <div className="bg-white rounded-lg p-8">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-bold text-text flex items-center gap-2">
-                      <Briefcase size={18} className="text-accent" />
-                      교육문의
-                    </h3>
-                  </div>
-                  <p className="text-sm text-text-sub leading-relaxed mb-6">
-                    기업·기관 맞춤 교육이 필요하신가요?
-                    <br />
-                    교육 전문 컨설턴트가 최적의 프로그램을 제안해드립니다.
-                  </p>
-                  <Link href="/inquiry" className="inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-white/90 text-primary font-semibold text-xs rounded-full transition-colors shadow-sm">
-                    교육문의 바로가기 <ArrowRight size={14} />
-                  </Link>
-                </div>
-
-                {/* 교육후기 */}
-                {reviews.length > 0 && (
-                  <div className="bg-white rounded-lg p-8">
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-lg font-bold text-text flex items-center gap-2">
-                        <Star size={18} className="text-amber-500" />
-                        교육후기
-                      </h3>
-                      <Link href="/community/review" className="text-xs text-text-muted hover:text-primary transition-colors">
-                        더보기 &rarr;
-                      </Link>
-                    </div>
-                    <ul className="space-y-4">
-                      {reviews.map((r) => (
-                        <li key={r.id} className="text-sm">
-                          <p className="text-text truncate">{r.title}</p>
-                          <p className="text-xs text-text-muted mt-0.5">{r.created_at?.slice(0, 10)}</p>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* 교육일정 */}
-                {upcomingSchedules.length > 0 && (
-                  <div className="bg-white rounded-lg p-8">
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-lg font-bold text-text flex items-center gap-2">
-                        <Calendar size={18} className="text-emerald-600" />
-                        교육일정
-                      </h3>
-                      <Link href="/community/schedule" className="text-xs text-text-muted hover:text-primary transition-colors">
-                        더보기 &rarr;
-                      </Link>
-                    </div>
-                    <ul className="space-y-4">
-                      {upcomingSchedules.map((s) => {
-                        const d = new Date(s.start_date);
-                        return (
-                          <li key={s.id} className="flex items-start gap-3 text-sm">
-                            <span className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-primary/5 text-primary text-xs font-bold shrink-0">
-                              {d.getMonth() + 1}/{d.getDate()}
-                            </span>
-                            <div>
-                              <p className="font-medium text-text">{s.title}</p>
-                              <p className="text-xs text-text-muted">
-                                {s.is_online ? "온라인" : s.location || ""}
-                                {s.start_time ? ` · ${s.start_time}~${s.end_time || ""}` : ""}
-                              </p>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                )}
-              </div>
+              <NewsTabs
+                notices={notices}
+                reviews={reviews}
+                upcomingSchedules={upcomingSchedules}
+              />
             </ScrollReveal>
           </div>
         </section>

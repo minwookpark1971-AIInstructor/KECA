@@ -41,6 +41,8 @@ const sidebarItems: SidebarItem[] = [
   },
   { label: "교육문의", href: "/admin/inquiries", icon: HelpCircle },
   { type: "divider" },
+  { label: "강의공고", href: "/admin/lectures", icon: Megaphone },
+  { type: "divider" },
   { label: "결제 내역", href: "/admin/payments", icon: CreditCard },
   { label: "파트너 관리", href: "/admin/partners", icon: Building2 },
   { label: "사이트 설정", href: "/admin/settings", icon: Settings },
@@ -50,7 +52,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(() => {
     const initial = new Set<string>();
-    // 커뮤니티 하위 경로에 있으면 자동으로 펼침
     if (pathname.startsWith("/admin/community")) {
       initial.add("커뮤니티");
     }
@@ -74,7 +75,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return item.children.some((child) => isItemActive(child.href));
   };
 
-  // 모바일용 flat 메뉴 (하위 항목 포함)
   const flatItems = sidebarItems.flatMap((item) => {
     if ("type" in item) return [];
     if ("children" in item) return item.children;

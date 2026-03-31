@@ -2,9 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Metadata } from "next";
 import { SubpageHero } from "@/components/layout/SubpageHero";
-import { getCurrentUser } from "@/lib/supabase/queries";
+import { getCurrentUser, getEnrollmentsByUser } from "@/lib/supabase/queries";
 import { roleLabels, roleBadgeColors } from "@/lib/utils";
-import { User, CreditCard, Edit, ChevronRight, Shield, Calendar } from "lucide-react";
+import { User, CreditCard, Edit, ChevronRight, Shield, Calendar, BookOpen, FileText, Wallet } from "lucide-react";
 
 export const metadata: Metadata = { title: "마이페이지" };
 
@@ -13,10 +13,13 @@ export default async function MyPage() {
   if (!user) redirect("/login");
   const roleLabel = roleLabels[user.role] || user.role;
   const badgeColor = roleBadgeColors[user.role] || "bg-gray-100 text-gray-800";
+  const enrollments = await getEnrollmentsByUser(user.id);
 
   const quickLinks = [
     { label: "프로필 수정", href: "/mypage/profile", icon: Edit, desc: "이름, 연락처, 비밀번호 변경" },
     { label: "협회비 납부", href: "/mypage/membership", icon: CreditCard, desc: "납부 현황 및 결제" },
+    { label: "지원이력", href: "/mypage/applications", icon: FileText, desc: "강의공고 지원 현황 확인" },
+    { label: "예치금 관리", href: "/mypage/deposits", icon: Wallet, desc: "예치금 결제 및 환불 내역" },
   ];
 
   return (
@@ -66,8 +69,43 @@ export default async function MyPage() {
             </div>
           </div>
 
+          {/* 수강 승인된 교육과정 */}
+          {enrollments.filter((e) => e.status === "approved").length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-lg font-bold text-text mb-4 flex items-center gap-2">
+                <BookOpen size={20} className="text-primary" />
+                수강 승인된 교육과정
+              </h2>
+              <div className="space-y-3">
+                {enrollments
+                  .filter((e) => e.status === "approved")
+                  .map((enr) => {
+                    const prog = enr.program as unknown as { id: string; title: string; slug: string } | undefined;
+                    return (
+                      <div key={enr.id} className="bg-white border border-blue-200 rounded-xl p-5 flex items-center justify-between gap-4">
+                        <div>
+                          <h3 className="text-sm font-semibold text-text">{prog?.title || "교육과정"}</h3>
+                          <p className="text-xs text-text-muted mt-1">
+                            수강료: <span className="text-primary font-medium">{enr.fee?.toLocaleString()}원</span>
+                            {enr.approved_at && <> · 승인일: {enr.approved_at.slice(0, 10)}</>}
+                          </p>
+                        </div>
+                        <Link
+                          href={`/mypage/programs/pay?name=${encodeURIComponent(prog?.title || "교육과정")}&programId=${prog?.id || ""}&fee=${enr.fee || 0}`}
+                          className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors"
+                        >
+                          <CreditCard size={14} />
+                          결제하기
+                        </Link>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+
           {/* 빠른 링크 */}
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-2 gap-4">
             {quickLinks.map((link) => (
               <Link
                 key={link.href}

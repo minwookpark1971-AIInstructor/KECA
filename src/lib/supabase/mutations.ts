@@ -173,16 +173,30 @@ export async function createInquiry(formData: {
   contact_email: string;
   contact_phone: string;
   preferred_category_id?: string;
+  preferred_program_id?: string;
   estimated_participants?: string;
   preferred_date?: string;
   budget_range?: string;
   message: string;
+  user_id?: string;
 }) {
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: inquiry, error } = await supabase
     .from("inquiries")
-    .insert({ ...formData, status: "new" });
+    .insert({ ...formData, status: "new" })
+    .select("id")
+    .single();
   if (error) throw new Error(error.message);
+
+  // 로그인 사용자 + 프로그램 선택 시 수강 신청도 자동 생성
+  if (formData.user_id && formData.preferred_program_id) {
+    await supabase.from("enrollments").insert({
+      user_id: formData.user_id,
+      program_id: formData.preferred_program_id,
+      inquiry_id: inquiry.id,
+      status: "pending",
+    });
+  }
 
   // 이메일 알림 발송 (관리자 + 문의자)
   sendInquiryNotification(formData);
@@ -413,6 +427,193 @@ export async function deleteCategory(id: string) {
   if (error) throw new Error(error.message);
   revalidatePath("/admin/categories");
   revalidatePath("/programs");
+}
+
+// ─── 수강 신청 ───
+
+export async function createEnrollment(
+  userId: string,
+  programId: string,
+  inquiryId?: string
+) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("enrollments").insert({
+    user_id: userId,
+    program_id: programId,
+    inquiry_id: inquiryId || null,
+    status: "pending",
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function approveEnrollment(id: string, fee: number, adminNote?: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("enrollments")
+    .update({
+      status: "approved",
+      fee,
+      admin_note: adminNote || null,
+      approved_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/inquiries");
+}
+
+export async function updateEnrollmentStatus(id: string, status: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("enrollments")
+    .update({ status })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+// ─── 강의공고 ───
+
+export async function createLecture(formData: {
+  title: string;
+  description?: string;
+  category_id?: string;
+  location?: string;
+  lecture_date?: string;
+  lecture_time?: string;
+  duration?: string;
+  target?: string;
+  required_count: number;
+  fee?: string;
+  requirements?: string;
+  status?: string;
+  deadline?: string;
+  created_by?: string;
+}) {
+  const supabase = await createClient();
+  const max_applicants = Math.ceil(formData.required_count * 1.5);
+  const { data, error } = await supabase
+    .from("lectures")
+    .insert({
+      ...formData,
+      max_applicants,
+      status: formData.status || "open",
+    })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/lectures");
+  revalidatePath("/lectures");
+  return data;
+}
+
+export async function updateLecture(id: string, fields: Record<string, unknown>) {
+  const supabase = await createClient();
+  const updates: Record<string, unknown> = { ...fields, updated_at: new Date().toISOString() };
+  if (fields.required_count) {
+    updates.max_applicants = Math.ceil(Number(fields.required_count) * 1.5);
+  }
+  const { error } = await supabase.from("lectures").update(updates).eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/lectures");
+  revalidatePath("/lectures");
+}
+
+export async function deleteLecture(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("lectures").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/lectures");
+  revalidatePath("/lectures");
+}
+
+// ─── 강사 지원 ───
+
+export async function createApplication(lectureId: string, applicantId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("applications")
+    .insert({
+      lecture_id: lectureId,
+      applicant_id: applicantId,
+      status: "pending",
+    })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function updateApplication(id: string, fields: Record<string, unknown>) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("applications")
+    .update({ ...fields, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function selectApplicants(lectureId: string, selectedIds: string[]) {
+  const supabase = await createClient();
+  const { sendLectureSelectedNotification, sendLectureRejectedNotification } = await import("@/lib/kakao");
+
+  // 강의 제목 조회 (알림용)
+  const { data: lectureData } = await supabase
+    .from("lectures")
+    .select("title")
+    .eq("id", lectureId)
+    .single();
+  const lectureTitle = lectureData?.title ?? "강의";
+
+  // 선발된 지원자 상태 업데이트
+  if (selectedIds.length > 0) {
+    const { error: selectError } = await supabase
+      .from("applications")
+      .update({ status: "selected", selected_at: new Date().toISOString() })
+      .in("id", selectedIds)
+      .eq("lecture_id", lectureId);
+    if (selectError) throw new Error(selectError.message);
+  }
+
+  // 나머지 지원자 미선발 처리
+  let rejectQuery = supabase
+    .from("applications")
+    .update({ status: "rejected", rejected_at: new Date().toISOString() })
+    .eq("lecture_id", lectureId)
+    .eq("status", "submitted");
+
+  if (selectedIds.length > 0) {
+    rejectQuery = rejectQuery.not("id", "in", `(${selectedIds.join(",")})`);
+  }
+
+  const { error: rejectError } = await rejectQuery;
+  if (rejectError) throw new Error(rejectError.message);
+
+  // 강의 상태를 closed로 변경
+  await supabase
+    .from("lectures")
+    .update({ status: "closed", updated_at: new Date().toISOString() })
+    .eq("id", lectureId);
+
+  // 카카오 알림톡 발송 (비동기, 실패해도 무관)
+  const { data: allApps } = await supabase
+    .from("applications")
+    .select("id, applicant_id, status, profiles:applicant_id(phone)")
+    .eq("lecture_id", lectureId)
+    .in("status", ["selected", "rejected"]);
+
+  if (allApps) {
+    for (const app of allApps) {
+      const phone = (app.profiles as { phone?: string } | null)?.phone;
+      if (!phone) continue;
+      if (app.status === "selected") {
+        sendLectureSelectedNotification(phone, lectureTitle).catch(() => {});
+      } else if (app.status === "rejected") {
+        sendLectureRejectedNotification(phone, lectureTitle).catch(() => {});
+      }
+    }
+  }
+
+  revalidatePath(`/admin/lectures/${lectureId}/applicants`);
+  revalidatePath("/admin/lectures");
 }
 
 // ─── 사이트 설정 ───

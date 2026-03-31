@@ -83,6 +83,11 @@ export default function PaymentPage() {
         orderName: "KECA 연간 협회비",
         successUrl: `${window.location.origin}/mypage/membership/pay`,
         failUrl: `${window.location.origin}/mypage/membership/pay?error=payment_failed`,
+        card: {
+          keyin: {
+            selectableCardTypes: ["PERSONAL", "CORPORATE"],
+          },
+        },
       });
     } catch (err) {
       if (err instanceof Error && err.message.includes("사용자가")) {

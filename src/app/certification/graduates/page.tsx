@@ -11,7 +11,7 @@ export default function GraduatesPage() {
         <div className="container-custom max-w-4xl">
           <div className="grid sm:grid-cols-3 gap-6 mb-10">
             <div className="bg-surface rounded-xl p-6 text-center">
-              <div className="text-3xl font-bold text-primary">50명</div>
+              <div className="text-3xl font-bold text-primary">31명</div>
               <div className="text-sm text-text-sub mt-1">1기 배출 (2025)</div>
             </div>
             <div className="bg-surface rounded-xl p-6 text-center">

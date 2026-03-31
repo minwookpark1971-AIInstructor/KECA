@@ -80,7 +80,7 @@ export default function CertificationPage() {
           <h2 className="text-xl font-bold text-text mb-4">배출 실적</h2>
           <div className="grid sm:grid-cols-3 gap-4 mb-10">
             <div className="bg-surface rounded-xl p-6 text-center">
-              <div className="text-2xl font-bold text-primary">50명</div>
+              <div className="text-2xl font-bold text-primary">31명</div>
               <div className="text-sm text-text-sub mt-1">1기 배출 인원 (2025년)</div>
             </div>
             <div className="bg-surface rounded-xl p-6 text-center">

@@ -2,13 +2,15 @@
 
 import { useTransition, useState } from "react";
 import Link from "next/link";
-import { User, Eye, EyeOff, Edit2, Trash2 } from "lucide-react";
-import { deleteInstructor } from "@/lib/supabase/mutations";
+import { User, Eye, EyeOff, Edit2, Trash2, Check, X, Pencil } from "lucide-react";
+import { deleteInstructor, updateInstructor } from "@/lib/supabase/mutations";
 import type { Profile } from "@/types";
 
 export default function InstructorsAdminClient({ instructors }: { instructors: Profile[] }) {
   const [isPending, startTransition] = useTransition();
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   const handleDelete = (inst: Profile) => {
     if (!confirm(`"${inst.name}" 강사를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) return;
@@ -18,6 +20,29 @@ export default function InstructorsAdminClient({ instructors }: { instructors: P
         setMsg({ type: "success", text: `${inst.name} 강사가 삭제되었습니다.` });
       } catch {
         setMsg({ type: "error", text: "삭제에 실패했습니다." });
+      }
+    });
+  };
+
+  const startEditSpecialties = (inst: Profile) => {
+    setEditingId(inst.id);
+    setEditValue((inst.specialties || []).join(", "));
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditValue("");
+  };
+
+  const saveSpecialties = (inst: Profile) => {
+    const newSpecialties = editValue.split(",").map((s) => s.trim()).filter(Boolean);
+    startTransition(async () => {
+      try {
+        await updateInstructor(inst.id, { specialties: newSpecialties });
+        setMsg({ type: "success", text: `${inst.name} 강사의 전문분야가 저장되었습니다.` });
+        setEditingId(null);
+      } catch {
+        setMsg({ type: "error", text: "전문분야 저장에 실패했습니다." });
       }
     });
   };
@@ -58,11 +83,56 @@ export default function InstructorsAdminClient({ instructors }: { instructors: P
                     </div>
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell">
-                    <div className="flex flex-wrap gap-1">
-                      {(inst.specialties || []).map((s) => (
-                        <span key={s} className="px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary">{s}</span>
-                      ))}
-                    </div>
+                    {editingId === inst.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          placeholder="AI교육, 데이터분석, ..."
+                          className="flex-1 min-w-[200px] px-2 py-1 text-xs border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") saveSpecialties(inst);
+                            if (e.key === "Escape") cancelEdit();
+                          }}
+                        />
+                        <button
+                          onClick={() => saveSpecialties(inst)}
+                          disabled={isPending}
+                          className="p-1 text-green-600 hover:bg-green-50 rounded disabled:opacity-50"
+                          title="저장"
+                        >
+                          <Check size={14} />
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          className="p-1 text-text-muted hover:bg-surface rounded"
+                          title="취소"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap gap-1">
+                          {(inst.specialties || []).length > 0 ? (
+                            inst.specialties!.map((s) => (
+                              <span key={s} className="px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary">{s}</span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-text-muted">미설정</span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => startEditSpecialties(inst)}
+                          className="p-1 text-text-muted hover:text-primary rounded shrink-0"
+                          title="전문분야 수정"
+                        >
+                          <Pencil size={12} />
+                        </button>
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-center">
                     {inst.is_profile_public ? (
