@@ -63,10 +63,10 @@ export default async function LecturesPage() {
               <Link
                 key={lecture.id}
                 href={`/lectures/${lecture.id}`}
-                className="bg-white rounded-xl border border-border-light p-6 hover:shadow-md transition-shadow flex flex-col gap-3"
+                className="bg-white rounded-xl border border-border-light p-6 hover:shadow-md transition-shadow flex flex-col gap-3 min-w-0"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <h2 className="text-base font-semibold text-text leading-snug flex-1">
+                  <h2 className="text-base font-semibold text-text leading-snug flex-1 break-keep">
                     {lecture.title}
                   </h2>
                   <StatusBadge status={lecture.status} />
@@ -74,27 +74,27 @@ export default async function LecturesPage() {
 
                 <div className="space-y-1.5 text-sm text-text-sub">
                   {lecture.lecture_date && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-text-sub/60 w-14 shrink-0">강의일</span>
+                    <div className="flex items-start gap-2">
+                      <span className="text-xs text-text-sub/60 w-16 shrink-0 pt-0.5">강의일</span>
                       <span>{lecture.lecture_date}</span>
                       {lecture.lecture_time && <span>{lecture.lecture_time}</span>}
                     </div>
                   )}
                   {lecture.location && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-text-sub/60 w-14 shrink-0">장소</span>
+                    <div className="flex items-start gap-2">
+                      <span className="text-xs text-text-sub/60 w-16 shrink-0 pt-0.5">장소</span>
                       <span>{lecture.location}</span>
                     </div>
                   )}
                   {lecture.fee && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-text-sub/60 w-14 shrink-0">강사료</span>
-                      <span className="font-medium text-text">{lecture.fee}</span>
+                    <div className="flex items-start gap-2">
+                      <span className="text-xs text-text-sub/60 w-16 shrink-0 pt-0.5">강사료</span>
+                      <span className="font-medium text-text break-keep">{lecture.fee}</span>
                     </div>
                   )}
                   {lecture.deadline && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-text-sub/60 w-14 shrink-0">마감일</span>
+                    <div className="flex items-start gap-2">
+                      <span className="text-xs text-text-sub/60 w-16 shrink-0 pt-0.5">마감일</span>
                       <span className="text-red-500 font-medium">{lecture.deadline}</span>
                     </div>
                   )}
