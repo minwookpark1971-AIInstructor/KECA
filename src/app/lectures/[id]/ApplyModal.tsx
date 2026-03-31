@@ -101,7 +101,7 @@ export default function ApplyModal({ lecture, user }: Props) {
       const documentUrls: { name: string; url: string }[] = [];
 
       for (const file of files) {
-        const safeName = file.name.replace(/[^a-zA-Z0-9가-힣._-]/g, "_");
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
         const path = `applications/${applicationId}/${Date.now()}_${safeName}`;
         const { error: uploadError } = await supabase.storage
           .from("portfolios")

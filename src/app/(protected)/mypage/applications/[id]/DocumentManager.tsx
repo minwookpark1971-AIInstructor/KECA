@@ -95,7 +95,7 @@ export default function DocumentManager({ applicationId, userId, status, initial
 
       // 새 파일 업로드
       for (const file of newFiles) {
-        const safeName = file.name.replace(/[^a-zA-Z0-9가-힣._-]/g, "_");
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
         const path = `applications/${applicationId}/${Date.now()}_${safeName}`;
         const { error: uploadError } = await supabase.storage
           .from("portfolios")
