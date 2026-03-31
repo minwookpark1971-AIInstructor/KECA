@@ -45,43 +45,49 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
 
-    const supabase = createClient();
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const supabase = createClient();
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (authError) {
-      if (authError.message === "Email not confirmed") {
-        setError("이메일 인증이 완료되지 않았습니다. 메일함에서 인증 링크를 클릭해주세요.");
-        setShowResend(true);
-      } else {
-        setError(
-          authError.message === "Invalid login credentials"
-            ? "이메일 또는 비밀번호가 올바르지 않습니다."
-            : authError.message
-        );
-        setShowResend(false);
+      if (authError) {
+        if (authError.message === "Email not confirmed") {
+          setError("이메일 인증이 완료되지 않았습니다. 메일함에서 인증 링크를 클릭해주세요.");
+          setShowResend(true);
+        } else {
+          setError(
+            authError.message === "Invalid login credentials"
+              ? "이메일 또는 비밀번호가 올바르지 않습니다."
+              : authError.message
+          );
+          setShowResend(false);
+        }
+        return;
       }
+
+      // 명시적 redirect가 없으면 role 확인 후 admin은 /admin으로 이동
+      let destination = redirectTo;
+      if (!explicitRedirect && data.user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", data.user.id)
+          .single();
+        if (profile?.role === "admin") {
+          destination = "/admin";
+        }
+      }
+
+      router.push(destination);
+      router.refresh();
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // 명시적 redirect가 없으면 role 확인 후 admin은 /admin으로 이동
-    let destination = redirectTo;
-    if (!explicitRedirect && data.user) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", data.user.id)
-        .single();
-      if (profile?.role === "admin") {
-        destination = "/admin";
-      }
-    }
-
-    router.push(destination);
-    router.refresh();
   };
 
   return (

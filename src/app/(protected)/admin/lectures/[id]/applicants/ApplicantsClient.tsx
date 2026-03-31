@@ -58,6 +58,7 @@ export default function ApplicantsClient({ lecture, applications }: Props) {
   const submitted = applications.filter(
     (a) => a.status === "submitted" || a.status === "selected" || a.status === "confirmed" || a.status === "standby"
   );
+  const pendingCount = applications.filter((a) => a.status === "pending").length;
   const alreadyFinalized = applications.some(
     (a) => a.status === "selected" || a.status === "confirmed" || a.status === "standby" || a.status === "rejected"
   );
@@ -140,7 +141,8 @@ export default function ApplicantsClient({ lecture, applications }: Props) {
       {/* 선발 현황 */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white rounded-xl border border-border-light p-4">
         <div className="text-sm text-text-sub space-x-3">
-          <span>접수: <strong className="text-text">{submitted.length}명</strong></span>
+          <span>접수완료: <strong className="text-text">{submitted.length}명</strong></span>
+          {pendingCount > 0 && <span>서류대기: <strong className="text-amber-500">{pendingCount}명</strong></span>}
           <span>강사확정: <strong className="text-green-600">{selectedCount}</strong>/{maxSelected}명</span>
           <span>예비강사: <strong className="text-amber-600">{standbyCount}</strong>/{maxStandby}명</span>
         </div>
@@ -181,7 +183,7 @@ export default function ApplicantsClient({ lecture, applications }: Props) {
                     onClick={() => openDetail(app)}
                     className={`cursor-pointer hover:bg-surface/50 transition-colors ${
                       sel === "selected" ? "bg-green-50/50" : sel === "standby" ? "bg-amber-50/50" : ""
-                    }`}
+                    } ${app.status === "pending" ? "opacity-60" : ""}`}
                   >
                     <td className="px-4 py-3 font-medium text-text">{app.applicant?.name ?? "-"}</td>
                     <td className="px-4 py-3 text-text-sub hidden sm:table-cell">{app.applicant?.phone ?? "-"}</td>
@@ -223,6 +225,22 @@ export default function ApplicantsClient({ lecture, applications }: Props) {
 
             {/* 내용 */}
             <div className="px-6 py-4 overflow-y-auto flex-1 space-y-5">
+
+              {/* pending 상태 안내 */}
+              {detailApp.status === "pending" && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm">
+                  <p className="font-medium text-amber-700">서류 제출 대기 중</p>
+                  <p className="text-amber-600 mt-1">지원자가 서류를 제출해야 선발이 가능합니다.</p>
+                </div>
+              )}
+
+              {/* cancelled 상태 안내 */}
+              {detailApp.status === "cancelled" && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm">
+                  <p className="font-medium text-gray-600">지원 취소됨</p>
+                  <p className="text-gray-500 mt-1">지원자가 지원을 취소하였습니다.</p>
+                </div>
+              )}
 
               {/* 선발구분 라디오 */}
               {(detailApp.status === "submitted" || detailApp.status === "selected" || detailApp.status === "standby") && !alreadyFinalized && (
