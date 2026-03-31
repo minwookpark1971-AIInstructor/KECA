@@ -125,6 +125,8 @@ export default function ApplicantsClient({ lecture, applications, adminId, statu
   // ─── 일괄 상태 변경 ───
   async function handleBulkChange() {
     if (!bulkStatus || checkedIds.size === 0) return;
+    const statusLabel = changeableStatuses.find((s) => s.value === bulkStatus)?.label ?? bulkStatus;
+    if (!confirm(`선택한 ${checkedIds.size}명을 "${statusLabel}"(으)로 일괄 변경하시겠습니까?`)) return;
     const changes = Array.from(checkedIds).map((id) => ({ id, status: bulkStatus }));
     setConfirming(true);
     try {
@@ -296,6 +298,7 @@ export default function ApplicantsClient({ lecture, applications, adminId, statu
                 <th className="text-left px-4 py-3 text-text-sub font-medium hidden lg:table-cell">지원일</th>
                 <th className="text-left px-4 py-3 text-text-sub font-medium">상태</th>
                 <th className="text-left px-4 py-3 text-text-sub font-medium hidden md:table-cell">서류</th>
+                <th className="w-10 px-3 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light">
@@ -354,6 +357,25 @@ export default function ApplicantsClient({ lecture, applications, adminId, statu
                       ) : (
                         <span className="text-xs text-text-muted">없음</span>
                       )}
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (!confirm(`"${app.applicant?.name ?? "지원자"}"의 지원을 삭제하시겠습니까?`)) return;
+                          try {
+                            await deleteApplication(app.id, adminId, true);
+                            toast("success", "지원이 삭제되었습니다.");
+                            router.refresh();
+                          } catch (err) {
+                            toast("error", err instanceof Error ? err.message : "삭제 실패");
+                          }
+                        }}
+                        className="text-text-muted hover:text-red-500 transition-colors"
+                        title="지원 삭제"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </td>
                   </tr>
                 );

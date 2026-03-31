@@ -656,24 +656,13 @@ export async function updateApplicationStatus(
 
   const previousStatus = app.status;
 
-  // 상태 업데이트
+  // 상태 업데이트 (원본 스키마 컬럼만)
   const updates: Record<string, unknown> = {
     status: newStatus,
-    status_changed_at: now,
-    status_changed_by: adminId,
     updated_at: now,
-    is_result_read: false,
   };
   if (newStatus === "selected") updates.selected_at = now;
-  if (newStatus === "rejected") {
-    updates.rejected_at = now;
-    if (options?.rejection_reason) updates.rejection_reason = options.rejection_reason;
-  }
-  if (newStatus === "standby" && options?.standby_rank != null) {
-    updates.standby_rank = options.standby_rank;
-  }
-  if (newStatus !== "standby") updates.standby_rank = null;
-  if (newStatus !== "rejected") updates.rejection_reason = null;
+  if (newStatus === "rejected") updates.rejected_at = now;
 
   const { error: updateError } = await supabase
     .from("applications")
@@ -681,51 +670,75 @@ export async function updateApplicationStatus(
     .eq("id", applicationId);
   if (updateError) throw new Error(updateError.message);
 
-  // 이력 기록
-  await supabase.from("application_status_history").insert({
-    application_id: applicationId,
-    previous_status: previousStatus,
-    new_status: newStatus,
-    changed_by: adminId,
-    changed_at: now,
-    memo: options?.memo ?? null,
-  });
-
-  // 알림 생성 (결과 통보 대상 상태만)
-  if (["selected", "standby", "rejected"].includes(newStatus)) {
-    const { data: lecture } = await supabase
-      .from("lectures")
-      .select("title")
-      .eq("id", app.lecture_id)
-      .single();
-    const lectureTitle = lecture?.title ?? "강의";
-
-    const messages: Record<string, { title: string; message: string }> = {
-      selected: {
-        title: `[${lectureTitle}] 강사로 확정되었습니다`,
-        message: "축하합니다! 강사로 선발되셨습니다. 상세 내용을 확인해주세요.",
-      },
-      standby: {
-        title: `[${lectureTitle}] 예비강사로 선정되었습니다`,
-        message: "예비강사로 선정되었습니다. 확정 강사 변동 시 안내드리겠습니다.",
-      },
-      rejected: {
-        title: `[${lectureTitle}] 선발 결과 안내`,
-        message: "아쉽게도 이번 강의에 선발되지 않았습니다. 다음 기회에 함께하길 바랍니다.",
-      },
+  // 009 마이그레이션 확장 컬럼 (없으면 무시)
+  try {
+    const extUpdates: Record<string, unknown> = {
+      status_changed_at: now,
+      status_changed_by: adminId,
+      is_result_read: false,
     };
-
-    const msg = messages[newStatus];
-    if (msg) {
-      await supabase.from("notifications").insert({
-        user_id: app.applicant_id,
-        type: "application_status_changed",
-        title: msg.title,
-        message: msg.message,
-        reference_id: applicationId,
-        reference_url: `/mypage/applications/${applicationId}`,
-      });
+    if (newStatus === "standby" && options?.standby_rank != null) {
+      extUpdates.standby_rank = options.standby_rank;
+    } else if (newStatus !== "standby") {
+      extUpdates.standby_rank = null;
     }
+    if (newStatus === "rejected" && options?.rejection_reason) {
+      extUpdates.rejection_reason = options.rejection_reason;
+    } else if (newStatus !== "rejected") {
+      extUpdates.rejection_reason = null;
+    }
+    await supabase.from("applications").update(extUpdates).eq("id", applicationId);
+  } catch { /* 009 미적용 시 무시 */ }
+
+  // 이력 기록 (테이블 없으면 무시)
+  try {
+    await supabase.from("application_status_history").insert({
+      application_id: applicationId,
+      previous_status: previousStatus,
+      new_status: newStatus,
+      changed_by: adminId,
+      changed_at: now,
+      memo: options?.memo ?? null,
+    });
+  } catch { /* 009 미적용 시 무시 */ }
+
+  // 알림 생성 (테이블 없으면 무시)
+  if (["selected", "standby", "rejected"].includes(newStatus)) {
+    try {
+      const { data: lecture } = await supabase
+        .from("lectures")
+        .select("title")
+        .eq("id", app.lecture_id)
+        .single();
+      const lectureTitle = lecture?.title ?? "강의";
+
+      const messages: Record<string, { title: string; message: string }> = {
+        selected: {
+          title: `[${lectureTitle}] 강사로 확정되었습니다`,
+          message: "축하합니다! 강사로 선발되셨습니다. 상세 내용을 확인해주세요.",
+        },
+        standby: {
+          title: `[${lectureTitle}] 예비강사로 선정되었습니다`,
+          message: "예비강사로 선정되었습니다. 확정 강사 변동 시 안내드리겠습니다.",
+        },
+        rejected: {
+          title: `[${lectureTitle}] 선발 결과 안내`,
+          message: "아쉽게도 이번 강의에 선발되지 않았습니다. 다음 기회에 함께하길 바랍니다.",
+        },
+      };
+
+      const msg = messages[newStatus];
+      if (msg) {
+        await supabase.from("notifications").insert({
+          user_id: app.applicant_id,
+          type: "application_status_changed",
+          title: msg.title,
+          message: msg.message,
+          reference_id: applicationId,
+          reference_url: `/mypage/applications/${applicationId}`,
+        });
+      }
+    } catch { /* 009 미적용 시 무시 */ }
   }
 
   revalidatePath(`/admin/lectures/${app.lecture_id}/applicants`);
@@ -771,12 +784,13 @@ export async function markAllNotificationsRead(userId: string) {
 }
 
 export async function markApplicationResultRead(applicationId: string) {
-  const supabase = createAdminClient();
-  const { error } = await supabase
-    .from("applications")
-    .update({ is_result_read: true })
-    .eq("id", applicationId);
-  if (error) throw new Error(error.message);
+  try {
+    const supabase = createAdminClient();
+    await supabase
+      .from("applications")
+      .update({ is_result_read: true })
+      .eq("id", applicationId);
+  } catch { /* 009 미적용 시 무시 */ }
 }
 
 // ─── 지원 삭제 ───
@@ -810,17 +824,21 @@ export async function deleteApplication(applicationId: string, userId: string, i
     }
   }
 
-  // 이력 삭제
-  await supabase
-    .from("application_status_history")
-    .delete()
-    .eq("application_id", applicationId);
+  // 이력 삭제 (009 미적용 시 무시)
+  try {
+    await supabase
+      .from("application_status_history")
+      .delete()
+      .eq("application_id", applicationId);
+  } catch { /* 무시 */ }
 
-  // 알림 삭제
-  await supabase
-    .from("notifications")
-    .delete()
-    .eq("reference_id", applicationId);
+  // 알림 삭제 (009 미적용 시 무시)
+  try {
+    await supabase
+      .from("notifications")
+      .delete()
+      .eq("reference_id", applicationId);
+  } catch { /* 무시 */ }
 
   // 지원 레코드 삭제
   const { error } = await supabase
@@ -852,19 +870,26 @@ export async function cancelApplication(applicationId: string, userId: string) {
 
   const { error } = await supabase
     .from("applications")
-    .update({ status: "cancelled", updated_at: now, status_changed_at: now })
+    .update({ status: "cancelled", updated_at: now })
     .eq("id", applicationId);
   if (error) throw new Error(error.message);
 
-  // 이력 기록
-  await supabase.from("application_status_history").insert({
-    application_id: applicationId,
-    previous_status: app.status,
-    new_status: "cancelled",
-    changed_by: userId,
-    changed_at: now,
-    memo: "지원자 본인 취소",
-  });
+  // 확장 필드 + 이력 기록 (009 미적용 시 무시)
+  try {
+    await supabase.from("applications")
+      .update({ status_changed_at: now })
+      .eq("id", applicationId);
+  } catch { /* 무시 */ }
+  try {
+    await supabase.from("application_status_history").insert({
+      application_id: applicationId,
+      previous_status: app.status,
+      new_status: "cancelled",
+      changed_by: userId,
+      changed_at: now,
+      memo: "지원자 본인 취소",
+    });
+  } catch { /* 무시 */ }
 
   revalidatePath("/mypage/applications");
   revalidatePath(`/admin/lectures/${app.lecture_id}/applicants`);

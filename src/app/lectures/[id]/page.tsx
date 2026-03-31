@@ -1,6 +1,7 @@
 import { getLectureById, getCurrentUser, getApplicationsByUser } from "@/lib/supabase/queries";
 import { notFound } from "next/navigation";
 import ApplyModal from "./ApplyModal";
+import LectureCancelButton from "./LectureCancelButton";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -14,7 +15,7 @@ export default async function LectureDetailPage({ params }: { params: Promise<{ 
 
   if (!lecture) notFound();
 
-  const isMember = user && (user.role === "member" || user.role === "admin" || user.role === "instructor");
+  const isMember = user && (user.role === "member" || user.role === "instructor");
 
   // 이미 지원했는지 확인
   let existingApplication = null;
@@ -151,9 +152,12 @@ export default async function LectureDetailPage({ params }: { params: Promise<{ 
                 </div>
               )}
               {["pending", "submitted", "reviewing"].includes(existingApplication.status) && (
-                <a href={`/mypage/applications/${existingApplication.id}`} className="mt-2 inline-block text-xs text-text-muted hover:text-primary">
-                  지원 상세 보기
-                </a>
+                <div className="mt-3 flex flex-col items-center gap-2">
+                  <a href={`/mypage/applications/${existingApplication.id}`} className="text-xs text-text-muted hover:text-primary">
+                    지원 상세 보기
+                  </a>
+                  <LectureCancelButton applicationId={existingApplication.id} userId={user!.id} />
+                </div>
               )}
             </div>
           ) : !user ? (
