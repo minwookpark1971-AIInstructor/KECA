@@ -488,7 +488,8 @@ export async function createLecture(formData: {
   deadline?: string;
   created_by?: string;
 }) {
-  const supabase = await createClient();
+  const { createAdminClient } = await import("./admin");
+  const supabase = createAdminClient();
   const max_applicants = Math.ceil(formData.required_count * 1.5);
   const { data, error } = await supabase
     .from("lectures")
@@ -506,7 +507,8 @@ export async function createLecture(formData: {
 }
 
 export async function updateLecture(id: string, fields: Record<string, unknown>) {
-  const supabase = await createClient();
+  const { createAdminClient } = await import("./admin");
+  const supabase = createAdminClient();
   const updates: Record<string, unknown> = { ...fields, updated_at: new Date().toISOString() };
   if (fields.required_count) {
     updates.max_applicants = Math.ceil(Number(fields.required_count) * 1.5);
@@ -518,7 +520,8 @@ export async function updateLecture(id: string, fields: Record<string, unknown>)
 }
 
 export async function deleteLecture(id: string) {
-  const supabase = await createClient();
+  const { createAdminClient } = await import("./admin");
+  const supabase = createAdminClient();
   const { error } = await supabase.from("lectures").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/lectures");
