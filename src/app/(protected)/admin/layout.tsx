@@ -40,6 +40,8 @@ const sidebarItems: SidebarItem[] = [
   },
   { label: "교육문의", href: "/admin/inquiries", icon: HelpCircle },
   { type: "divider" },
+  { label: "강의공고", href: "/admin/lectures", icon: Megaphone },
+  { type: "divider" },
   { label: "결제 내역", href: "/admin/payments", icon: CreditCard },
   { label: "파트너 관리", href: "/admin/partners", icon: Building2 },
   { label: "사이트 설정", href: "/admin/settings", icon: Settings },

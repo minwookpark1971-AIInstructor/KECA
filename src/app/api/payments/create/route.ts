@@ -12,7 +12,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
     }
 
-    const { amount, paymentType, programId } = await request.json();
+    const { amount, paymentType, programId, applicationId } = await request.json();
     const orderId = `KECA_${user.id.slice(0, 8)}_${Date.now()}`;
 
     // payments 테이블에 pending 레코드 생성
@@ -28,6 +28,11 @@ export async function POST(request: Request) {
     // program_fee인 경우 metadata에 programId 저장
     if (paymentType === "program_fee" && programId) {
       insertData.metadata = { programId };
+    }
+
+    // deposit인 경우 metadata에 applicationId 저장
+    if (paymentType === "deposit" && applicationId) {
+      insertData.metadata = { applicationId };
     }
 
     const { error } = await supabase.from("payments").insert(insertData);

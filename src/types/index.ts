@@ -173,7 +173,7 @@ export interface Schedule {
 }
 
 // ----- 결제 -----
-export type PaymentType = "annual_membership" | "certification_fee" | "program_fee";
+export type PaymentType = "annual_membership" | "certification_fee" | "program_fee" | "deposit";
 export type PaymentStatus = "pending" | "completed" | "failed" | "cancelled" | "refunded";
 
 export interface Payment {
@@ -236,4 +236,56 @@ export interface MenuItem {
   href: string;
   children?: MenuItem[];
   icon?: string;
+}
+
+// ----- 강의공고 -----
+export type LectureStatus = "open" | "closed" | "completed";
+
+export interface Lecture {
+  id: string;
+  title: string;
+  description?: string;
+  category_id?: string;
+  location?: string;
+  lecture_date?: string;
+  lecture_time?: string;
+  duration?: string;
+  target?: string;
+  required_count: number;
+  max_applicants?: number;
+  fee?: string;
+  requirements?: string;
+  status: LectureStatus;
+  deadline?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+  category?: Category;
+  application_count?: number;
+}
+
+// ----- 강사 지원 -----
+export type ApplicationStatus =
+  | "pending"
+  | "deposit_pending"
+  | "submitted"
+  | "selected"
+  | "rejected"
+  | "cancelled";
+
+export interface Application {
+  id: string;
+  lecture_id: string;
+  applicant_id: string;
+  portfolio_url?: string;
+  cover_letter?: string;
+  deposit_payment_id?: string;
+  status: ApplicationStatus;
+  selected_at?: string;
+  rejected_at?: string;
+  admin_note?: string;
+  created_at: string;
+  updated_at: string;
+  lecture?: Lecture;
+  applicant?: Profile;
 }

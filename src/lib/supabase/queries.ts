@@ -9,6 +9,9 @@ import type {
   Inquiry,
   Enrollment,
   Partner,
+  Lecture,
+  LectureStatus,
+  Application,
 } from "@/types";
 
 // ─── 카테고리 ───
@@ -356,4 +359,63 @@ export async function getSiteContent(key: string): Promise<unknown | null> {
     .eq("key", key)
     .single();
   return data?.value ?? null;
+}
+
+// ─── 강의공고 ───
+
+export async function getLectures(status?: LectureStatus): Promise<Lecture[]> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("lectures")
+    .select("*, categories(*)")
+    .order("created_at", { ascending: false });
+
+  if (status) {
+    query = query.eq("status", status);
+  }
+
+  const { data } = await query;
+  return (data as unknown as Lecture[]) ?? [];
+}
+
+export async function getLectureById(id: string): Promise<Lecture | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("lectures")
+    .select("*, categories(*)")
+    .eq("id", id)
+    .single();
+  return data as unknown as Lecture | null;
+}
+
+// ─── 강사 지원 ───
+
+export async function getApplicationsByLecture(lectureId: string): Promise<Application[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("applications")
+    .select("*, applicant:profiles(id, name, email, phone, specialties, bio)")
+    .eq("lecture_id", lectureId)
+    .order("created_at", { ascending: false });
+  return (data as unknown as Application[]) ?? [];
+}
+
+export async function getApplicationsByUser(userId: string): Promise<Application[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("applications")
+    .select("*, lecture:lectures(id, title, lecture_date, location, status)")
+    .eq("applicant_id", userId)
+    .order("created_at", { ascending: false });
+  return (data as unknown as Application[]) ?? [];
+}
+
+export async function getApplicationById(id: string): Promise<Application | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("applications")
+    .select("*, lecture:lectures(*), applicant:profiles(*)")
+    .eq("id", id)
+    .single();
+  return data as unknown as Application | null;
 }

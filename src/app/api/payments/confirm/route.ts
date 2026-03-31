@@ -85,6 +85,23 @@ export async function POST(request: Request) {
           .in("role", ["pending", "approved"]);
       }
 
+      if (paymentData.payment_type === "deposit") {
+        // metadata에서 applicationId 조회
+        const { data: paymentRow } = await supabase
+          .from("payments")
+          .select("id, metadata")
+          .eq("toss_order_id", orderId)
+          .single();
+        const meta = paymentRow?.metadata as { applicationId?: string } | null;
+        const applicationId = meta?.applicationId;
+        if (paymentRow && applicationId) {
+          await supabase
+            .from("applications")
+            .update({ status: "submitted", deposit_payment_id: paymentRow.id })
+            .eq("id", applicationId);
+        }
+      }
+
       // 결제 완료 이메일 발송 (모든 타입 공통)
       if (profile) {
         sendPaymentConfirmation(

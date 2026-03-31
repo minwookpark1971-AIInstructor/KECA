@@ -4,7 +4,7 @@ import { Metadata } from "next";
 import { SubpageHero } from "@/components/layout/SubpageHero";
 import { getCurrentUser, getEnrollmentsByUser } from "@/lib/supabase/queries";
 import { roleLabels, roleBadgeColors } from "@/lib/utils";
-import { User, CreditCard, Edit, ChevronRight, Shield, Calendar, BookOpen } from "lucide-react";
+import { User, CreditCard, Edit, ChevronRight, Shield, Calendar, BookOpen, FileText, Wallet } from "lucide-react";
 
 export const metadata: Metadata = { title: "마이페이지" };
 
@@ -18,6 +18,8 @@ export default async function MyPage() {
   const quickLinks = [
     { label: "프로필 수정", href: "/mypage/profile", icon: Edit, desc: "이름, 연락처, 비밀번호 변경" },
     { label: "협회비 납부", href: "/mypage/membership", icon: CreditCard, desc: "납부 현황 및 결제" },
+    { label: "지원이력", href: "/mypage/applications", icon: FileText, desc: "강의공고 지원 현황 확인" },
+    { label: "예치금 관리", href: "/mypage/deposits", icon: Wallet, desc: "예치금 결제 및 환불 내역" },
   ];
 
   return (
@@ -103,7 +105,7 @@ export default async function MyPage() {
           )}
 
           {/* 빠른 링크 */}
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-2 gap-4">
             {quickLinks.map((link) => (
               <Link
                 key={link.href}

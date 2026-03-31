@@ -51,6 +51,10 @@ export const mainNavigation: MenuItem[] = [
     href: "/instructors",
   },
   {
+    label: "강의공고",
+    href: "/lectures",
+  },
+  {
     label: "커뮤니티",
     href: "/community/notice",
     children: [
