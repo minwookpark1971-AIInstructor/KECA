@@ -16,6 +16,29 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showResend, setShowResend] = useState(false);
+  const [resendMsg, setResendMsg] = useState<string | null>(null);
+
+  const verified = searchParams.get("verified");
+
+  const handleResendVerification = async () => {
+    if (!email) {
+      setResendMsg("이메일을 입력해주세요.");
+      return;
+    }
+    const supabase = createClient();
+    const { error: resendError } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/api/auth/callback` },
+    });
+    if (resendError) {
+      setResendMsg("재발송에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    } else {
+      setResendMsg("인증 메일이 재발송되었습니다. 메일함을 확인해주세요.");
+      setShowResend(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,11 +52,17 @@ export default function LoginPage() {
     });
 
     if (authError) {
-      setError(
-        authError.message === "Invalid login credentials"
-          ? "이메일 또는 비밀번호가 올바르지 않습니다."
-          : authError.message
-      );
+      if (authError.message === "Email not confirmed") {
+        setError("이메일 인증이 완료되지 않았습니다. 메일함에서 인증 링크를 클릭해주세요.");
+        setShowResend(true);
+      } else {
+        setError(
+          authError.message === "Invalid login credentials"
+            ? "이메일 또는 비밀번호가 올바르지 않습니다."
+            : authError.message
+        );
+        setShowResend(false);
+      }
       setLoading(false);
       return;
     }
@@ -66,9 +95,34 @@ export default function LoginPage() {
 
         {/* 로그인 카드 */}
         <div className="bg-white border border-border-light rounded-2xl p-8 shadow-card">
+          {verified && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              이메일 인증이 완료되었습니다! 로그인해주세요.
+            </div>
+          )}
+
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
               {error}
+            </div>
+          )}
+
+          {showResend && (
+            <div className="mb-4">
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                className="w-full py-2 text-sm text-primary border border-primary/30 rounded-lg hover:bg-primary/5 transition-colors"
+              >
+                인증 메일 재발송
+              </button>
+            </div>
+          )}
+
+          {resendMsg && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+              {resendMsg}
             </div>
           )}
 

@@ -45,6 +45,7 @@ export default function RegisterPage() {
           name: formData.name,
           phone: formData.phone,
         },
+        emailRedirectTo: `${window.location.origin}/api/auth/callback`,
       },
     });
 
@@ -77,9 +78,12 @@ export default function RegisterPage() {
           <div className="bg-white border border-border-light rounded-2xl p-8 shadow-card">
             <CheckCircle size={48} className="text-green-500 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-text mb-2">회원가입이 완료되었습니다</h2>
-            <p className="text-sm text-text-sub mb-6">
+            <p className="text-sm text-text-sub mb-2">
               입력하신 이메일로 인증 메일이 발송되었습니다.<br />
               이메일 인증 후 로그인이 가능합니다.
+            </p>
+            <p className="text-xs text-text-muted mb-6">
+              메일이 도착하지 않으면 스팸함을 확인해주세요.
             </p>
             <Link
               href="/login"
