@@ -2,8 +2,8 @@
 
 import { useTransition, useState } from "react";
 import Link from "next/link";
-import { User, Eye, EyeOff, Edit2, Trash2, Check, X, Pencil } from "lucide-react";
-import { deleteInstructor, updateInstructor } from "@/lib/supabase/mutations";
+import { User, Eye, EyeOff, Edit2, UserX, Check, X, Pencil } from "lucide-react";
+import { demoteInstructor, updateInstructor } from "@/lib/supabase/mutations";
 import type { Profile } from "@/types";
 
 export default function InstructorsAdminClient({ instructors }: { instructors: Profile[] }) {
@@ -12,14 +12,14 @@ export default function InstructorsAdminClient({ instructors }: { instructors: P
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
 
-  const handleDelete = (inst: Profile) => {
-    if (!confirm(`"${inst.name}" 강사를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) return;
+  const handleDemote = (inst: Profile) => {
+    if (!confirm(`"${inst.name}" 강사를 해제하시겠습니까?\n회원 계정과 프로필 데이터는 유지됩니다.`)) return;
     startTransition(async () => {
       try {
-        await deleteInstructor(inst.id);
-        setMsg({ type: "success", text: `${inst.name} 강사가 삭제되었습니다.` });
+        await demoteInstructor(inst.id);
+        setMsg({ type: "success", text: `${inst.name} 강사가 해제되었습니다.` });
       } catch {
-        setMsg({ type: "error", text: "삭제에 실패했습니다." });
+        setMsg({ type: "error", text: "강사 해제에 실패했습니다." });
       }
     });
   };
@@ -147,12 +147,12 @@ export default function InstructorsAdminClient({ instructors }: { instructors: P
                         <Edit2 size={14} />
                       </Link>
                       <button
-                        onClick={() => handleDelete(inst)}
+                        onClick={() => handleDemote(inst)}
                         disabled={isPending}
-                        className="p-1.5 text-text-muted hover:text-error rounded disabled:opacity-50"
-                        title="삭제"
+                        className="p-1.5 text-text-muted hover:text-orange-500 rounded disabled:opacity-50"
+                        title="강사 해제"
                       >
-                        <Trash2 size={14} />
+                        <UserX size={14} />
                       </button>
                     </div>
                   </td>

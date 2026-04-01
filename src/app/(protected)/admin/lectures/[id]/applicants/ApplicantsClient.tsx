@@ -326,7 +326,15 @@ export default function ApplicantsClient({ lecture, applications, adminId, statu
                       </button>
                     </td>
                     <td className="px-4 py-3 font-medium text-text cursor-pointer" onClick={() => openDetail(app)}>
-                      {app.applicant?.name ?? "-"}
+                      <div className="flex items-center gap-2">
+                        {app.applicant?.profile_image_url ? (
+                          <img src={app.applicant.profile_image_url} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
+                        ) : null}
+                        <span>{app.applicant?.name ?? "-"}</span>
+                        {app.applicant?.role === "instructor" && (
+                          <span className="px-1.5 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full">강사</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-text-sub hidden sm:table-cell">{app.applicant?.phone ?? "-"}</td>
                     <td className="px-4 py-3 text-text-sub hidden md:table-cell">{app.applicant?.specialties?.join(", ") || "-"}</td>
@@ -352,11 +360,24 @@ export default function ApplicantsClient({ lecture, applications, adminId, statu
                       )}
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell">
-                      {docCount > 0 ? (
-                        <span className="text-xs text-primary cursor-pointer" onClick={() => openDetail(app)}>{docCount}건</span>
-                      ) : (
-                        <span className="text-xs text-text-muted">없음</span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {docCount > 0 ? (
+                          <span className="text-xs text-primary cursor-pointer" onClick={() => openDetail(app)}>{docCount}건</span>
+                        ) : (
+                          <span className="text-xs text-text-muted">없음</span>
+                        )}
+                        {app.applicant?.profile_pdf_url && (
+                          <a
+                            href={app.applicant.profile_pdf_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-red-500 underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            PDF
+                          </a>
+                        )}
+                      </div>
                     </td>
                     <td className="px-3 py-3 text-center">
                       <button
