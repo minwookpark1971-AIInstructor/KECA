@@ -10,7 +10,7 @@ export default async function InstructorProfilePage() {
   if (!user) redirect("/login");
 
   // 승인된 회원 이상만 접근 가능
-  const allowedRoles = ["approved", "associate", "member", "instructor", "admin"];
+  const allowedRoles = ["approved", "associate", "member", "admin"];
   if (!allowedRoles.includes(user.role)) {
     redirect("/mypage");
   }

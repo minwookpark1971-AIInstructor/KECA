@@ -2,13 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { roleLabels, roleBadgeColors } from "@/lib/utils";
-import { UserCheck, Search, Trash2, Eye, FileText, X, CheckCircle, XCircle, RotateCcw, File } from "lucide-react";
+import { roleLabels, roleBadgeColors, instructorBadgeColor } from "@/lib/utils";
+import { UserCheck, Search, Trash2, Eye, FileText, X, CheckCircle, XCircle, RotateCcw, File, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   approveMember,
   changeUserRole,
   deleteMember,
+  promoteToInstructor,
+  demoteInstructor,
   approveInstructorProfile,
   rejectInstructorProfile,
   resetInstructorProfile,
@@ -48,7 +50,9 @@ export default function MembersClient({ members }: { members: Profile[] }) {
   const [promotingUser, setPromotingUser] = useState<Profile | null>(null);
 
   const filtered = members.filter((u) => {
-    if (filter !== "all" && filter !== "profile_submitted") {
+    if (filter === "instructor") {
+      if (!u.is_instructor) return false;
+    } else if (filter !== "all" && filter !== "profile_submitted") {
       if (u.role !== filter) return false;
     }
     if (filter === "profile_submitted" && u.profile_status !== "submitted") return false;
@@ -61,13 +65,6 @@ export default function MembersClient({ members }: { members: Profile[] }) {
 
   const handleApprove = (userId: string) => {
     const role = getApproveRole(userId);
-    if (role === "instructor") {
-      const user = members.find((m) => m.id === userId);
-      if (user) {
-        setPromotingUser(user);
-        return;
-      }
-    }
     startTransition(async () => {
       try {
         await approveMember(userId, role);
@@ -79,13 +76,6 @@ export default function MembersClient({ members }: { members: Profile[] }) {
   };
 
   const handleChangeRole = (userId: string, role: string) => {
-    if (role === "instructor") {
-      const user = members.find((m) => m.id === userId);
-      if (user) {
-        setPromotingUser(user);
-        return;
-      }
-    }
     startTransition(async () => {
       try {
         await changeUserRole(userId, role);
@@ -101,8 +91,8 @@ export default function MembersClient({ members }: { members: Profile[] }) {
     const userId = promotingUser.id;
     startTransition(async () => {
       try {
-        await changeUserRole(userId, "instructor");
-        setMsg({ type: "success", text: "강사 역할이 부여되었습니다." });
+        await promoteToInstructor(userId);
+        setMsg({ type: "success", text: "강사로 지정되었습니다." });
         setPromotingUser(null);
         if (action === "with_profile") {
           router.push(`/admin/instructors/${userId}`);
@@ -241,9 +231,16 @@ export default function MembersClient({ members }: { members: Profile[] }) {
                     <td className="px-4 py-3 text-text-sub">{user.email}</td>
                     <td className="px-4 py-3 text-text-sub hidden sm:table-cell">{user.phone || "-"}</td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${roleBadgeColors[user.role]}`}>
-                        {roleLabels[user.role]}
-                      </span>
+                      <div className="flex items-center justify-center gap-1">
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${roleBadgeColors[user.role]}`}>
+                          {roleLabels[user.role]}
+                        </span>
+                        {user.is_instructor && (
+                          <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${instructorBadgeColor}`}>
+                            강사
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-center hidden lg:table-cell">
                       <div className="flex items-center justify-center gap-1">
@@ -287,7 +284,6 @@ export default function MembersClient({ members }: { members: Profile[] }) {
                             >
                               <option value="associate">준회원</option>
                               <option value="member">정회원</option>
-                              <option value="instructor">강사</option>
                             </select>
                             <button
                               onClick={() => handleApprove(user.id)}
@@ -298,6 +294,7 @@ export default function MembersClient({ members }: { members: Profile[] }) {
                             </button>
                           </>
                         ) : (
+                          <>
                           <select
                             value={user.role}
                             onChange={(e) => handleChangeRole(user.id, e.target.value)}
@@ -307,9 +304,38 @@ export default function MembersClient({ members }: { members: Profile[] }) {
                             <option value="approved">승인완료</option>
                             <option value="associate">준회원</option>
                             <option value="member">정회원</option>
-                            <option value="instructor">강사</option>
                             <option value="admin">관리자</option>
                           </select>
+                          {user.role !== "admin" && (
+                            <button
+                              onClick={() => {
+                                if (user.is_instructor) {
+                                  if (!confirm(`${user.name}님의 강사 지정을 해제하시겠습니까?`)) return;
+                                  startTransition(async () => {
+                                    try {
+                                      await demoteInstructor(user.id);
+                                      setMsg({ type: "success", text: "강사 지정이 해제되었습니다." });
+                                    } catch {
+                                      setMsg({ type: "error", text: "강사 해제에 실패했습니다." });
+                                    }
+                                  });
+                                } else {
+                                  setPromotingUser(user);
+                                }
+                              }}
+                              disabled={isPending}
+                              className={cn(
+                                "p-1 rounded transition-colors disabled:opacity-50",
+                                user.is_instructor
+                                  ? "text-purple-600 hover:text-purple-800 bg-purple-50"
+                                  : "text-text-muted hover:text-purple-600"
+                              )}
+                              title={user.is_instructor ? "강사 해제" : "강사 지정"}
+                            >
+                              <GraduationCap size={14} />
+                            </button>
+                          )}
+                          </>
                         )}
                         {user.role !== "admin" && (
                           <button

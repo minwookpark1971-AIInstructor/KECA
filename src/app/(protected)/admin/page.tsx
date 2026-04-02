@@ -19,7 +19,7 @@ export default async function AdminDashboardPage() {
 
   const totalMembers = members.length;
   const pendingMembers = members.filter((u) => u.role === "pending").length;
-  const instructors = members.filter((u) => u.role === "instructor").length;
+  const instructors = members.filter((u) => u.is_instructor).length;
   const publishedPrograms = programs.length;
 
   const statCards = [

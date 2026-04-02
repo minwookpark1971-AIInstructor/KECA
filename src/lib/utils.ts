@@ -11,7 +11,6 @@ export const roleLabels: Record<string, string> = {
   approved: "승인완료",
   associate: "준회원",
   member: "정회원",
-  instructor: "강사",
   admin: "관리자",
 };
 
@@ -21,6 +20,14 @@ export const roleBadgeColors: Record<string, string> = {
   approved: "bg-blue-100 text-blue-800",
   associate: "bg-teal-100 text-teal-800",
   member: "bg-green-100 text-green-800",
-  instructor: "bg-purple-100 text-purple-800",
   admin: "bg-red-100 text-red-800",
 };
+
+// 강사 배지 색상
+export const instructorBadgeColor = "bg-purple-100 text-purple-800";
+
+// 표시용 역할 라벨 (강사 플래그 포함)
+export function getDisplayRoleLabel(profile: { role: string; is_instructor: boolean }): string {
+  const base = roleLabels[profile.role] || profile.role;
+  return profile.is_instructor ? `${base}/강사` : base;
+}

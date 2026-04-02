@@ -331,7 +331,7 @@ export default function ApplicantsClient({ lecture, applications, adminId, statu
                           <img src={app.applicant.profile_image_url} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
                         ) : null}
                         <span>{app.applicant?.name ?? "-"}</span>
-                        {app.applicant?.role === "instructor" && (
+                        {app.applicant?.is_instructor && (
                           <span className="px-1.5 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full">강사</span>
                         )}
                       </div>

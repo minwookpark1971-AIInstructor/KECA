@@ -5,7 +5,7 @@ import { Plus } from "lucide-react";
 
 export default async function AdminInstructorsPage() {
   const members = await getMembersForAdmin();
-  const instructors = members.filter((u) => u.role === "instructor");
+  const instructors = members.filter((u) => u.is_instructor);
 
   return (
     <div>

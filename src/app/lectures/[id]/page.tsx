@@ -15,7 +15,7 @@ export default async function LectureDetailPage({ params }: { params: Promise<{ 
 
   if (!lecture) notFound();
 
-  const isMember = user && (user.role === "member" || user.role === "instructor");
+  const isMember = user && (user.role === "member" || user.is_instructor);
 
   // 이미 지원했는지 확인
   let existingApplication = null;

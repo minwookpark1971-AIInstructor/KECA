@@ -58,15 +58,15 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 강사 경로: role 확인
+  // 강사 경로: is_instructor 확인
   if (pathname.startsWith("/instructor")) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, is_instructor")
       .eq("id", user.id)
       .single();
 
-    if (profile?.role !== "instructor" && profile?.role !== "admin") {
+    if (!profile?.is_instructor && profile?.role !== "admin") {
       return NextResponse.redirect(new URL("/mypage", request.url));
     }
   }

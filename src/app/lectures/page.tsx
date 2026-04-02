@@ -25,7 +25,7 @@ function StatusBadge({ status }: { status: Lecture["status"] }) {
 export default async function LecturesPage() {
   const [lectures, user] = await Promise.all([getLectures(), getCurrentUser()]);
 
-  const isMember = user && (user.role === "member" || user.role === "admin" || user.role === "instructor");
+  const isMember = user && (user.role === "member" || user.role === "admin" || user.is_instructor);
 
   return (
     <div className="min-h-screen bg-surface">

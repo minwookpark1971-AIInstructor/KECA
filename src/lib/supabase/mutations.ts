@@ -354,7 +354,7 @@ export async function promoteToInstructor(
   const supabase = createAdminClient();
 
   const updateData: Record<string, unknown> = {
-    role: "instructor",
+    is_instructor: true,
     is_profile_public: fields?.is_profile_public ?? true,
   };
   if (!updateData.approved_at) {
@@ -375,12 +375,12 @@ export async function promoteToInstructor(
   revalidatePath("/instructors");
 }
 
-export async function demoteInstructor(userId: string, newRole: string = "member") {
+export async function demoteInstructor(userId: string) {
   const { createAdminClient } = await import("./admin");
   const supabase = createAdminClient();
   const { error } = await supabase
     .from("profiles")
-    .update({ role: newRole, is_profile_public: false })
+    .update({ is_instructor: false, is_profile_public: false })
     .eq("id", userId);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/instructors");
@@ -424,7 +424,8 @@ export async function createInstructor(formData: {
       email: formData.email,
       name: formData.name,
       phone: formData.phone || null,
-      role: "instructor",
+      role: "associate",
+      is_instructor: true,
       bio: formData.bio || null,
       career_summary: formData.career_summary || null,
       specialties: formData.specialties || [],

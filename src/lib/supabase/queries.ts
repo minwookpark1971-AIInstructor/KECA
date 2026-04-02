@@ -135,7 +135,7 @@ export async function getApprovedProfiles(): Promise<Profile[]> {
     .from("profiles")
     .select("*")
     .eq("profile_status", "approved")
-    .neq("role", "instructor")
+    .eq("is_instructor", false)
     .order("name");
   return (data as Profile[]) ?? [];
 }
@@ -155,7 +155,7 @@ export async function getInstructors(categoryId?: string): Promise<Profile[]> {
   const { data } = await supabase
     .from("profiles")
     .select("*")
-    .eq("role", "instructor")
+    .eq("is_instructor", true)
     .eq("is_profile_public", true)
     .order("name");
   return (data as Profile[]) ?? [];

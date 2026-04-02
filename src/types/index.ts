@@ -3,7 +3,7 @@
 // ============================================================
 
 // ----- 사용자 역할 -----
-export type UserRole = "pending" | "approved" | "associate" | "member" | "instructor" | "admin";
+export type UserRole = "pending" | "approved" | "associate" | "member" | "admin";
 export type ProfileStatus = "none" | "draft" | "submitted" | "approved" | "rejected";
 
 // ----- Profiles -----
@@ -13,6 +13,7 @@ export interface Profile {
   name: string;
   phone?: string;
   role: UserRole;
+  is_instructor: boolean;
 
   // 강사 전용
   profile_image_url?: string;

@@ -16,7 +16,7 @@ export default async function MyPage() {
   const badgeColor = roleBadgeColors[user.role] || "bg-gray-100 text-gray-800";
   const enrollments = await getEnrollmentsByUser(user.id);
 
-  const allowedForProfile = ["approved", "associate", "member", "instructor", "admin"];
+  const allowedForProfile = ["approved", "associate", "member", "admin"];
   const showInstructorProfile = allowedForProfile.includes(user.role);
   const profileStatus = (user.profile_status as ProfileStatus) || "none";
 
@@ -98,7 +98,7 @@ export default async function MyPage() {
               </div>
             </div>
           )}
-          {showInstructorProfile && profileStatus === "approved" && user.role !== "instructor" && (
+          {showInstructorProfile && profileStatus === "approved" && !user.is_instructor && (
             <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-xl">
               <div className="flex items-center gap-3">
                 <CheckCircle size={20} className="text-green-500 shrink-0" />

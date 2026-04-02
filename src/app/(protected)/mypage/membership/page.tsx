@@ -11,7 +11,7 @@ export default async function MembershipPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const payments = await getPaymentsByUser(user.id);
-  const isPaid = user.role === "member" || user.role === "instructor" || user.role === "admin";
+  const isPaid = user.role === "member" || user.role === "admin";
   const isExpiringSoon = user.membership_expires_at
     ? new Date(user.membership_expires_at) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     : false;
