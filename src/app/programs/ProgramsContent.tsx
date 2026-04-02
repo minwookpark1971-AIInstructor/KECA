@@ -131,64 +131,69 @@ export default function ProgramsContent({ categories, programs }: { categories: 
             );
           })()}
 
-          {/* 교육과정 목록 */}
-          {activeCategory && (
-            <h3 className="text-lg font-bold text-text mb-6">
-              {categories.find((c) => c.slug === activeCategory)?.name} 교육과정
-            </h3>
-          )}
-
-          {filteredPrograms.length > 0 ? (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredPrograms.map((program) => {
-                const category = categories.find((c) => c.id === program.category_id);
-                const catSlug = category?.slug || "";
-                const style = categoryStyles[catSlug] || { gradient: "from-[#1B2A4A] to-[#C4963C]", icon: Award };
-                const Icon = style.icon;
-                return (
-                  <Link
-                    key={program.id}
-                    href={`/programs/${program.slug}`}
-                    className="group rounded-lg overflow-hidden card-hover bg-white"
-                  >
-                    <div className={`aspect-[16/10] flex flex-col items-center justify-center p-6 overflow-hidden ${
-                      program.thumbnail_url
-                        ? "bg-white border border-border"
-                        : `bg-gradient-to-br ${style.gradient}`
-                    }`}>
-                      {program.thumbnail_url ? (
-                        <img src={program.thumbnail_url} alt={program.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                      ) : (
-                        <>
-                          <Icon size={48} className="text-white/80 mb-3 group-hover:scale-110 transition-transform duration-300" />
-                          <span className="text-white/70 text-sm font-medium tracking-wide">{category?.name || "교육과정"}</span>
-                        </>
-                      )}
-                    </div>
-                    <div className="p-5">
-                      {category && (
-                        <span className="inline-block px-2 py-0.5 text-xs font-medium text-primary bg-primary/5 rounded mb-2">
-                          {category.name}
-                        </span>
-                      )}
-                      <h3 className="text-base font-semibold text-text group-hover:text-primary transition-colors">
-                        {program.title}
-                      </h3>
-                      {program.subtitle && (
-                        <p className="mt-1 text-xs text-text-muted line-clamp-2">{program.subtitle}</p>
-                      )}
-                      <p className="mt-3 text-xs text-text-sub">
-                        {program.target_audience && <span>{program.target_audience}</span>}
-                        {program.duration && <span> · {program.duration}</span>}
-                      </p>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+          {/* 교육과정 목록 — 카테고리 선택 시에만 표시 */}
+          {activeCategory ? (
+            <>
+              <h3 className="text-lg font-bold text-text mb-6">
+                {categories.find((c) => c.slug === activeCategory)?.name} 교육과정
+              </h3>
+              {filteredPrograms.length > 0 ? (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredPrograms.map((program) => {
+                    const category = categories.find((c) => c.id === program.category_id);
+                    const catSlug = category?.slug || "";
+                    const style = categoryStyles[catSlug] || { gradient: "from-[#1B2A4A] to-[#C4963C]", icon: Award };
+                    const Icon = style.icon;
+                    return (
+                      <Link
+                        key={program.id}
+                        href={`/programs/${program.slug}`}
+                        className="group rounded-lg overflow-hidden card-hover bg-white"
+                      >
+                        <div className={`aspect-[16/10] flex flex-col items-center justify-center p-6 overflow-hidden ${
+                          program.thumbnail_url
+                            ? "bg-white border border-border"
+                            : `bg-gradient-to-br ${style.gradient}`
+                        }`}>
+                          {program.thumbnail_url ? (
+                            <img src={program.thumbnail_url} alt={program.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                          ) : (
+                            <>
+                              <Icon size={48} className="text-white/80 mb-3 group-hover:scale-110 transition-transform duration-300" />
+                              <span className="text-white/70 text-sm font-medium tracking-wide">{category?.name || "교육과정"}</span>
+                            </>
+                          )}
+                        </div>
+                        <div className="p-5">
+                          {category && (
+                            <span className="inline-block px-2 py-0.5 text-xs font-medium text-primary bg-primary/5 rounded mb-2">
+                              {category.name}
+                            </span>
+                          )}
+                          <h3 className="text-base font-semibold text-text group-hover:text-primary transition-colors">
+                            {program.title}
+                          </h3>
+                          {program.subtitle && (
+                            <p className="mt-1 text-xs text-text-muted line-clamp-2">{program.subtitle}</p>
+                          )}
+                          <p className="mt-3 text-xs text-text-sub">
+                            {program.target_audience && <span>{program.target_audience}</span>}
+                            {program.duration && <span> · {program.duration}</span>}
+                          </p>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-text-muted">
+                  해당 카테고리의 교육프로그램이 준비 중입니다.
+                </div>
+              )}
+            </>
           ) : (
-            <div className="text-center py-20 text-text-muted">
-              {activeCategory ? "해당 카테고리의 교육프로그램이 준비 중입니다." : "등록된 교육프로그램이 없습니다."}
+            <div className="text-center py-10 text-text-muted text-sm">
+              교육분야를 선택하시면 해당 교육과정을 확인할 수 있습니다.
             </div>
           )}
         </div>
