@@ -56,8 +56,8 @@ export default function InstructorEditClient({ instructor }: { instructor: Profi
         });
         setMsg({ type: "success", text: "강사 정보가 저장되었습니다." });
         router.refresh();
-      } catch {
-        setMsg({ type: "error", text: "저장에 실패했습니다." });
+      } catch (err) {
+        setMsg({ type: "error", text: "저장에 실패했습니다: " + (err instanceof Error ? err.message : String(err)) });
       }
     });
   };
