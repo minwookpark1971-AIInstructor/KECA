@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sendPaymentConfirmation } from "@/lib/email";
 
 export async function POST(request: Request) {
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     }
 
     // DB 업데이트: 결제 완료
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const now = new Date().toISOString();
     const oneYearLater = new Date(
       Date.now() + 365 * 24 * 60 * 60 * 1000
@@ -106,6 +106,10 @@ export async function POST(request: Request) {
           }
         } else {
           console.error("Deposit payment confirmed but applicationId not found. orderId:", orderId);
+          return NextResponse.json(
+            { error: "지원 정보를 찾을 수 없습니다." },
+            { status: 400 }
+          );
         }
       }
 

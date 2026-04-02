@@ -1,6 +1,5 @@
 "use server";
 
-import { createClient } from "./server";
 import { createAdminClient } from "./admin";
 import { revalidatePath } from "next/cache";
 import {
@@ -490,10 +489,14 @@ export async function createLecture(formData: {
 }) {
   const supabase = createAdminClient();
   const max_applicants = Math.ceil(formData.required_count * 1.5);
+  // 빈 문자열을 제거하여 UUID 등 타입 에러 방지
+  const cleanData = Object.fromEntries(
+    Object.entries(formData).filter(([, v]) => v !== "")
+  );
   const { data, error } = await supabase
     .from("lectures")
     .insert({
-      ...formData,
+      ...cleanData,
       max_applicants,
       status: formData.status || "open",
     })
@@ -765,7 +768,7 @@ export async function bulkUpdateApplicationStatus(
 // ─── 알림 관리 ───
 
 export async function markNotificationRead(notificationId: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("notifications")
     .update({ is_read: true })
