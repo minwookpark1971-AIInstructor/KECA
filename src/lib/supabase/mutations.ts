@@ -287,7 +287,87 @@ export async function deletePartner(id: string) {
   revalidatePath("/admin/partners");
 }
 
-// ─── 강사 등록 (Admin) ───
+// ─── 강사 프로필 검토 (Admin) ───
+
+export async function approveInstructorProfile(userId: string) {
+  const { createAdminClient } = await import("./admin");
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ profile_status: "approved", profile_reject_reason: null })
+    .eq("id", userId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/members");
+}
+
+export async function rejectInstructorProfile(userId: string, reason: string) {
+  const { createAdminClient } = await import("./admin");
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ profile_status: "rejected", profile_reject_reason: reason })
+    .eq("id", userId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/members");
+}
+
+export async function resetInstructorProfile(userId: string) {
+  const { createAdminClient } = await import("./admin");
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ profile_status: "rejected", profile_reject_reason: "관리자 요청에 의한 재작성" })
+    .eq("id", userId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/members");
+  revalidatePath("/admin/instructors");
+}
+
+// ─── 강사 승격/해제 (Admin) ───
+
+export async function promoteToInstructor(
+  userId: string,
+  fields?: { profile_card_url?: string; is_profile_public?: boolean }
+) {
+  const { createAdminClient } = await import("./admin");
+  const supabase = createAdminClient();
+
+  const updateData: Record<string, unknown> = {
+    role: "instructor",
+    is_profile_public: fields?.is_profile_public ?? true,
+  };
+  if (!updateData.approved_at) {
+    updateData.approved_at = new Date().toISOString();
+  }
+  if (fields?.profile_card_url !== undefined) {
+    updateData.profile_card_url = fields.profile_card_url;
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update(updateData)
+    .eq("id", userId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/instructors");
+  revalidatePath("/admin/members");
+  revalidatePath("/instructors");
+}
+
+export async function demoteInstructor(userId: string, newRole: string = "member") {
+  const { createAdminClient } = await import("./admin");
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ role: newRole, is_profile_public: false })
+    .eq("id", userId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/instructors");
+  revalidatePath("/admin/members");
+  revalidatePath("/instructors");
+}
+
+// ─── 강사 등록 (Admin) — @deprecated: promoteToInstructor 사용 권장 ───
 
 export async function createInstructor(formData: {
   name: string;

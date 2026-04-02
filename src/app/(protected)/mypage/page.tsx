@@ -4,7 +4,8 @@ import { Metadata } from "next";
 import { SubpageHero } from "@/components/layout/SubpageHero";
 import { getCurrentUser, getEnrollmentsByUser } from "@/lib/supabase/queries";
 import { roleLabels, roleBadgeColors } from "@/lib/utils";
-import { User, CreditCard, Edit, ChevronRight, Shield, Calendar, BookOpen, FileText, Wallet } from "lucide-react";
+import { User, CreditCard, Edit, ChevronRight, Shield, Calendar, BookOpen, FileText, Wallet, GraduationCap, AlertCircle, Clock, CheckCircle } from "lucide-react";
+import type { ProfileStatus } from "@/types";
 
 export const metadata: Metadata = { title: "마이페이지" };
 
@@ -15,8 +16,15 @@ export default async function MyPage() {
   const badgeColor = roleBadgeColors[user.role] || "bg-gray-100 text-gray-800";
   const enrollments = await getEnrollmentsByUser(user.id);
 
+  const allowedForProfile = ["approved", "associate", "member", "instructor", "admin"];
+  const showInstructorProfile = allowedForProfile.includes(user.role);
+  const profileStatus = (user.profile_status as ProfileStatus) || "none";
+
   const quickLinks = [
     { label: "프로필 수정", href: "/mypage/profile", icon: Edit, desc: "이름, 연락처, 비밀번호 변경" },
+    ...(showInstructorProfile
+      ? [{ label: "강사 프로필", href: "/mypage/instructor-profile", icon: GraduationCap, desc: "소개, 경력, 전문분야, 영상, PDF" }]
+      : []),
     { label: "협회비 납부", href: "/mypage/membership", icon: CreditCard, desc: "납부 현황 및 결제" },
     { label: "지원이력", href: "/mypage/applications", icon: FileText, desc: "강의공고 지원 현황 확인" },
     { label: "보증금 관리", href: "/mypage/deposits", icon: Wallet, desc: "보증금 결제 및 환불 내역" },
@@ -68,6 +76,36 @@ export default async function MyPage() {
               </div>
             </div>
           </div>
+
+          {/* 강사 프로필 상태 배너 */}
+          {showInstructorProfile && profileStatus === "rejected" && (
+            <Link href="/mypage/instructor-profile" className="block mb-8 p-4 bg-red-50 border border-red-200 rounded-xl">
+              <div className="flex items-center gap-3">
+                <AlertCircle size={20} className="text-red-500 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-red-700">강사 프로필이 반려되었습니다.</p>
+                  <p className="text-xs text-red-600 mt-0.5">수정 후 재제출해주세요.</p>
+                </div>
+                <ChevronRight size={16} className="text-red-400 shrink-0" />
+              </div>
+            </Link>
+          )}
+          {showInstructorProfile && profileStatus === "submitted" && (
+            <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+              <div className="flex items-center gap-3">
+                <Clock size={20} className="text-blue-500 shrink-0" />
+                <p className="text-sm font-medium text-blue-700">강사 프로필 검토 중입니다.</p>
+              </div>
+            </div>
+          )}
+          {showInstructorProfile && profileStatus === "approved" && user.role !== "instructor" && (
+            <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-xl">
+              <div className="flex items-center gap-3">
+                <CheckCircle size={20} className="text-green-500 shrink-0" />
+                <p className="text-sm font-medium text-green-700">강사 프로필이 승인되었습니다.</p>
+              </div>
+            </div>
+          )}
 
           {/* 수강 승인된 교육과정 */}
           {enrollments.filter((e) => e.status === "approved").length > 0 && (

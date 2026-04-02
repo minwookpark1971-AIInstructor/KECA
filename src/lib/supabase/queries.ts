@@ -129,6 +129,17 @@ export async function getProgramInstructors(programId: string): Promise<Profile[
 
 // ─── 강사 ───
 
+export async function getApprovedProfiles(): Promise<Profile[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("profile_status", "approved")
+    .neq("role", "instructor")
+    .order("name");
+  return (data as Profile[]) ?? [];
+}
+
 export async function getInstructors(categoryId?: string): Promise<Profile[]> {
   const supabase = await createClient();
 
@@ -396,7 +407,7 @@ export async function getApplicationsByLecture(lectureId: string): Promise<Appli
   const supabase = await createClient();
   const { data } = await supabase
     .from("applications")
-    .select("*, applicant:profiles(id, name, email, phone, specialties, bio)")
+    .select("*, applicant:profiles(id, name, email, phone, specialties, bio, career_summary, profile_image_url, profile_pdf_url, role)")
     .eq("lecture_id", lectureId)
     .order("created_at", { ascending: false });
   return (data as unknown as Application[]) ?? [];

@@ -4,6 +4,7 @@
 
 // ----- 사용자 역할 -----
 export type UserRole = "pending" | "approved" | "associate" | "member" | "instructor" | "admin";
+export type ProfileStatus = "none" | "draft" | "submitted" | "approved" | "rejected";
 
 // ----- Profiles -----
 export interface Profile {
@@ -21,6 +22,9 @@ export interface Profile {
   specialties?: string[];
   video_url?: string;
   is_profile_public?: boolean;
+  profile_pdf_url?: string;
+  profile_status?: ProfileStatus;
+  profile_reject_reason?: string;
 
   // 회원 상태
   approved_at?: string;
