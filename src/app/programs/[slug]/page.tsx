@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { SubpageHero } from "@/components/layout/SubpageHero";
-import { getProgramBySlug, getProgramInstructors } from "@/lib/supabase/queries";
+import { getProgramBySlug, getProgramInstructors, getProgramImages } from "@/lib/supabase/queries";
+import ImageSlider from "@/components/programs/ImageSlider";
 import { Clock, Users, BookOpen, ArrowRight, CheckCircle, ChevronDown } from "lucide-react";
 
 export default async function ProgramDetailPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -10,7 +11,10 @@ export default async function ProgramDetailPage({ params }: { params: Promise<{ 
   if (!program) notFound();
 
   const category = (program as unknown as Record<string, unknown>).categories as { id: string; name: string; slug: string } | null;
-  const instructors = await getProgramInstructors(program.id);
+  const [instructors, images] = await Promise.all([
+    getProgramInstructors(program.id),
+    getProgramImages(program.id),
+  ]);
 
   return (
     <>
@@ -55,6 +59,14 @@ export default async function ProgramDetailPage({ params }: { params: Promise<{ 
                 </div>
               </div>
             </div>
+
+            {/* 과정소개 이미지 슬라이드 */}
+            {images.length > 0 && (
+              <div className="mb-10">
+                <h2 className="text-xl font-bold text-text mb-4">과정 소개</h2>
+                <ImageSlider images={images} />
+              </div>
+            )}
 
             {/* 과정 설명 */}
             {program.description && (

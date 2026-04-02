@@ -99,6 +99,27 @@ export async function deleteProgram(id: string) {
   const { error } = await supabase.from("programs").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/programs");
+  revalidatePath("/programs");
+}
+
+// ─── 과정소개 이미지 ───
+
+export async function addProgramImage(programId: string, imageUrl: string, sortOrder: number) {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("program_images")
+    .insert({ program_id: programId, image_url: imageUrl, sort_order: sortOrder });
+  if (error) throw new Error(error.message);
+  revalidatePath(`/admin/programs/${programId}`);
+  revalidatePath("/programs");
+}
+
+export async function deleteProgramImage(imageId: string, programId: string) {
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("program_images").delete().eq("id", imageId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/admin/programs/${programId}`);
+  revalidatePath("/programs");
 }
 
 // ─── 커뮤니티 게시판 ───

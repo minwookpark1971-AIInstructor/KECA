@@ -3,16 +3,18 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Save, Trash2, ArrowLeft, Eye, Upload } from "lucide-react";
-import { updateProgram, deleteProgram } from "@/lib/supabase/mutations";
-import type { Program, Category } from "@/types";
+import { Save, Trash2, ArrowLeft, Eye, Upload, X, ImagePlus } from "lucide-react";
+import { updateProgram, deleteProgram, addProgramImage, deleteProgramImage } from "@/lib/supabase/mutations";
+import type { Program, Category, ProgramImage } from "@/types";
 
 export default function ProgramEditClient({
   program,
   categories,
+  initialImages = [],
 }: {
   program: Program;
   categories: Category[];
+  initialImages?: ProgramImage[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -28,6 +30,8 @@ export default function ProgramEditClient({
   const [isFeatured, setIsFeatured] = useState(program.is_featured);
   const [thumbnailUrl, setThumbnailUrl] = useState(program.thumbnail_url || "");
   const [imageUploading, setImageUploading] = useState(false);
+  const [programImages, setProgramImages] = useState<ProgramImage[]>(initialImages);
+  const [introImageUploading, setIntroImageUploading] = useState(false);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -171,6 +175,85 @@ export default function ProgramEditClient({
               <p className="text-sm text-text-sub">{imageUploading ? "업로드 중..." : "PNG, JPG 이미지를 클릭하여 업로드"}</p>
               <p className="text-xs text-text-muted mt-1">최대 5MB</p>
               <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleImageUpload} disabled={imageUploading} className="hidden" />
+            </label>
+          )}
+        </div>
+
+        {/* 과정소개 이미지 (최대 5장) */}
+        <div className="bg-white border border-border-light rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-bold text-text">과정소개 이미지</h2>
+            <span className="text-xs text-text-muted">{programImages.length} / 5장</span>
+          </div>
+
+          {programImages.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+              {programImages.map((img, idx) => (
+                <div key={img.id} className="relative group">
+                  <img src={img.image_url} alt={`과정소개 ${idx + 1}`} className="w-full h-32 object-cover rounded-lg" />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!confirm("이 이미지를 삭제하시겠습니까?")) return;
+                      try {
+                        await deleteProgramImage(img.id, program.id);
+                        setProgramImages((prev) => prev.filter((p) => p.id !== img.id));
+                      } catch {
+                        setMsg({ type: "error", text: "이미지 삭제에 실패했습니다." });
+                      }
+                    }}
+                    className="absolute top-1.5 right-1.5 bg-black/60 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X size={14} />
+                  </button>
+                  <span className="absolute bottom-1.5 left-1.5 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">{idx + 1}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {programImages.length < 5 && (
+            <label className="block border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer hover:border-primary/30 transition-colors">
+              <ImagePlus size={28} className="mx-auto text-text-muted/40 mb-2" />
+              <p className="text-sm text-text-sub">
+                {introImageUploading ? "업로드 중..." : "과정을 설명하는 이미지를 업로드하세요"}
+              </p>
+              <p className="text-xs text-text-muted mt-1">PNG, JPG (최대 5MB) · 회원에게 슬라이드로 표시됩니다</p>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                disabled={introImageUploading}
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.size > 5 * 1024 * 1024) {
+                    setMsg({ type: "error", text: "이미지 크기는 5MB 이하여야 합니다." });
+                    return;
+                  }
+                  setIntroImageUploading(true);
+                  try {
+                    const fd = new FormData();
+                    fd.append("file", file);
+                    fd.append("folder", "programs");
+                    const res = await fetch("/api/upload", { method: "POST", body: fd });
+                    const data = await res.json();
+                    if (!res.ok) {
+                      setMsg({ type: "error", text: "업로드 실패: " + data.error });
+                    } else {
+                      await addProgramImage(program.id, data.url, programImages.length);
+                      setProgramImages((prev) => [
+                        ...prev,
+                        { id: crypto.randomUUID(), program_id: program.id, image_url: data.url, sort_order: prev.length, created_at: new Date().toISOString() },
+                      ]);
+                    }
+                  } catch {
+                    setMsg({ type: "error", text: "이미지 업로드에 실패했습니다." });
+                  }
+                  setIntroImageUploading(false);
+                  e.target.value = "";
+                }}
+              />
             </label>
           )}
         </div>
