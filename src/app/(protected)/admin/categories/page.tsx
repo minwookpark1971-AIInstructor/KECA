@@ -1,7 +1,7 @@
-import { getCategories } from "@/lib/supabase/queries";
+import { getCategories, getAllCategoryImages } from "@/lib/supabase/queries";
 import CategoriesClient from "./CategoriesClient";
 
 export default async function AdminCategoriesPage() {
-  const categories = await getCategories();
-  return <CategoriesClient categories={categories} />;
+  const [categories, allImages] = await Promise.all([getCategories(), getAllCategoryImages()]);
+  return <CategoriesClient categories={categories} allImages={allImages} />;
 }

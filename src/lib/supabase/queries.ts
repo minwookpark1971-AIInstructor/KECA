@@ -1,6 +1,7 @@
 import { createClient } from "./server";
 import type {
   Category,
+  CategoryImage,
   Program,
   Profile,
   Post,
@@ -36,6 +37,25 @@ export async function getCategoryBySlug(slug: string): Promise<Category | null> 
     .eq("slug", slug)
     .single();
   return data as Category | null;
+}
+
+export async function getCategoryImages(categoryId: string): Promise<CategoryImage[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("category_images")
+    .select("*")
+    .eq("category_id", categoryId)
+    .order("sort_order");
+  return (data as CategoryImage[]) ?? [];
+}
+
+export async function getAllCategoryImages(): Promise<CategoryImage[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("category_images")
+    .select("*")
+    .order("sort_order");
+  return (data as CategoryImage[]) ?? [];
 }
 
 // ─── 교육프로그램 ───

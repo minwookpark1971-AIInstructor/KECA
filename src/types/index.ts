@@ -49,6 +49,14 @@ export interface Category {
   created_at: string;
 }
 
+export interface CategoryImage {
+  id: string;
+  category_id: string;
+  image_url: string;
+  sort_order: number;
+  created_at: string;
+}
+
 // ----- 교육프로그램 -----
 export type ProgramType = "education" | "expert" | "certification";
 export type ProgramStatus = "draft" | "published" | "archived";

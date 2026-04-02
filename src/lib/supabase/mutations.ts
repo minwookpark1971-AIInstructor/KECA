@@ -530,6 +530,26 @@ export async function deleteCategory(id: string) {
   revalidatePath("/programs");
 }
 
+// ─── 카테고리 소개 이미지 ───
+
+export async function addCategoryImage(categoryId: string, imageUrl: string, sortOrder: number) {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("category_images")
+    .insert({ category_id: categoryId, image_url: imageUrl, sort_order: sortOrder });
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/categories");
+  revalidatePath("/programs");
+}
+
+export async function deleteCategoryImage(imageId: string) {
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("category_images").delete().eq("id", imageId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/categories");
+  revalidatePath("/programs");
+}
+
 // ─── 수강 신청 ───
 
 export async function createEnrollment(

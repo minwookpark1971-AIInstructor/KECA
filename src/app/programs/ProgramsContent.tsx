@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { SubpageHero } from "@/components/layout/SubpageHero";
 import { Cpu, Compass, Briefcase, Users, Target, Shield, Award, BookOpen, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Category, Program } from "@/types";
+import type { Category, CategoryImage, Program } from "@/types";
 
 const categoryStyles: Record<string, { gradient: string; icon: React.ElementType }> = {
   "ai-edutech": { gradient: "from-[#1B2A4A] to-[#2E5090]", icon: Cpu },
@@ -17,7 +17,7 @@ const categoryStyles: Record<string, { gradient: string; icon: React.ElementType
   "mandatory": { gradient: "from-[#374151] to-[#6B7280]", icon: Shield },
 };
 
-export default function ProgramsContent({ categories, programs }: { categories: Category[]; programs: Program[] }) {
+export default function ProgramsContent({ categories, programs, categoryImages = [] }: { categories: Category[]; programs: Program[]; categoryImages?: CategoryImage[] }) {
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get("category") || "";
   const [activeCategory, setActiveCategory] = useState(initialCategory);
@@ -103,30 +103,36 @@ export default function ProgramsContent({ categories, programs }: { categories: 
             })}
           </div>
 
-          {/* 선택된 카테고리 상세 설명 */}
+          {/* 선택된 카테고리 상세 설명 + 소개 이미지 */}
           {activeCategory && (() => {
             const selectedCat = categories.find((c) => c.slug === activeCategory);
             if (!selectedCat) return null;
+            const images = categoryImages.filter((img) => img.category_id === selectedCat.id);
             return (
-              <div className="mb-10 bg-white border border-border-light rounded-2xl overflow-hidden">
-                <div className="flex flex-col md:flex-row">
-                  {selectedCat.image_url && (
-                    <div className="md:w-2/5 shrink-0">
-                      <img src={selectedCat.image_url} alt={selectedCat.name} className="w-full h-full min-h-[200px] object-cover" />
-                    </div>
-                  )}
-                  <div className="flex-1 p-6 md:p-8 flex flex-col justify-center">
-                    <div className="flex items-center justify-between mb-3">
-                      <h2 className="text-xl font-bold text-text">{selectedCat.name}</h2>
-                      <button onClick={() => setActiveCategory("")} className="text-xs text-text-muted hover:text-primary px-3 py-1 border border-border-light rounded-full">
-                        전체보기
-                      </button>
-                    </div>
-                    {selectedCat.description && (
-                      <p className="text-sm text-text-sub leading-relaxed whitespace-pre-line">{selectedCat.description}</p>
-                    )}
+              <div className="mb-10">
+                {/* 카테고리 설명 */}
+                <div className="bg-white border border-border-light rounded-2xl p-6 md:p-8 mb-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-xl font-bold text-text">{selectedCat.name}</h2>
+                    <button onClick={() => setActiveCategory("")} className="text-xs text-text-muted hover:text-primary px-3 py-1 border border-border-light rounded-full">
+                      전체보기
+                    </button>
                   </div>
+                  {selectedCat.description && (
+                    <p className="text-sm text-text-sub leading-relaxed whitespace-pre-line">{selectedCat.description}</p>
+                  )}
                 </div>
+
+                {/* 소개 이미지 세로 나열 */}
+                {images.length > 0 && (
+                  <div className="space-y-4 mb-6">
+                    {images.map((img, idx) => (
+                      <div key={img.id} className="rounded-xl overflow-hidden border border-border-light">
+                        <img src={img.image_url} alt={`${selectedCat.name} 소개 ${idx + 1}`} className="w-full object-contain" />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })()}
