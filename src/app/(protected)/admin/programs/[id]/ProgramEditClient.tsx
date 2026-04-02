@@ -32,6 +32,7 @@ export default function ProgramEditClient({
   const [imageUploading, setImageUploading] = useState(false);
   const [programImages, setProgramImages] = useState<ProgramImage[]>(initialImages);
   const [introImageUploading, setIntroImageUploading] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -45,7 +46,7 @@ export default function ProgramEditClient({
       const res = await fetch("/api/upload", { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) { setMsg({ type: "error", text: "업로드 실패: " + data.error }); }
-      else { setThumbnailUrl(data.url); }
+      else { setThumbnailUrl(data.url); setIsDirty(true); }
     } catch { setMsg({ type: "error", text: "이미지 업로드에 실패했습니다." }); }
     setImageUploading(false);
   };
@@ -67,6 +68,7 @@ export default function ProgramEditClient({
           thumbnail_url: thumbnailUrl || null,
         });
         setMsg({ type: "success", text: "프로그램이 저장되었습니다." });
+        setIsDirty(false);
       } catch {
         setMsg({ type: "error", text: "저장에 실패했습니다." });
       }
@@ -125,19 +127,19 @@ export default function ProgramEditClient({
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-text mb-1.5">프로그램명 <span className="text-red-500">*</span></label>
-              <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+              <input type="text" value={title} onChange={(e) => { setTitle(e.target.value); setIsDirty(true); }} required className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-text mb-1.5">카테고리</label>
-                <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
+                <select value={categoryId} onChange={(e) => { setCategoryId(e.target.value); setIsDirty(true); }} className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
                   <option value="">선택하세요</option>
                   {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-text mb-1.5">유형</label>
-                <select value={programType} onChange={(e) => setProgramType(e.target.value as Program["program_type"])} className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
+                <select value={programType} onChange={(e) => { setProgramType(e.target.value as Program["program_type"]); setIsDirty(true); }} className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
                   <option value="education">교육프로그램</option>
                   <option value="expert">전문가과정</option>
                   <option value="certification">자격증과정</option>
@@ -147,16 +149,16 @@ export default function ProgramEditClient({
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-text mb-1.5">대상</label>
-                <input type="text" value={targetAudience} onChange={(e) => setTargetAudience(e.target.value)} placeholder="기업 임직원, 대학생 등" className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                <input type="text" value={targetAudience} onChange={(e) => { setTargetAudience(e.target.value); setIsDirty(true); }} placeholder="기업 임직원, 대학생 등" className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-text mb-1.5">소요시간</label>
-                <input type="text" value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="4시간, 2일(16시간)" className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                <input type="text" value={duration} onChange={(e) => { setDuration(e.target.value); setIsDirty(true); }} placeholder="4시간, 2일(16시간)" className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-text mb-1.5">과정 설명</label>
-              <textarea rows={5} value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-4 py-3 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-y" />
+              <textarea rows={5} value={description} onChange={(e) => { setDescription(e.target.value); setIsDirty(true); }} className="w-full px-4 py-3 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-y" />
             </div>
           </div>
         </div>
@@ -167,7 +169,7 @@ export default function ProgramEditClient({
           {thumbnailUrl ? (
             <div className="relative">
               <img src={thumbnailUrl} alt="썸네일" className="w-full max-h-60 object-cover rounded-lg" />
-              <button type="button" onClick={() => setThumbnailUrl("")} className="absolute top-2 right-2 bg-white/90 text-text-muted hover:text-error px-2 py-1 rounded text-xs">삭제</button>
+              <button type="button" onClick={() => { setThumbnailUrl(""); setIsDirty(true); }} className="absolute top-2 right-2 bg-white/90 text-text-muted hover:text-error px-2 py-1 rounded text-xs">삭제</button>
             </div>
           ) : (
             <label className="block border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-primary/30 transition-colors">
@@ -264,14 +266,14 @@ export default function ProgramEditClient({
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-text mb-1.5">상태</label>
-              <select value={status} onChange={(e) => setStatus(e.target.value as Program["status"])} className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
+              <select value={status} onChange={(e) => { setStatus(e.target.value as Program["status"]); setIsDirty(true); }} className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
                 <option value="draft">초안</option>
                 <option value="published">공개</option>
                 <option value="archived">보관</option>
               </select>
             </div>
             <label className="flex items-center gap-3 cursor-pointer">
-              <input type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} className="w-4 h-4 accent-primary" />
+              <input type="checkbox" checked={isFeatured} onChange={(e) => { setIsFeatured(e.target.checked); setIsDirty(true); }} className="w-4 h-4 accent-primary" />
               <div>
                 <p className="text-sm font-medium text-text">추천 프로그램</p>
                 <p className="text-xs text-text-muted">홈페이지 추천 교육 섹션에 표시됩니다.</p>
@@ -287,7 +289,7 @@ export default function ProgramEditClient({
             disabled={isPending}
             className="flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-light transition-colors disabled:opacity-50"
           >
-            <Save size={16} /> {isPending ? "저장 중..." : "수정"}
+            <Save size={16} /> {isPending ? "저장 중..." : isDirty ? "저장" : "수정"}
           </button>
           <Link href="/admin/programs" className="px-6 py-2.5 rounded-lg text-sm font-medium text-text-sub border border-border-light hover:bg-surface transition-colors">
             취소
