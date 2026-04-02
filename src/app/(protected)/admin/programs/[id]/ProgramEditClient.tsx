@@ -287,7 +287,7 @@ export default function ProgramEditClient({
             disabled={isPending}
             className="flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-light transition-colors disabled:opacity-50"
           >
-            <Save size={16} /> {isPending ? "저장 중..." : "저장"}
+            <Save size={16} /> {isPending ? "저장 중..." : "수정"}
           </button>
           <Link href="/admin/programs" className="px-6 py-2.5 rounded-lg text-sm font-medium text-text-sub border border-border-light hover:bg-surface transition-colors">
             취소
