@@ -74,9 +74,10 @@ export default function ProgramsContent({ categories, programs }: { categories: 
               const Icon = style.icon;
               const isActive = activeCategory === cat.slug;
               return (
-                <button
+                <Link
                   key={cat.slug}
-                  onClick={() => setActiveCategory(isActive ? "" : cat.slug)}
+                  href={`/programs?category=${cat.slug}`}
+                  onClick={(e) => { e.preventDefault(); setActiveCategory(isActive ? "" : cat.slug); }}
                   className={cn(
                     "text-left rounded-xl overflow-hidden border-2 transition-all",
                     isActive ? "border-primary shadow-lg" : "border-transparent shadow-card hover:shadow-lg"
@@ -92,32 +93,51 @@ export default function ProgramsContent({ categories, programs }: { categories: 
                     </div>
                   )}
                   <div className="p-4 bg-white">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-bold text-text">{cat.name}</h3>
-                      {isActive && <span className="px-1.5 py-0.5 text-[10px] bg-primary text-white rounded">선택됨</span>}
-                    </div>
+                    <h3 className="text-sm font-bold text-text">{cat.name}</h3>
                     {cat.description && (
                       <p className="text-xs text-text-sub mt-1 line-clamp-2">{cat.description}</p>
                     )}
                   </div>
-                </button>
+                </Link>
               );
             })}
           </div>
 
-          {/* 선택된 카테고리 표시 */}
+          {/* 선택된 카테고리 상세 설명 */}
+          {activeCategory && (() => {
+            const selectedCat = categories.find((c) => c.slug === activeCategory);
+            if (!selectedCat) return null;
+            return (
+              <div className="mb-10 bg-white border border-border-light rounded-2xl overflow-hidden">
+                <div className="flex flex-col md:flex-row">
+                  {selectedCat.image_url && (
+                    <div className="md:w-2/5 shrink-0">
+                      <img src={selectedCat.image_url} alt={selectedCat.name} className="w-full h-full min-h-[200px] object-cover" />
+                    </div>
+                  )}
+                  <div className="flex-1 p-6 md:p-8 flex flex-col justify-center">
+                    <div className="flex items-center justify-between mb-3">
+                      <h2 className="text-xl font-bold text-text">{selectedCat.name}</h2>
+                      <button onClick={() => setActiveCategory("")} className="text-xs text-text-muted hover:text-primary px-3 py-1 border border-border-light rounded-full">
+                        전체보기
+                      </button>
+                    </div>
+                    {selectedCat.description && (
+                      <p className="text-sm text-text-sub leading-relaxed whitespace-pre-line">{selectedCat.description}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* 교육과정 목록 */}
           {activeCategory && (
-            <div className="flex items-center gap-2 mb-6">
-              <span className="text-sm font-medium text-text">
-                {categories.find((c) => c.slug === activeCategory)?.name} 과정
-              </span>
-              <button onClick={() => setActiveCategory("")} className="text-xs text-text-muted hover:text-primary px-2 py-0.5 border border-border-light rounded-full">
-                전체보기
-              </button>
-            </div>
+            <h3 className="text-lg font-bold text-text mb-6">
+              {categories.find((c) => c.slug === activeCategory)?.name} 교육과정
+            </h3>
           )}
 
-          {/* 프로그램 그리드 */}
           {filteredPrograms.length > 0 ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredPrograms.map((program) => {
@@ -168,7 +188,7 @@ export default function ProgramsContent({ categories, programs }: { categories: 
             </div>
           ) : (
             <div className="text-center py-20 text-text-muted">
-              해당 카테고리의 교육프로그램이 준비 중입니다.
+              {activeCategory ? "해당 카테고리의 교육프로그램이 준비 중입니다." : "등록된 교육프로그램이 없습니다."}
             </div>
           )}
         </div>
