@@ -67,34 +67,55 @@ export default function ProgramsContent({ categories, programs }: { categories: 
             </div>
           </div>
 
-          {/* 카테고리 탭 */}
-          <div className="flex flex-wrap gap-2 mb-10">
-            <button
-              onClick={() => setActiveCategory("")}
-              className={cn(
-                "px-4 py-2 text-sm font-medium rounded-full border transition-colors",
-                !activeCategory
-                  ? "bg-primary text-white border-primary"
-                  : "bg-white text-text-sub border-border hover:border-primary hover:text-primary"
-              )}
-            >
-              전체
-            </button>
-            {categories.map((cat) => (
-              <button
-                key={cat.slug}
-                onClick={() => setActiveCategory(cat.slug)}
-                className={cn(
-                  "px-4 py-2 text-sm font-medium rounded-full border transition-colors",
-                  activeCategory === cat.slug
-                    ? "bg-primary text-white border-primary"
-                    : "bg-white text-text-sub border-border hover:border-primary hover:text-primary"
-                )}
-              >
-                {cat.name}
-              </button>
-            ))}
+          {/* 카테고리 카드 그리드 */}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
+            {categories.map((cat) => {
+              const style = categoryStyles[cat.slug] || { gradient: "from-[#1B2A4A] to-[#C4963C]", icon: Award };
+              const Icon = style.icon;
+              const isActive = activeCategory === cat.slug;
+              return (
+                <button
+                  key={cat.slug}
+                  onClick={() => setActiveCategory(isActive ? "" : cat.slug)}
+                  className={cn(
+                    "text-left rounded-xl overflow-hidden border-2 transition-all",
+                    isActive ? "border-primary shadow-lg" : "border-transparent shadow-card hover:shadow-lg"
+                  )}
+                >
+                  {cat.image_url ? (
+                    <div className="h-36 overflow-hidden">
+                      <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className={`h-36 bg-gradient-to-br ${style.gradient} flex items-center justify-center`}>
+                      <Icon size={40} className="text-white/60" />
+                    </div>
+                  )}
+                  <div className="p-4 bg-white">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-text">{cat.name}</h3>
+                      {isActive && <span className="px-1.5 py-0.5 text-[10px] bg-primary text-white rounded">선택됨</span>}
+                    </div>
+                    {cat.description && (
+                      <p className="text-xs text-text-sub mt-1 line-clamp-2">{cat.description}</p>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
+
+          {/* 선택된 카테고리 표시 */}
+          {activeCategory && (
+            <div className="flex items-center gap-2 mb-6">
+              <span className="text-sm font-medium text-text">
+                {categories.find((c) => c.slug === activeCategory)?.name} 과정
+              </span>
+              <button onClick={() => setActiveCategory("")} className="text-xs text-text-muted hover:text-primary px-2 py-0.5 border border-border-light rounded-full">
+                전체보기
+              </button>
+            </div>
+          )}
 
           {/* 프로그램 그리드 */}
           {filteredPrograms.length > 0 ? (

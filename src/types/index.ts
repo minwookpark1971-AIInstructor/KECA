@@ -43,6 +43,7 @@ export interface Category {
   slug: string;
   description?: string;
   icon_name?: string;
+  image_url?: string;
   sort_order: number;
   is_active: boolean;
   created_at: string;
