@@ -7,6 +7,12 @@
       "runtimeArgs": ["run", "dev"],
       "port": 3000,
       "autoPort": false
+    },
+    {
+      "name": "todo-app",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "4000", "--directory", "todo-app"],
+      "port": 4000
     }
   ]
 }
