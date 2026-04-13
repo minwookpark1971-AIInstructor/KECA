@@ -561,6 +561,39 @@ export default function KakaoComposeClient({ templates }: Props) {
               </button>
             </div>
 
+            {/* 테스트 발송 */}
+            <button
+              onClick={async () => {
+                const testPhone = prompt("테스트 수신 번호를 입력하세요 (예: 010-1234-5678)");
+                if (!testPhone || !message.trim()) return;
+                setIsSending(true);
+                try {
+                  const res = await fetch("/api/marketing/send-kakao", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      recipientIds: [],
+                      messageType,
+                      message,
+                      buttons: buttons.length > 0 ? buttons : undefined,
+                      imageUrl: imageUrl || undefined,
+                      testPhone,
+                    }),
+                  });
+                  const result = await res.json();
+                  setMsg({ type: result.error ? "error" : "success", text: result.error || "테스트 발송이 요청되었습니다." });
+                } catch {
+                  setMsg({ type: "error", text: "테스트 발송에 실패했습니다." });
+                } finally {
+                  setIsSending(false);
+                }
+              }}
+              disabled={isSending || !message.trim()}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-surface text-text-sub text-xs font-medium rounded-xl hover:bg-border-light transition-colors disabled:opacity-50 mt-2"
+            >
+              테스트 발송 (1건)
+            </button>
+
             <div className="mt-4 p-3 bg-surface rounded-lg">
               <p className="text-xs text-text-muted">
                 {messageType === "alimtalk"

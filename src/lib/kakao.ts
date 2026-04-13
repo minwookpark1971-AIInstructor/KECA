@@ -1,86 +1,175 @@
 /**
- * 카카오 비즈 메시지 API (알림톡)
+ * 카카오 비즈메시지 발송 — 솔라피(Solapi) SDK 연동
  *
  * 사전 조건:
- * - 카카오 비즈니스 채널 개설 + 알림톡 채널 연동
- * - 알림톡 템플릿 승인 (LECTURE_SELECTED, LECTURE_REJECTED)
- * - 환경변수: KAKAO_BIZ_API_KEY, KAKAO_BIZ_SENDER_ID
- *
- * API: https://developers.kakao.com/docs/latest/ko/kakaotalk-channel/rest-api
+ * - 솔라피(solapi.com) 가입 + API Key/Secret 발급
+ * - 카카오 비즈니스 채널 개설 + 솔라피에서 채널 연동 (PFID 발급)
+ * - 알림톡 템플릿 등록 + 카카오 검수 승인
+ * - 환경변수: SOLAPI_API_KEY, SOLAPI_API_SECRET, SOLAPI_PFID
  */
 
-const KAKAO_BIZ_URL = "https://api-alimtalk.kakao.com/alimtalk/v2.0/senders";
+import { SolapiMessageService } from "solapi";
 
-export async function sendKakaoAlimtalk(
-  phone: string,
-  templateCode: string,
-  variables: Record<string, string>
-): Promise<void> {
-  const apiKey = process.env.KAKAO_BIZ_API_KEY;
-  const senderId = process.env.KAKAO_BIZ_SENDER_ID;
+// ─── 솔라피 클라이언트 ───
 
-  if (!apiKey || !senderId) {
-    // API 키 미설정 시 로그만 출력 (개발 환경)
-    console.log("[Kakao Alimtalk] API 키 미설정 - 발송 스킵:", {
-      phone,
-      templateCode,
-      variables,
-    });
-    return;
+function getSolapiClient(): SolapiMessageService | null {
+  const apiKey = process.env.SOLAPI_API_KEY;
+  const apiSecret = process.env.SOLAPI_API_SECRET;
+
+  if (!apiKey || !apiSecret) {
+    console.warn("[Solapi] API 키 미설정 — 발송을 스킵합니다.");
+    return null;
   }
 
-  // 전화번호 정규화 (010-1234-5678 → 01012345678)
-  const normalizedPhone = phone.replace(/[^0-9]/g, "");
+  return new SolapiMessageService(apiKey, apiSecret);
+}
 
-  const body = {
-    senderKey: senderId,
-    templateCode,
-    recipientList: [
-      {
-        recipientNo: normalizedPhone,
-        templateParameter: variables,
-      },
-    ],
-  };
+const PFID = () => process.env.SOLAPI_PFID || "";
+
+// ─── 전화번호 정규화 ───
+
+export function normalizePhoneNumber(phone: string): string {
+  // 하이픈, 공백, 괄호 제거 → 숫자만 남김
+  return phone.replace(/[^0-9]/g, "");
+}
+
+// ─── 알림톡 발송 ───
+
+export async function sendAlimtalkViaSolapi(
+  phone: string,
+  templateId: string,
+  variables: Record<string, string>,
+  buttons?: Array<{ buttonName: string; buttonType: string; linkMo?: string; linkPc?: string }>
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const client = getSolapiClient();
+  if (!client) {
+    console.log("[Solapi Alimtalk] SDK 미설정 — 발송 스킵:", { phone, templateId, variables });
+    return { success: false, error: "Solapi not configured" };
+  }
+
+  const normalizedPhone = normalizePhoneNumber(phone);
+  const pfId = PFID();
+
+  if (!pfId) {
+    return { success: false, error: "SOLAPI_PFID not configured" };
+  }
 
   try {
-    const res = await fetch(`${KAKAO_BIZ_URL}/${senderId}/messages`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json;charset=UTF-8",
-        Authorization: `KakaoAK ${apiKey}`,
+    const messageParams: Record<string, unknown> = {
+      to: normalizedPhone,
+      from: process.env.SOLAPI_SENDER_NUMBER || normalizedPhone,
+      kakaoOptions: {
+        pfId,
+        templateId,
+        variables,
       },
-      body: JSON.stringify(body),
-    });
+    };
 
-    if (!res.ok) {
-      const text = await res.text();
-      console.error("[Kakao Alimtalk] 발송 실패:", text);
+    if (buttons && buttons.length > 0) {
+      (messageParams.kakaoOptions as Record<string, unknown>).buttons = buttons;
     }
+
+    const result = await client.sendOne(messageParams as Parameters<typeof client.sendOne>[0]);
+    return { success: true, messageId: result.messageId };
   } catch (err) {
-    // 알림 실패해도 본 흐름 중단하지 않음
-    console.error("[Kakao Alimtalk] 오류:", err);
+    const message = err instanceof Error ? err.message : "알림톡 발송 실패";
+    console.error("[Solapi Alimtalk] 발송 실패:", message);
+    return { success: false, error: message };
   }
 }
 
-/**
- * 선발 알림
- * 템플릿: "강의공고 #{강의명}에 선발되셨습니다. 담당자가 곧 연락드리겠습니다."
- */
+// ─── 브랜드 메시지 (구 친구톡) 발송 ───
+
+export async function sendBrandMessageViaSolapi(
+  phone: string,
+  message: string,
+  options?: {
+    imageUrl?: string;
+    buttons?: Array<{ buttonName: string; buttonType: string; linkMo?: string; linkPc?: string }>;
+  }
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const client = getSolapiClient();
+  if (!client) {
+    console.log("[Solapi BrandMessage] SDK 미설정 — 발송 스킵:", { phone, message });
+    return { success: false, error: "Solapi not configured" };
+  }
+
+  const normalizedPhone = normalizePhoneNumber(phone);
+  const pfId = PFID();
+
+  if (!pfId) {
+    return { success: false, error: "SOLAPI_PFID not configured" };
+  }
+
+  try {
+    const kakaoOptions: Record<string, unknown> = {
+      pfId,
+      text: message,
+    };
+
+    if (options?.imageUrl) {
+      kakaoOptions.imageUrl = options.imageUrl;
+    }
+    if (options?.buttons && options.buttons.length > 0) {
+      kakaoOptions.buttons = options.buttons;
+    }
+
+    const result = await client.sendOne({
+      to: normalizedPhone,
+      from: process.env.SOLAPI_SENDER_NUMBER || normalizedPhone,
+      kakaoOptions,
+    } as Parameters<typeof client.sendOne>[0]);
+
+    return { success: true, messageId: result.messageId };
+  } catch (err) {
+    const message2 = err instanceof Error ? err.message : "브랜드 메시지 발송 실패";
+    console.error("[Solapi BrandMessage] 발송 실패:", message2);
+    return { success: false, error: message2 };
+  }
+}
+
+// ─── 솔라피 템플릿 목록 조회 ───
+
+export async function getApprovedTemplatesFromSolapi(): Promise<
+  Array<{
+    templateId: string;
+    name: string;
+    content: string;
+    status: string;
+    buttons?: unknown[];
+  }>
+> {
+  const client = getSolapiClient();
+  if (!client) return [];
+
+  try {
+    // 솔라피 SDK의 카카오 알림톡 템플릿 목록 조회
+    const result = await (client as unknown as { getAlimtalkTemplates: () => Promise<{ templateList: Array<{ templateId: string; templateName: string; templateContent: string; templateStatus: string; buttons?: unknown[] }> }> }).getAlimtalkTemplates();
+    return (result.templateList || []).map((t) => ({
+      templateId: t.templateId,
+      name: t.templateName,
+      content: t.templateContent,
+      status: t.templateStatus,
+      buttons: t.buttons,
+    }));
+  } catch (err) {
+    console.error("[Solapi] 템플릿 조회 실패:", err);
+    return [];
+  }
+}
+
+// ─── 기존 강의 알림 호환 함수 (솔라피 경유) ───
+
 export async function sendLectureSelectedNotification(
   phone: string,
   lectureName: string
 ): Promise<void> {
-  return sendKakaoAlimtalk(phone, "LECTURE_SELECTED", { 강의명: lectureName });
+  await sendAlimtalkViaSolapi(phone, "LECTURE_SELECTED", { "강의명": lectureName });
 }
 
-/**
- * 미선발 알림
- * 템플릿: "강의공고 #{강의명} 지원 결과, 이번에는 함께하지 못하게 되었습니다. 보증금은 3영업일 이내 환불됩니다."
- */
 export async function sendLectureRejectedNotification(
   phone: string,
   lectureName: string
 ): Promise<void> {
-  return sendKakaoAlimtalk(phone, "LECTURE_REJECTED", { 강의명: lectureName });
+  await sendAlimtalkViaSolapi(phone, "LECTURE_REJECTED", { "강의명": lectureName });
 }

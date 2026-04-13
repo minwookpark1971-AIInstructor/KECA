@@ -1,41 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import crypto from "crypto";
 
-// 카카오 딜러사 Webhook — 발송 결과 수신
+// 솔라피 Webhook 서명 검증
+function verifySignature(body: string, signature: string | null): boolean {
+  const secret = process.env.SOLAPI_API_SECRET;
+  if (!secret || !signature) return false;
+
+  const hmac = crypto.createHmac("sha256", secret);
+  hmac.update(body);
+  const expected = hmac.digest("hex");
+  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+}
+
+// 솔라피 Webhook — 발송 결과 수신
 export async function POST(request: NextRequest) {
-  // TODO: 딜러사 선정 후 인증 토큰/서명 검증 구현
-  // const signature = request.headers.get("x-webhook-signature");
-  // if (!verifySignature(signature)) {
-  //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  // }
+  const rawBody = await request.text();
+  const signature = request.headers.get("x-solapi-signature");
+
+  // 서명 검증 (환경변수 없으면 스킵 — 개발 환경)
+  if (process.env.SOLAPI_API_SECRET && !verifySignature(rawBody, signature)) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  }
 
   try {
-    const body = await request.json();
-    const { msgId, status, recipientPhone, errorCode, errorMessage } = body as {
-      msgId?: string;
-      status?: string;
-      recipientPhone?: string;
-      errorCode?: string;
-      errorMessage?: string;
+    const body = JSON.parse(rawBody);
+
+    // 솔라피 Webhook 형식
+    const { messageId, statusCode, to } = body as {
+      messageId?: string;
+      statusCode?: string;
+      to?: string;
     };
 
-    if (!msgId || !status) {
+    if (!messageId && !to) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
     const supabase = createAdminClient();
 
-    // 상태 매핑: 딜러사 상태 → 내부 상태
+    // 솔라피 상태 코드 → 내부 상태 매핑
     const statusMap: Record<string, string> = {
-      success: "delivered",
-      sent: "sent",
-      failed: "failed",
-      read: "opened",
+      "2000": "delivered",   // 발송 성공
+      "3000": "delivered",   // 수신 완료
+      "4000": "failed",      // 발송 실패
+      "4100": "failed",      // 차단
+      "success": "delivered",
+      "sent": "sent",
+      "failed": "failed",
+      "read": "opened",
     };
 
-    const mappedStatus = statusMap[status] || "sent";
+    const mappedStatus = statusMap[statusCode || ""] || "sent";
 
-    // 발송 로그 업데이트
     const updateData: Record<string, unknown> = {
       status: mappedStatus,
     };
@@ -47,15 +64,16 @@ export async function POST(request: NextRequest) {
       updateData.opened_at = new Date().toISOString();
     }
     if (mappedStatus === "failed") {
-      updateData.error_message = errorMessage || errorCode || "발송 실패";
+      updateData.error_message = body.reason || body.errorMessage || statusCode || "발송 실패";
     }
 
-    // recipient_phone으로 매칭 (딜러사 응답에 포함)
-    if (recipientPhone) {
+    // recipient_phone으로 최근 pending 로그 매칭
+    if (to) {
+      const normalizedPhone = to.replace(/[^0-9]/g, "");
       await supabase
         .from("marketing_send_logs")
         .update(updateData)
-        .eq("recipient_phone", recipientPhone)
+        .eq("recipient_phone", normalizedPhone)
         .eq("status", "pending");
     }
 

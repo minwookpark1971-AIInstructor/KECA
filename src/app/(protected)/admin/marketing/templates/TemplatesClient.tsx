@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ArrowLeft, Plus, Pencil, Trash2, X, Mail, MessageSquare, Eye } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, X, Mail, MessageSquare, Eye, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { createMarketingTemplate, updateMarketingTemplate, deleteMarketingTemplate } from "@/lib/supabase/mutations";
 import type { MarketingTemplate } from "@/types";
@@ -22,6 +22,23 @@ export default function TemplatesClient({ templates }: { templates: MarketingTem
   const [isPending, startTransition] = useTransition();
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // 솔라피 템플릿 동기화
+  const handleSync = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch("/api/marketing/kakao-templates");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "동기화 실패");
+      setMsg({ type: "success", text: data.message || `${data.synced}개 템플릿이 동기화되었습니다.` });
+      window.location.reload();
+    } catch (err) {
+      setMsg({ type: "error", text: err instanceof Error ? err.message : "동기화에 실패했습니다." });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
   const [editing, setEditing] = useState<MarketingTemplate | null>(null);
   const [previewTemplate, setPreviewTemplate] = useState<MarketingTemplate | null>(null);
   const [formData, setFormData] = useState({
@@ -121,13 +138,23 @@ export default function TemplatesClient({ templates }: { templates: MarketingTem
           </Link>
           <h1 className="text-2xl font-bold text-text">템플릿 관리</h1>
         </div>
-        <button
-          onClick={openCreate}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition-colors"
-        >
-          <Plus size={15} />
-          새 템플릿
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSync}
+            disabled={isSyncing}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-yellow-50 text-yellow-700 text-sm font-medium rounded-lg border border-yellow-200 hover:bg-yellow-100 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={isSyncing ? "animate-spin" : ""} />
+            {isSyncing ? "동기화 중..." : "솔라피 동기화"}
+          </button>
+          <button
+            onClick={openCreate}
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition-colors"
+          >
+            <Plus size={15} />
+            새 템플릿
+          </button>
+        </div>
       </div>
 
       {msg && (

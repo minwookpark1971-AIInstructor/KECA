@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  sendAlimtalkViaSolapi,
+  sendBrandMessageViaSolapi,
+  normalizePhoneNumber,
+} from "@/lib/kakao";
 
 export async function POST(request: NextRequest) {
   // 관리자 권한 확인
@@ -35,7 +40,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "필수 항목이 누락되었습니다." }, { status: 400 });
   }
 
-  // Validate buttons
+  // 버튼 검증
   if (buttons && buttons.length > 5) {
     return NextResponse.json({ error: "링크 버튼은 최대 5개까지 가능합니다." }, { status: 400 });
   }
@@ -107,56 +112,83 @@ export async function POST(request: NextRequest) {
     recipient_phone: r.phone,
     channel,
   }));
-
   await supabaseAdmin.from("marketing_send_logs").insert(logs);
 
-  // TODO: 실제 딜러사 API 호출
-  // 현재는 딜러사 연동 전이므로 로그만 기록하고 상태를 pending으로 유지
-  // 딜러사 선정 후 아래 주석 해제 및 구현 필요
-  //
-  // for (const recipient of targetRecipients) {
-  //   const personalizedMessage = message
-  //     .replace(/#{이름}/g, recipient.name)
-  //     .replace(/#{연락처}/g, recipient.phone || "");
-  //
-  //   // 링크 버튼 구성 (딜러사 API 형식에 맞게 변환)
-  //   const apiButtons = buttons?.map(btn => ({
-  //     name: btn.name,
-  //     linkMobile: btn.url,
-  //     linkPc: btn.url,
-  //     type: btn.type === "video" ? "MD" : btn.type === "blog" ? "BK" : "WL",
-  //   }));
-  //
-  //   const result = messageType === "alimtalk"
-  //     ? await sendAlimtalk(recipient.phone!, templateCode || "", {
-  //         name: recipient.name,
-  //         buttons: apiButtons,
-  //       })
-  //     : await sendBrandMessage(recipient.phone!, personalizedMessage, {
-  //         buttons: apiButtons,
-  //         imageUrl: imageUrl || undefined,
-  //       });
-  //
-  //   await supabaseAdmin.from("marketing_send_logs").update({
-  //     status: result.success ? "sent" : "failed",
-  //     sent_at: result.success ? new Date().toISOString() : null,
-  //     error_message: result.error || null,
-  //   }).eq("campaign_id", campaign.id).eq("recipient_id", recipient.id);
-  // }
+  // 솔라피 버튼 형식 변환
+  const solapiButtons = buttons?.map((btn) => ({
+    buttonName: btn.name,
+    buttonType: "WL" as const,
+    linkMo: btn.url,
+    linkPc: btn.url,
+  }));
 
-  // 딜러사 미연동 상태에서는 캠페인을 draft로 저장
+  // 실제 발송 (솔라피 SDK)
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const recipient of targetRecipients) {
+    // 변수 치환
+    const personalizedMessage = message
+      .replace(/#{이름}/g, recipient.name)
+      .replace(/#{연락처}/g, recipient.phone || "");
+
+    let result: { success: boolean; messageId?: string; error?: string };
+
+    if (messageType === "alimtalk") {
+      // 알림톡: 템플릿 코드 필수
+      const tplCode = templateCode || "DEFAULT";
+      result = await sendAlimtalkViaSolapi(
+        recipient.phone!,
+        tplCode,
+        { "이름": recipient.name },
+        solapiButtons
+      );
+    } else {
+      // 브랜드 메시지: 자유 형식
+      result = await sendBrandMessageViaSolapi(
+        recipient.phone!,
+        personalizedMessage,
+        {
+          imageUrl: imageUrl || undefined,
+          buttons: solapiButtons,
+        }
+      );
+    }
+
+    // 발송 로그 업데이트
+    await supabaseAdmin
+      .from("marketing_send_logs")
+      .update({
+        status: result.success ? "sent" : "failed",
+        sent_at: result.success ? new Date().toISOString() : null,
+        error_message: result.success ? null : result.error,
+      })
+      .eq("campaign_id", campaign.id)
+      .eq("recipient_id", recipient.id);
+
+    if (result.success) successCount++;
+    else failCount++;
+
+    // Rate limit: 100ms 간격
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+
+  // 캠페인 상태 업데이트
   await supabaseAdmin
     .from("marketing_campaigns")
     .update({
-      status: "draft",
+      status: failCount === targetRecipients.length ? "failed" : "sent",
+      sent_at: new Date().toISOString(),
+      success_count: successCount,
+      fail_count: failCount,
       updated_at: new Date().toISOString(),
     })
     .eq("id", campaign.id);
 
   return NextResponse.json({
     campaignId: campaign.id,
-    successCount: 0,
+    successCount,
+    failCount,
     totalRecipients: targetRecipients.length,
-    message: "카카오톡 딜러사 연동이 필요합니다. 캠페인이 초안으로 저장되었습니다.",
   });
 }
