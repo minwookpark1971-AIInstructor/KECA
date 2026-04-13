@@ -91,6 +91,37 @@ export async function sendApprovalNotification(to: string, name: string) {
   }
 }
 
+// 마케팅 이메일 발송
+export async function sendMarketingEmail(
+  to: string,
+  subject: string,
+  html: string,
+  unsubscribeUrl: string
+) {
+  const resend = getResend();
+  if (!resend) return { success: false, error: "Resend not configured" };
+
+  const footer = `
+    <div style="margin-top:40px;padding-top:20px;border-top:1px solid #eee;text-align:center;">
+      <p style="color:#888;font-size:12px;">한국교육컨설팅협회 KECA | kecamanager@gmail.com</p>
+      <p style="color:#aaa;font-size:11px;margin-top:4px;">
+        <a href="${unsubscribeUrl}" style="color:#aaa;">수신 거부</a>
+      </p>
+    </div>
+  `;
+
+  const { data, error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    replyTo: "kecamanager@gmail.com",
+    subject,
+    html: html + footer,
+  });
+
+  if (error) return { success: false, error: error.message };
+  return { success: true, id: data?.id };
+}
+
 // 결제 완료 알림
 export async function sendPaymentConfirmation(
   to: string,

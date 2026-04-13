@@ -10,6 +10,7 @@ import {
   MessageSquare, HelpCircle, CreditCard, Building2,
   Settings, Award, ChevronDown,
   Megaphone, CalendarDays, Star, Image, Video, FolderArchive, Mic2, SlidersHorizontal,
+  Mail, Send, Clock, FileText, BarChart3,
 } from "lucide-react";
 
 type SidebarItem =
@@ -45,6 +46,19 @@ const sidebarItems: SidebarItem[] = [
   { type: "divider" },
   { label: "결제 내역", href: "/admin/payments", icon: CreditCard },
   { label: "파트너 관리", href: "/admin/partners", icon: Building2 },
+  { type: "divider" },
+  {
+    label: "마케팅", icon: Send,
+    children: [
+      { label: "대시보드", href: "/admin/marketing", icon: BarChart3 },
+      { label: "이메일 발송", href: "/admin/marketing/email", icon: Mail },
+      { label: "카카오톡 발송", href: "/admin/marketing/kakao", icon: MessageSquare },
+      { label: "발송 이력", href: "/admin/marketing/history", icon: Clock },
+      { label: "템플릿 관리", href: "/admin/marketing/templates", icon: FileText },
+      { label: "수신 그룹", href: "/admin/marketing/groups", icon: Users },
+    ],
+  },
+  { type: "divider" },
   { label: "사이트 설정", href: "/admin/settings", icon: Settings },
 ];
 
@@ -54,6 +68,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const initial = new Set<string>();
     if (pathname.startsWith("/admin/community")) {
       initial.add("커뮤니티");
+    }
+    if (pathname.startsWith("/admin/marketing")) {
+      initial.add("마케팅");
     }
     return initial;
   });

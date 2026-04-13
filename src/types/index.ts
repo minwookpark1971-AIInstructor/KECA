@@ -32,6 +32,12 @@ export interface Profile {
   membership_paid_at?: string;
   membership_expires_at?: string;
 
+  // 마케팅 동의
+  marketing_email_agreed?: boolean;
+  marketing_sms_agreed?: boolean;
+  marketing_kakao_agreed?: boolean;
+  marketing_agreed_at?: string;
+
   created_at: string;
   updated_at: string;
 }
@@ -335,5 +341,80 @@ export interface Notification {
   reference_id?: string;
   reference_url?: string;
   is_read: boolean;
+  created_at: string;
+}
+
+// ----- 마케팅 -----
+export type CampaignChannel = "email" | "kakao_alimtalk" | "kakao_brand_message";
+export type CampaignStatus = "draft" | "scheduled" | "sending" | "sent" | "failed" | "cancelled";
+export type SendLogStatus = "pending" | "sent" | "delivered" | "opened" | "clicked" | "bounced" | "failed";
+
+export interface MarketingCampaign {
+  id: string;
+  title: string;
+  channel: CampaignChannel;
+  status: CampaignStatus;
+  subject?: string;
+  body?: string;
+  template_id?: string;
+  sender_name: string;
+  sender_email: string;
+  scheduled_at?: string;
+  sent_at?: string;
+  total_recipients: number;
+  success_count: number;
+  fail_count: number;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MarketingSendLog {
+  id: string;
+  campaign_id: string;
+  recipient_id: string;
+  recipient_email?: string;
+  recipient_phone?: string;
+  channel: string;
+  status: SendLogStatus;
+  error_message?: string;
+  fallback_channel?: string;
+  sent_at?: string;
+  opened_at?: string;
+  created_at: string;
+  recipient?: Profile;
+}
+
+export interface MarketingTemplate {
+  id: string;
+  name: string;
+  channel: "email" | "kakao";
+  subject?: string;
+  body: string;
+  variables?: string[];
+  is_active: boolean;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MarketingGroup {
+  id: string;
+  name: string;
+  description?: string;
+  filter_criteria?: Record<string, unknown>;
+  member_ids?: string[];
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DownloadAuditLog {
+  id: string;
+  admin_id: string;
+  download_type: string;
+  record_count: number;
+  filters_applied?: Record<string, unknown>;
+  fields_included?: string[];
   created_at: string;
 }

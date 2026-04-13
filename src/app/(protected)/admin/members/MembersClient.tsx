@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { roleLabels, roleBadgeColors, instructorBadgeColor } from "@/lib/utils";
-import { UserCheck, Search, Trash2, Eye, FileText, X, CheckCircle, XCircle, RotateCcw, File, GraduationCap } from "lucide-react";
+import { UserCheck, Search, Trash2, Eye, X, CheckCircle, XCircle, RotateCcw, File, GraduationCap, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   approveMember,
@@ -14,8 +14,11 @@ import {
   approveInstructorProfile,
   rejectInstructorProfile,
   resetInstructorProfile,
+  logDownloadAudit,
 } from "@/lib/supabase/mutations";
 import type { Profile, ProfileStatus } from "@/types";
+import MemberDownloadModal from "./MemberDownloadModal";
+import MemberActionBar from "./MemberActionBar";
 
 const profileStatusLabels: Record<string, string> = {
   none: "미작성",
@@ -49,6 +52,12 @@ export default function MembersClient({ members }: { members: Profile[] }) {
   // 강사 승격 모달
   const [promotingUser, setPromotingUser] = useState<Profile | null>(null);
 
+  // 다운로드 모달
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+
+  // 회원 선택 (마케팅)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
   const filtered = members.filter((u) => {
     if (filter === "instructor") {
       if (!u.is_instructor) return false;
@@ -62,6 +71,35 @@ export default function MembersClient({ members }: { members: Profile[] }) {
 
   const getApproveRole = (userId: string) => approveRoles[userId] || "associate";
   const submittedCount = members.filter((m) => m.profile_status === "submitted").length;
+
+  // 체크박스 핸들러
+  const isAllSelected = filtered.length > 0 && filtered.every((m) => selectedIds.has(m.id));
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((m) => m.id)));
+    }
+  };
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // 다운로드 완료 콜백
+  const handleDownloaded = (recordCount: number, downloadFormat: string, fields: string[]) => {
+    logDownloadAudit({
+      adminId: "", // server action에서 처리
+      downloadType: `member_list_${downloadFormat}`,
+      recordCount,
+      filtersApplied: { filter, search },
+      fieldsIncluded: fields,
+    }).catch(() => {});
+  };
 
   const handleApprove = (userId: string) => {
     const role = getApproveRole(userId);
@@ -162,7 +200,16 @@ export default function MembersClient({ members }: { members: Profile[] }) {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-text mb-6">회원관리</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-text">회원관리</h1>
+        <button
+          onClick={() => setShowDownloadModal(true)}
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-border-light text-sm font-medium text-text-sub rounded-lg hover:bg-surface transition-colors"
+        >
+          <Download size={15} />
+          회원목록 다운로드
+        </button>
+      </div>
 
       {msg && (
         <div className={`mb-4 p-3 rounded-lg text-sm ${msg.type === "success" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
@@ -213,6 +260,14 @@ export default function MembersClient({ members }: { members: Profile[] }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-surface border-b border-border-light text-text-sub">
+                <th className="text-center px-2 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={toggleSelectAll}
+                    className="rounded border-border text-primary focus:ring-primary/20"
+                  />
+                </th>
                 <th className="text-left px-4 py-3 font-medium">이름</th>
                 <th className="text-left px-4 py-3 font-medium">이메일</th>
                 <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">연락처</th>
@@ -226,7 +281,15 @@ export default function MembersClient({ members }: { members: Profile[] }) {
               {filtered.map((user) => {
                 const ps = getProfileStatus(user);
                 return (
-                  <tr key={user.id} className="hover:bg-surface/50">
+                  <tr key={user.id} className={cn("hover:bg-surface/50", selectedIds.has(user.id) && "bg-primary/5")}>
+                    <td className="text-center px-2 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(user.id)}
+                        onChange={() => toggleSelect(user.id)}
+                        className="rounded border-border text-primary focus:ring-primary/20"
+                      />
+                    </td>
                     <td className="px-4 py-3 font-medium text-text">{user.name}</td>
                     <td className="px-4 py-3 text-text-sub">{user.email}</td>
                     <td className="px-4 py-3 text-text-sub hidden sm:table-cell">{user.phone || "-"}</td>
@@ -483,6 +546,24 @@ export default function MembersClient({ members }: { members: Profile[] }) {
           </div>
         </div>
       )}
+
+      {/* 다운로드 모달 */}
+      {showDownloadModal && (
+        <MemberDownloadModal
+          members={members}
+          filteredMembers={filtered}
+          currentFilter={filter}
+          onClose={() => setShowDownloadModal(false)}
+          onDownloaded={handleDownloaded}
+        />
+      )}
+
+      {/* 회원 선택 액션 바 */}
+      <MemberActionBar
+        selectedCount={selectedIds.size}
+        selectedIds={selectedIds}
+        onClearSelection={() => setSelectedIds(new Set())}
+      />
 
       {/* 강사 승격 확인 모달 */}
       {promotingUser && (

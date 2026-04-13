@@ -10,6 +10,7 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({ name: "", email: "", phone: "", password: "", confirmPassword: "" });
   const [loading, setLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [marketingAgreed, setMarketingAgreed] = useState({ email: false, kakao: false });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -44,6 +45,8 @@ export default function RegisterPage() {
         data: {
           name: formData.name,
           phone: formData.phone,
+          marketing_email_agreed: marketingAgreed.email,
+          marketing_kakao_agreed: marketingAgreed.kakao,
         },
         emailRedirectTo: `${window.location.origin}/api/auth/callback`,
       },
@@ -140,18 +143,46 @@ export default function RegisterPage() {
             ))}
 
             {/* 약관 동의 */}
-            <label className="flex items-start gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={agreed}
-                onChange={(e) => setAgreed(e.target.checked)}
-                className="mt-0.5 accent-primary"
-              />
-              <span className="text-xs text-text-sub">
-                <Link href="/terms" target="_blank" className="text-primary hover:underline">이용약관</Link> 및{" "}
-                <Link href="/privacy" target="_blank" className="text-primary hover:underline">개인정보처리방침</Link>에 동의합니다.
-              </span>
-            </label>
+            <div className="space-y-2.5 pt-1">
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={agreed}
+                  onChange={(e) => setAgreed(e.target.checked)}
+                  className="mt-0.5 accent-primary"
+                />
+                <span className="text-xs text-text-sub">
+                  <Link href="/terms" target="_blank" className="text-primary hover:underline">이용약관</Link> 및{" "}
+                  <Link href="/privacy" target="_blank" className="text-primary hover:underline">개인정보처리방침</Link>에 동의합니다. <span className="text-red-400">(필수)</span>
+                </span>
+              </label>
+
+              {/* 마케팅 수신 동의 */}
+              <div className="bg-surface rounded-lg p-3 space-y-2">
+                <p className="text-xs font-medium text-text-sub">마케팅 정보 수신 동의 <span className="text-text-muted">(선택)</span></p>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={marketingAgreed.email}
+                    onChange={(e) => setMarketingAgreed((prev) => ({ ...prev, email: e.target.checked }))}
+                    className="accent-primary"
+                  />
+                  <span className="text-xs text-text-sub">이메일 수신 동의</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={marketingAgreed.kakao}
+                    onChange={(e) => setMarketingAgreed((prev) => ({ ...prev, kakao: e.target.checked }))}
+                    className="accent-primary"
+                  />
+                  <span className="text-xs text-text-sub">카카오톡 수신 동의</span>
+                </label>
+                <p className="text-[11px] text-text-muted leading-relaxed">
+                  교육 프로그램 안내, 협회 소식 등 마케팅 정보를 받으실 수 있습니다. 동의하지 않아도 회원가입이 가능하며, 마이페이지에서 변경할 수 있습니다.
+                </p>
+              </div>
+            </div>
 
             <button
               type="submit"

@@ -15,6 +15,10 @@ import type {
   Application,
   StatusHistory,
   Notification,
+  MarketingCampaign,
+  MarketingSendLog,
+  MarketingTemplate,
+  MarketingGroup,
 } from "@/types";
 
 // ─── 카테고리 ───
@@ -487,4 +491,96 @@ export async function getUnreadNotificationCount(userId: string): Promise<number
     .eq("user_id", userId)
     .eq("is_read", false);
   return count ?? 0;
+}
+
+// ─── 마케팅 ───
+
+export async function getMarketingCampaigns(): Promise<MarketingCampaign[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("marketing_campaigns")
+    .select("*")
+    .order("created_at", { ascending: false });
+  return (data as unknown as MarketingCampaign[]) ?? [];
+}
+
+export async function getMarketingCampaignById(id: string): Promise<MarketingCampaign | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("marketing_campaigns")
+    .select("*")
+    .eq("id", id)
+    .single();
+  return data as unknown as MarketingCampaign | null;
+}
+
+export async function getMarketingSendLogs(campaignId: string): Promise<MarketingSendLog[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("marketing_send_logs")
+    .select("*, recipient:recipient_id(name, email)")
+    .eq("campaign_id", campaignId)
+    .order("created_at", { ascending: false });
+  return (data as unknown as MarketingSendLog[]) ?? [];
+}
+
+export async function getMarketingTemplates(channel?: string): Promise<MarketingTemplate[]> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("marketing_templates")
+    .select("*")
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
+  if (channel) query = query.eq("channel", channel);
+  const { data } = await query;
+  return (data as unknown as MarketingTemplate[]) ?? [];
+}
+
+export async function getMembersByIds(ids: string[]): Promise<Profile[]> {
+  if (ids.length === 0) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .in("id", ids);
+  return (data as unknown as Profile[]) ?? [];
+}
+
+export async function getMarketingGroups(): Promise<MarketingGroup[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("marketing_groups")
+    .select("*")
+    .order("created_at", { ascending: false });
+  return (data as unknown as MarketingGroup[]) ?? [];
+}
+
+export async function getMarketingStats() {
+  const supabase = await createClient();
+
+  const { count: totalCampaigns } = await supabase
+    .from("marketing_campaigns")
+    .select("*", { count: "exact", head: true });
+
+  const thisMonth = new Date();
+  thisMonth.setDate(1);
+  thisMonth.setHours(0, 0, 0, 0);
+
+  const { count: thisMonthSent } = await supabase
+    .from("marketing_campaigns")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "sent")
+    .gte("sent_at", thisMonth.toISOString());
+
+  const { data: recentCampaigns } = await supabase
+    .from("marketing_campaigns")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  return {
+    totalCampaigns: totalCampaigns ?? 0,
+    thisMonthSent: thisMonthSent ?? 0,
+    recentCampaigns: (recentCampaigns as unknown as MarketingCampaign[]) ?? [],
+  };
 }

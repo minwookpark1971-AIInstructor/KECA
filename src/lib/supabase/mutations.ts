@@ -1108,6 +1108,165 @@ export async function deleteApplicationFile(
   revalidatePath(`/admin/lectures/${app.lecture_id}/applicants`);
 }
 
+// ─── 마케팅: 다운로드 감사 로그 ───
+
+export async function logDownloadAudit(params: {
+  adminId: string;
+  downloadType: string;
+  recordCount: number;
+  filtersApplied: Record<string, unknown>;
+  fieldsIncluded: string[];
+}) {
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("download_audit_logs").insert({
+    admin_id: params.adminId,
+    download_type: params.downloadType,
+    record_count: params.recordCount,
+    filters_applied: params.filtersApplied,
+    fields_included: params.fieldsIncluded,
+  });
+  if (error) throw new Error(error.message);
+}
+
+// ─── 마케팅: 캠페인 ───
+
+export async function createMarketingCampaign(data: {
+  title: string;
+  channel: string;
+  subject?: string;
+  body?: string;
+  template_id?: string;
+  sender_name?: string;
+  sender_email?: string;
+  scheduled_at?: string;
+  total_recipients: number;
+  created_by?: string;
+}) {
+  const supabase = createAdminClient();
+  const { data: campaign, error } = await supabase
+    .from("marketing_campaigns")
+    .insert(data)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/marketing");
+  revalidatePath("/admin/marketing/history");
+  return campaign;
+}
+
+export async function updateMarketingCampaign(
+  id: string,
+  fields: Record<string, unknown>
+) {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("marketing_campaigns")
+    .update({ ...fields, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/marketing");
+  revalidatePath("/admin/marketing/history");
+}
+
+// ─── 마케팅: 발송 로그 ───
+
+export async function createMarketingSendLogs(
+  logs: {
+    campaign_id: string;
+    recipient_id: string;
+    recipient_email?: string;
+    recipient_phone?: string;
+    channel: string;
+  }[]
+) {
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("marketing_send_logs").insert(logs);
+  if (error) throw new Error(error.message);
+}
+
+export async function updateMarketingSendLog(
+  id: string,
+  fields: Record<string, unknown>
+) {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("marketing_send_logs")
+    .update(fields)
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+// ─── 마케팅: 템플릿 ───
+
+export async function createMarketingTemplate(data: {
+  name: string;
+  channel: string;
+  subject?: string;
+  body: string;
+  variables?: string[];
+  created_by?: string;
+}) {
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("marketing_templates").insert(data);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/marketing/templates");
+}
+
+export async function updateMarketingTemplate(
+  id: string,
+  fields: Record<string, unknown>
+) {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("marketing_templates")
+    .update({ ...fields, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/marketing/templates");
+}
+
+export async function deleteMarketingTemplate(id: string) {
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("marketing_templates").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/marketing/templates");
+}
+
+// ─── 마케팅: 수신 그룹 ───
+
+export async function createMarketingGroup(data: {
+  name: string;
+  description?: string;
+  filter_criteria?: Record<string, unknown>;
+  member_ids?: string[];
+  created_by?: string;
+}) {
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("marketing_groups").insert(data);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/marketing/groups");
+}
+
+export async function updateMarketingGroup(
+  id: string,
+  fields: Record<string, unknown>
+) {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("marketing_groups")
+    .update({ ...fields, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/marketing/groups");
+}
+
+export async function deleteMarketingGroup(id: string) {
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("marketing_groups").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/marketing/groups");
+}
+
 // ─── 사이트 설정 ───
 
 export async function saveSiteSettings(
