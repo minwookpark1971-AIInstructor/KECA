@@ -97,10 +97,12 @@ export default function EmailComposeClient({ templates }: Props) {
       setMembersLoading(true);
       try {
         const res = await fetch("/api/marketing/send-email");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         setAllMembers(data.members || []);
-      } catch {
-        setMsg({ type: "error", text: "회원 목록을 불러오지 못했습니다." });
+      } catch (err) {
+        console.error("회원 목록 로드 실패:", err);
+        setMsg({ type: "error", text: "회원 목록을 불러오지 못했습니다. 페이지를 새로고침해주세요." });
       } finally {
         setMembersLoading(false);
       }

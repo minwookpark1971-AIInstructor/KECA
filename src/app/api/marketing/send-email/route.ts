@@ -6,10 +6,26 @@ import { sendMarketingEmail } from "@/lib/email";
 // GET: 전체 회원 목록 조회 (수신자 추가 모달용)
 export async function GET() {
   const supabase = createAdminClient();
-  const { data } = await supabase
+
+  // marketing_email_agreed 컬럼이 없을 수 있으므로 (016 마이그레이션 미적용 시) 두 가지 시도
+  const { data, error } = await supabase
     .from("profiles")
     .select("id, name, email, phone, role, is_instructor, marketing_email_agreed")
     .order("created_at", { ascending: false });
+
+  if (error) {
+    // marketing_email_agreed 컬럼이 없는 경우 fallback
+    const { data: fallback } = await supabase
+      .from("profiles")
+      .select("id, name, email, phone, role, is_instructor")
+      .order("created_at", { ascending: false });
+
+    const members = (fallback || []).map((m) => ({
+      ...m,
+      marketing_email_agreed: true, // 컬럼 미존재 시 기본 동의로 처리
+    }));
+    return NextResponse.json({ members });
+  }
 
   return NextResponse.json({ members: data || [] });
 }
@@ -25,10 +41,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ recipients: [] });
     }
     const supabase = createAdminClient();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
       .select("id, name, email, phone, role, is_instructor, marketing_email_agreed")
       .in("id", ids);
+
+    if (error) {
+      const { data: fallback } = await supabase
+        .from("profiles")
+        .select("id, name, email, phone, role, is_instructor")
+        .in("id", ids);
+      const recipients = (fallback || []).map((m) => ({
+        ...m,
+        marketing_email_agreed: true,
+      }));
+      return NextResponse.json({ recipients });
+    }
     return NextResponse.json({ recipients: data || [] });
   }
 
