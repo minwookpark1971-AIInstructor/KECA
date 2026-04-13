@@ -60,7 +60,11 @@ export default function KakaoComposeClient({ templates }: Props) {
       return;
     }
 
-    fetch(`/api/marketing/send-email?action=get_recipients&ids=${ids.join(",")}`)
+    fetch("/api/marketing/send-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "get_recipients", ids }),
+    })
       .then((res) => res.json())
       .then((data) => setRecipients(data.recipients || []))
       .catch(() => setMsg({ type: "error", text: "수신자 정보를 불러오지 못했습니다." }))

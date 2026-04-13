@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, name, email, phone, role, is_instructor, marketing_email_agreed")
+      .select("id, name, email, phone, role, is_instructor, marketing_email_agreed, marketing_kakao_agreed")
       .in("id", ids);
 
     if (error) {
@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
       const recipients = (fallback || []).map((m) => ({
         ...m,
         marketing_email_agreed: true,
+        marketing_kakao_agreed: true,
       }));
       return NextResponse.json({ recipients });
     }
