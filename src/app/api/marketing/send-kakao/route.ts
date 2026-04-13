@@ -27,17 +27,23 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { recipientIds, messageType, message, buttons, imageUrl, templateCode } = body as {
+  const { recipientIds, messageType, message, buttons, imageUrl, templateCode, testPhone } = body as {
     recipientIds: string[];
     messageType: "alimtalk" | "brand_message";
     message: string;
     buttons?: Array<{ name: string; url: string; type: string }>;
     imageUrl?: string;
     templateCode?: string;
+    testPhone?: string;
   };
 
-  if (!recipientIds?.length || !message) {
+  const isTestMode = !!testPhone;
+
+  if (!isTestMode && (!recipientIds?.length || !message)) {
     return NextResponse.json({ error: "필수 항목이 누락되었습니다." }, { status: 400 });
+  }
+  if (isTestMode && !message) {
+    return NextResponse.json({ error: "메시지를 입력해주세요." }, { status: 400 });
   }
 
   // 버튼 검증
@@ -50,6 +56,39 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "링크 버튼의 이름과 URL을 모두 입력해주세요." }, { status: 400 });
       }
     }
+  }
+
+  // 테스트 발송 모드: 1건만 즉시 발송
+  if (isTestMode) {
+    const solapiButtons = buttons?.map((btn) => ({
+      buttonName: btn.name,
+      buttonType: "WL" as const,
+      linkMo: btn.url,
+      linkPc: btn.url,
+    }));
+
+    let result: { success: boolean; messageId?: string; error?: string };
+
+    if (messageType === "alimtalk") {
+      result = await sendAlimtalkViaSolapi(
+        testPhone,
+        templateCode || "DEFAULT",
+        { "이름": "테스트" },
+        solapiButtons
+      );
+    } else {
+      result = await sendBrandMessageViaSolapi(
+        testPhone,
+        message.replace(/#{이름}/g, "테스트").replace(/#{연락처}/g, testPhone),
+        { imageUrl: imageUrl || undefined, buttons: solapiButtons }
+      );
+    }
+
+    return NextResponse.json({
+      success: result.success,
+      error: result.error,
+      testPhone,
+    });
   }
 
   // 수신자 조회
