@@ -20,6 +20,7 @@ export default function EmailComposeClient({ templates }: Props) {
   const [body, setBody] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [showPreview, setShowPreview] = useState(false);
+  const [showConfirmSend, setShowConfirmSend] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -155,7 +156,8 @@ export default function EmailComposeClient({ templates }: Props) {
     setShowAddModal(false);
   };
 
-  const handleSend = async () => {
+  // 발송 버튼 클릭 → 확인 모달 표시 (confirm 대신 비동기 모달로 INP 해결)
+  const handleSendClick = () => {
     if (!subject.trim() || !body.trim()) {
       setMsg({ type: "error", text: "제목과 본문을 입력해주세요." });
       return;
@@ -164,9 +166,12 @@ export default function EmailComposeClient({ templates }: Props) {
       setMsg({ type: "error", text: "이메일 수신에 동의한 회원이 없습니다." });
       return;
     }
+    setShowConfirmSend(true);
+  };
 
-    if (!confirm(`${agreedRecipients.length}명에게 이메일을 발송하시겠습니까?`)) return;
-
+  // 확인 모달에서 "발송" 클릭 시 실제 발송
+  const executeSend = async () => {
+    setShowConfirmSend(false);
     setIsSending(true);
     try {
       const res = await fetch("/api/marketing/send-email", {
@@ -358,7 +363,7 @@ export default function EmailComposeClient({ templates }: Props) {
                 미리보기
               </button>
               <button
-                onClick={handleSend}
+                onClick={handleSendClick}
                 disabled={isSending || agreedRecipients.length === 0 || !subject.trim() || !body.trim()}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white text-sm font-medium rounded-xl hover:bg-primary-dark transition-colors disabled:opacity-50"
               >
@@ -399,6 +404,39 @@ export default function EmailComposeClient({ templates }: Props) {
                   <span className="underline">수신 거부</span>
                 </p>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 발송 확인 모달 */}
+      {showConfirmSend && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full">
+            <div className="p-6 text-center">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <Send size={20} className="text-primary" />
+              </div>
+              <h3 className="text-lg font-bold text-text mb-2">이메일 발송 확인</h3>
+              <p className="text-sm text-text-sub">
+                <span className="font-bold text-primary">{agreedRecipients.length}명</span>에게 이메일을 발송합니다.
+              </p>
+              <p className="text-xs text-text-muted mt-1">발송 후에는 취소할 수 없습니다.</p>
+            </div>
+            <div className="flex gap-2 p-5 border-t border-border-light">
+              <button
+                onClick={() => setShowConfirmSend(false)}
+                className="flex-1 px-4 py-2.5 text-sm text-text-sub bg-surface rounded-xl hover:bg-border-light transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={executeSend}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white text-sm font-medium rounded-xl hover:bg-primary-dark transition-colors"
+              >
+                <Send size={14} />
+                발송
+              </button>
             </div>
           </div>
         </div>

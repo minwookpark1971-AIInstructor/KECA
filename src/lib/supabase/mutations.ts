@@ -350,25 +350,27 @@ export async function promoteToInstructor(
   userId: string,
   fields?: { profile_card_url?: string; is_profile_public?: boolean }
 ) {
-  const { createAdminClient } = await import("./admin");
   const supabase = createAdminClient();
 
-  const updateData: Record<string, unknown> = {
-    is_instructor: true,
-    is_profile_public: fields?.is_profile_public ?? true,
-  };
-  if (!updateData.approved_at) {
-    updateData.approved_at = new Date().toISOString();
-  }
-  if (fields?.profile_card_url !== undefined) {
-    updateData.profile_card_url = fields.profile_card_url;
-  }
-
+  // 기본 필드만 먼저 업데이트 (항상 존재하는 컬럼)
   const { error } = await supabase
     .from("profiles")
-    .update(updateData)
+    .update({
+      is_instructor: true,
+      is_profile_public: fields?.is_profile_public ?? true,
+      approved_at: new Date().toISOString(),
+    })
     .eq("id", userId);
   if (error) throw new Error(error.message);
+
+  // profile_card_url은 컬럼이 없을 수 있으므로 별도 시도 (실패해도 무시)
+  if (fields?.profile_card_url !== undefined) {
+    await supabase
+      .from("profiles")
+      .update({ profile_card_url: fields.profile_card_url })
+      .eq("id", userId)
+      .then(() => {});
+  }
 
   revalidatePath("/admin/instructors");
   revalidatePath("/admin/members");

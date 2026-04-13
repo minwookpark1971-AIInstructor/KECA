@@ -7,13 +7,15 @@ const protectedPaths = ["/mypage", "/instructor", "/admin"];
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 보호 경로가 아니면 통과
-  const isProtected = protectedPaths.some((p) => pathname.startsWith(p));
-  if (!isProtected) {
+  // 정적 자원은 스킵
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname.includes(".") // .ico, .png, .css 등
+  ) {
     return NextResponse.next();
   }
 
-  // Supabase 세션 확인
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -39,9 +41,16 @@ export async function middleware(request: NextRequest) {
     }
   );
 
+  // 모든 페이지에서 세션 갱신 (기존 영구 쿠키를 세션 쿠키로 변환)
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // 보호 경로가 아니면 여기서 종료 (세션 쿠키 변환만 수행)
+  const isProtected = protectedPaths.some((p) => pathname.startsWith(p));
+  if (!isProtected) {
+    return response;
+  }
 
   // 미인증 시 로그인 페이지로 리다이렉트
   if (!user) {
@@ -80,5 +89,11 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/mypage/:path*", "/instructor/:path*", "/admin/:path*"],
+  matcher: [
+    /*
+     * 모든 경로에서 실행 (정적 자원 제외)
+     * 세션 쿠키 변환을 위해 모든 페이지 요청에서 미들웨어 실행
+     */
+    "/((?!_next/static|_next/image|favicon.ico).*)",
+  ],
 };
