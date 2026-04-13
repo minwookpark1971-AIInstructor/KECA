@@ -364,6 +364,9 @@ export interface MarketingCampaign {
   total_recipients: number;
   success_count: number;
   fail_count: number;
+  deleted_at?: string;
+  kakao_buttons?: Array<{ name: string; url: string; type: string }>;
+  image_url?: string;
   created_by?: string;
   created_at: string;
   updated_at: string;
@@ -385,25 +388,43 @@ export interface MarketingSendLog {
   recipient?: Profile;
 }
 
+export type TemplateType = "email" | "alimtalk" | "brand_message";
+export type KakaoTemplateStatus = "draft" | "pending_review" | "approved" | "rejected";
+
 export interface MarketingTemplate {
   id: string;
   name: string;
   channel: "email" | "kakao";
+  type?: TemplateType;
   subject?: string;
   body: string;
   variables?: string[];
+  kakao_template_code?: string;
+  kakao_status?: KakaoTemplateStatus;
   is_active: boolean;
   created_by?: string;
   created_at: string;
   updated_at: string;
 }
 
+export interface GroupFilterCriteria {
+  roles?: string[];
+  is_instructor?: boolean;
+  join_date_from?: string;
+  join_date_to?: string;
+  enrolled_program_ids?: string[];
+  payment_status?: "paid" | "unpaid" | "any";
+  [key: string]: unknown;
+}
+
 export interface MarketingGroup {
   id: string;
   name: string;
   description?: string;
-  filter_criteria?: Record<string, unknown>;
+  group_type?: "static" | "dynamic";
+  filter_criteria?: GroupFilterCriteria;
   member_ids?: string[];
+  member_count?: number;
   created_by?: string;
   created_at: string;
   updated_at: string;

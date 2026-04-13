@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ArrowLeft, Plus, Pencil, Trash2, X, Mail, MessageSquare } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, X, Mail, MessageSquare, Eye } from "lucide-react";
 import Link from "next/link";
 import { createMarketingTemplate, updateMarketingTemplate, deleteMarketingTemplate } from "@/lib/supabase/mutations";
 import type { MarketingTemplate } from "@/types";
@@ -11,22 +11,32 @@ const channelLabels: Record<string, { label: string; icon: typeof Mail }> = {
   kakao: { label: "카카오", icon: MessageSquare },
 };
 
+const kakaoStatusLabels: Record<string, { label: string; color: string }> = {
+  draft: { label: "초안", color: "bg-gray-100 text-gray-700" },
+  pending_review: { label: "검수중", color: "bg-yellow-100 text-yellow-700" },
+  approved: { label: "승인됨", color: "bg-green-100 text-green-700" },
+  rejected: { label: "반려됨", color: "bg-red-100 text-red-700" },
+};
+
 export default function TemplatesClient({ templates }: { templates: MarketingTemplate[] }) {
   const [isPending, startTransition] = useTransition();
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<MarketingTemplate | null>(null);
+  const [previewTemplate, setPreviewTemplate] = useState<MarketingTemplate | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     channel: "email" as "email" | "kakao",
     subject: "",
     body: "",
     variables: "",
+    type: "email" as "email" | "alimtalk" | "brand_message",
+    kakao_template_code: "",
   });
 
   const openCreate = () => {
     setEditing(null);
-    setFormData({ name: "", channel: "email", subject: "", body: "", variables: "" });
+    setFormData({ name: "", channel: "email", subject: "", body: "", variables: "", type: "email", kakao_template_code: "" });
     setShowModal(true);
   };
 
@@ -38,6 +48,8 @@ export default function TemplatesClient({ templates }: { templates: MarketingTem
       subject: t.subject || "",
       body: t.body,
       variables: (t.variables || []).join(", "),
+      type: t.type || (t.channel === "kakao" ? "alimtalk" : "email"),
+      kakao_template_code: t.kakao_template_code || "",
     });
     setShowModal(true);
   };
@@ -51,14 +63,23 @@ export default function TemplatesClient({ templates }: { templates: MarketingTem
     startTransition(async () => {
       try {
         const variables = formData.variables.split(",").map((v) => v.trim()).filter(Boolean);
+        const payload: Record<string, unknown> = {
+          name: formData.name,
+          channel: formData.channel,
+          subject: formData.subject || null,
+          body: formData.body,
+          variables,
+        };
+
+        if (formData.channel === "kakao") {
+          payload.type = formData.type;
+          payload.kakao_template_code = formData.kakao_template_code || null;
+        } else {
+          payload.type = "email";
+        }
+
         if (editing) {
-          await updateMarketingTemplate(editing.id, {
-            name: formData.name,
-            channel: formData.channel,
-            subject: formData.subject || null,
-            body: formData.body,
-            variables,
-          });
+          await updateMarketingTemplate(editing.id, payload);
           setMsg({ type: "success", text: "템플릿이 수정되었습니다." });
         } else {
           await createMarketingTemplate({
@@ -67,6 +88,8 @@ export default function TemplatesClient({ templates }: { templates: MarketingTem
             subject: formData.subject || undefined,
             body: formData.body,
             variables,
+            type: formData.channel === "kakao" ? formData.type : "email",
+            kakao_template_code: formData.channel === "kakao" ? formData.kakao_template_code || undefined : undefined,
           });
           setMsg({ type: "success", text: "템플릿이 생성되었습니다." });
         }
@@ -143,6 +166,7 @@ export default function TemplatesClient({ templates }: { templates: MarketingTem
                     <td className="px-3 py-3 text-text-muted text-xs hidden md:table-cell">{(t.variables || []).join(", ") || "-"}</td>
                     <td className="px-3 py-3 text-center">
                       <div className="flex items-center justify-center gap-1">
+                        <button onClick={() => setPreviewTemplate(t)} className="p-1 text-text-muted hover:text-blue-600 rounded"><Eye size={14} /></button>
                         <button onClick={() => openEdit(t)} disabled={isPending} className="p-1 text-text-muted hover:text-primary rounded"><Pencil size={14} /></button>
                         <button onClick={() => handleDelete(t.id, t.name)} disabled={isPending} className="p-1 text-text-muted hover:text-error rounded"><Trash2 size={14} /></button>
                       </div>
@@ -170,11 +194,61 @@ export default function TemplatesClient({ templates }: { templates: MarketingTem
               </div>
               <div>
                 <label className="text-sm font-medium text-text">채널</label>
-                <select value={formData.channel} onChange={(e) => setFormData({ ...formData, channel: e.target.value as "email" | "kakao" })} className="w-full mt-1 px-3 py-2 border border-border-light rounded-lg text-sm focus:outline-none">
+                <select
+                  value={formData.channel}
+                  onChange={(e) => {
+                    const channel = e.target.value as "email" | "kakao";
+                    setFormData({
+                      ...formData,
+                      channel,
+                      type: channel === "kakao" ? "alimtalk" : "email",
+                      kakao_template_code: "",
+                    });
+                  }}
+                  className="w-full mt-1 px-3 py-2 border border-border-light rounded-lg text-sm focus:outline-none"
+                >
                   <option value="email">이메일</option>
                   <option value="kakao">카카오톡</option>
                 </select>
               </div>
+
+              {formData.channel === "kakao" && (
+                <>
+                  <div>
+                    <label className="text-sm font-medium text-text">카카오 유형</label>
+                    <select
+                      value={formData.type}
+                      onChange={(e) => setFormData({ ...formData, type: e.target.value as "alimtalk" | "brand_message" })}
+                      className="w-full mt-1 px-3 py-2 border border-border-light rounded-lg text-sm focus:outline-none"
+                    >
+                      <option value="alimtalk">알림톡</option>
+                      <option value="brand_message">브랜드 메시지</option>
+                    </select>
+                  </div>
+                  {formData.type === "alimtalk" && (
+                    <div>
+                      <label className="text-sm font-medium text-text">카카오 템플릿 코드</label>
+                      <input
+                        value={formData.kakao_template_code}
+                        onChange={(e) => setFormData({ ...formData, kakao_template_code: e.target.value })}
+                        placeholder="딜러사에서 발급받은 템플릿 코드"
+                        className="w-full mt-1 px-3 py-2 border border-border-light rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                  )}
+                  {editing && editing.kakao_status && (
+                    <div>
+                      <label className="text-sm font-medium text-text">카카오 검수 상태</label>
+                      <div className="mt-1">
+                        <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${kakaoStatusLabels[editing.kakao_status]?.color || "bg-gray-100 text-gray-700"}`}>
+                          {kakaoStatusLabels[editing.kakao_status]?.label || editing.kakao_status}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
               {formData.channel === "email" && (
                 <div>
                   <label className="text-sm font-medium text-text">제목</label>
@@ -195,6 +269,59 @@ export default function TemplatesClient({ templates }: { templates: MarketingTem
               <button onClick={handleSave} disabled={isPending} className="flex-1 px-4 py-2.5 bg-primary text-white text-sm font-medium rounded-xl hover:bg-primary-dark transition-colors disabled:opacity-50">
                 {isPending ? "저장 중..." : "저장"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 미리보기 모달 */}
+      {previewTemplate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-5 border-b border-border-light">
+              <h3 className="text-lg font-bold text-text">미리보기: {previewTemplate.name}</h3>
+              <button onClick={() => setPreviewTemplate(null)} className="p-1 text-text-muted hover:text-text"><X size={20} /></button>
+            </div>
+            <div className="p-5">
+              {previewTemplate.channel === "email" ? (
+                <div>
+                  {previewTemplate.subject && (
+                    <div className="mb-3 px-4 py-2 bg-surface rounded-lg">
+                      <span className="text-xs text-text-muted">제목: </span>
+                      <span className="text-sm font-medium text-text">{previewTemplate.subject}</span>
+                    </div>
+                  )}
+                  <div
+                    className="border border-border-light rounded-lg p-4 text-sm"
+                    style={{ maxHeight: "400px", overflowY: "auto" }}
+                    dangerouslySetInnerHTML={{ __html: previewTemplate.body }}
+                  />
+                </div>
+              ) : (
+                <div className="flex justify-center">
+                  <div className="w-80">
+                    {/* 카카오 채팅 버블 스타일 */}
+                    <div className="bg-yellow-300 rounded-2xl p-3">
+                      <div className="bg-white rounded-xl p-4">
+                        <p className="text-sm text-gray-800 whitespace-pre-wrap">{previewTemplate.body}</p>
+                      </div>
+                    </div>
+                    {previewTemplate.type && (
+                      <p className="text-xs text-text-muted mt-2 text-center">
+                        유형: {previewTemplate.type === "alimtalk" ? "알림톡" : "브랜드 메시지"}
+                        {previewTemplate.kakao_template_code && ` | 코드: ${previewTemplate.kakao_template_code}`}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+              {previewTemplate.variables && previewTemplate.variables.length > 0 && (
+                <div className="mt-4 p-3 bg-surface rounded-lg">
+                  <p className="text-xs text-text-muted">
+                    사용 변수: {previewTemplate.variables.map((v) => `#{${v}}`).join(", ")}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

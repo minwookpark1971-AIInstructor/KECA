@@ -22,14 +22,29 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { recipientIds, messageType, message } = body as {
+  const { recipientIds, messageType, message, buttons, imageUrl, templateCode } = body as {
     recipientIds: string[];
     messageType: "alimtalk" | "brand_message";
     message: string;
+    buttons?: Array<{ name: string; url: string; type: string }>;
+    imageUrl?: string;
+    templateCode?: string;
   };
 
   if (!recipientIds?.length || !message) {
     return NextResponse.json({ error: "필수 항목이 누락되었습니다." }, { status: 400 });
+  }
+
+  // Validate buttons
+  if (buttons && buttons.length > 5) {
+    return NextResponse.json({ error: "링크 버튼은 최대 5개까지 가능합니다." }, { status: 400 });
+  }
+  if (buttons) {
+    for (const btn of buttons) {
+      if (!btn.name || !btn.url) {
+        return NextResponse.json({ error: "링크 버튼의 이름과 URL을 모두 입력해주세요." }, { status: 400 });
+      }
+    }
   }
 
   // 수신자 조회
@@ -75,6 +90,8 @@ export async function POST(request: NextRequest) {
       body: message,
       total_recipients: targetRecipients.length,
       created_by: user.id,
+      kakao_buttons: buttons || null,
+      image_url: imageUrl || null,
     })
     .select()
     .single();
@@ -102,9 +119,23 @@ export async function POST(request: NextRequest) {
   //     .replace(/#{이름}/g, recipient.name)
   //     .replace(/#{연락처}/g, recipient.phone || "");
   //
+  //   // 링크 버튼 구성 (딜러사 API 형식에 맞게 변환)
+  //   const apiButtons = buttons?.map(btn => ({
+  //     name: btn.name,
+  //     linkMobile: btn.url,
+  //     linkPc: btn.url,
+  //     type: btn.type === "video" ? "MD" : btn.type === "blog" ? "BK" : "WL",
+  //   }));
+  //
   //   const result = messageType === "alimtalk"
-  //     ? await sendAlimtalk(recipient.phone!, templateCode, { name: recipient.name })
-  //     : await sendBrandMessage(recipient.phone!, personalizedMessage);
+  //     ? await sendAlimtalk(recipient.phone!, templateCode || "", {
+  //         name: recipient.name,
+  //         buttons: apiButtons,
+  //       })
+  //     : await sendBrandMessage(recipient.phone!, personalizedMessage, {
+  //         buttons: apiButtons,
+  //         imageUrl: imageUrl || undefined,
+  //       });
   //
   //   await supabaseAdmin.from("marketing_send_logs").update({
   //     status: result.success ? "sent" : "failed",

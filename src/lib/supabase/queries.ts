@@ -500,6 +500,7 @@ export async function getMarketingCampaigns(): Promise<MarketingCampaign[]> {
   const { data } = await supabase
     .from("marketing_campaigns")
     .select("*")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
   return (data as unknown as MarketingCampaign[]) ?? [];
 }

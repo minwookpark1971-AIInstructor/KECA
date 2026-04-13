@@ -1,19 +1,51 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ArrowLeft, MessageSquare, AlertTriangle, Send, X, Info } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { ArrowLeft, AlertTriangle, Send, X, Info, Link2, Plus, Trash2, Image as ImageIcon, ExternalLink, Loader2 } from "lucide-react";
 import Link from "next/link";
-import type { Profile } from "@/types";
+import type { Profile, MarketingTemplate } from "@/types";
 
 type MessageType = "alimtalk" | "brand_message";
 
-export default function KakaoComposeClient() {
+interface LinkButton {
+  name: string;
+  url: string;
+  type: "web" | "video" | "blog";
+}
+
+interface OgData {
+  title: string;
+  description: string;
+  image: string;
+}
+
+interface Props {
+  templates: MarketingTemplate[];
+}
+
+export default function KakaoComposeClient({ templates }: Props) {
   const [recipients, setRecipients] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [messageType, setMessageType] = useState<MessageType>("alimtalk");
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Link buttons
+  const [buttons, setButtons] = useState<LinkButton[]>([]);
+  const [showAddButton, setShowAddButton] = useState(false);
+  const [newButtonName, setNewButtonName] = useState("");
+  const [newButtonUrl, setNewButtonUrl] = useState("");
+  const [newButtonType, setNewButtonType] = useState<"web" | "video" | "blog">("web");
+  const [ogData, setOgData] = useState<Record<string, OgData>>({});
+  const [ogLoading, setOgLoading] = useState<Set<number>>(new Set());
+  const ogDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Image upload (brand_message only)
+  const [imageUrl, setImageUrl] = useState("");
+  const [imageUploading, setImageUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // sessionStorage에서 수신자 ID 로드
   useEffect(() => {
@@ -47,6 +79,78 @@ export default function KakaoComposeClient() {
   const agreedRecipients = validRecipients.filter((r) => r.marketing_kakao_agreed);
   const notAgreedCount = validRecipients.length - agreedRecipients.length;
 
+  // OG metadata fetch (debounced)
+  const fetchOgData = useCallback((url: string, index: number) => {
+    if (!url) return;
+    try {
+      new URL(url);
+    } catch {
+      return;
+    }
+
+    setOgLoading((prev) => new Set(prev).add(index));
+    fetch(`/api/og-metadata?url=${encodeURIComponent(url)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.title || data.description || data.image) {
+          setOgData((prev) => ({ ...prev, [url]: data }));
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        setOgLoading((prev) => {
+          const next = new Set(prev);
+          next.delete(index);
+          return next;
+        });
+      });
+  }, []);
+
+  const handleNewButtonUrlChange = (url: string) => {
+    setNewButtonUrl(url);
+    if (ogDebounceRef.current) clearTimeout(ogDebounceRef.current);
+    ogDebounceRef.current = setTimeout(() => {
+      fetchOgData(url, -1);
+    }, 800);
+  };
+
+  const handleAddButton = () => {
+    if (!newButtonName.trim() || !newButtonUrl.trim()) return;
+    if (buttons.length >= 5) return;
+    setButtons((prev) => [...prev, { name: newButtonName.trim(), url: newButtonUrl.trim(), type: newButtonType }]);
+    // Fetch OG for the newly added button
+    fetchOgData(newButtonUrl.trim(), buttons.length);
+    setNewButtonName("");
+    setNewButtonUrl("");
+    setNewButtonType("web");
+    setShowAddButton(false);
+  };
+
+  const removeButton = (index: number) => {
+    setButtons((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Image upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "marketing");
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "업로드 실패");
+      setImageUrl(data.url);
+    } catch (err) {
+      setMsg({ type: "error", text: err instanceof Error ? err.message : "이미지 업로드에 실패했습니다." });
+    } finally {
+      setImageUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const handleSend = async () => {
     if (!message.trim()) {
       setMsg({ type: "error", text: "메시지를 입력해주세요." });
@@ -70,6 +174,8 @@ export default function KakaoComposeClient() {
           recipientIds: target.map((r) => r.id),
           messageType,
           message,
+          buttons: buttons.length > 0 ? buttons : undefined,
+          imageUrl: imageUrl || undefined,
         }),
       });
       const result = await res.json();
@@ -81,6 +187,14 @@ export default function KakaoComposeClient() {
       setMsg({ type: "error", text: err instanceof Error ? err.message : "발송에 실패했습니다." });
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const buttonTypeBadge = (type: string) => {
+    switch (type) {
+      case "video": return { label: "동영상", cls: "bg-red-50 text-red-600" };
+      case "blog": return { label: "블로그", cls: "bg-green-50 text-green-600" };
+      default: return { label: "일반", cls: "bg-blue-50 text-blue-600" };
     }
   };
 
@@ -169,6 +283,40 @@ export default function KakaoComposeClient() {
             )}
           </div>
 
+          {/* 템플릿 선택 */}
+          {(() => {
+            const filteredTemplates = templates.filter(
+              (t) => t.channel === "kakao" && (messageType === "alimtalk" ? t.type === "alimtalk" : t.type === "brand_message")
+            );
+            return filteredTemplates.length > 0 ? (
+              <div className="bg-white border border-border-light rounded-xl p-5">
+                <p className="text-sm font-medium text-text mb-2">템플릿 선택 (선택사항)</p>
+                <select
+                  value={selectedTemplateId}
+                  onChange={(e) => {
+                    setSelectedTemplateId(e.target.value);
+                    const tpl = templates.find((t) => t.id === e.target.value);
+                    if (tpl) setMessage(tpl.body);
+                  }}
+                  className="w-full px-3 py-2 border border-border-light rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="">직접 작성</option>
+                  {filteredTemplates.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}{t.kakao_template_code ? ` (${t.kakao_template_code})` : ""}</option>
+                  ))}
+                </select>
+                {selectedTemplateId && (() => {
+                  const selected = templates.find((t) => t.id === selectedTemplateId);
+                  return selected?.kakao_template_code ? (
+                    <p className="mt-2 text-xs text-text-muted bg-surface rounded-lg px-3 py-2">
+                      템플릿 코드: <span className="font-mono font-medium">{selected.kakao_template_code}</span>
+                    </p>
+                  ) : null;
+                })()}
+              </div>
+            ) : null;
+          })()}
+
           {/* 메시지 작성 */}
           <div className="bg-white border border-border-light rounded-xl p-5">
             <div className="flex items-center justify-between mb-2">
@@ -194,6 +342,179 @@ export default function KakaoComposeClient() {
               className="w-full px-3 py-2 border border-border-light rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-y"
             />
           </div>
+
+          {/* 링크 버튼 */}
+          <div className="bg-white border border-border-light rounded-xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Link2 size={16} className="text-text-sub" />
+                <p className="text-sm font-medium text-text">링크 버튼 ({buttons.length}/5)</p>
+              </div>
+              {buttons.length < 5 && (
+                <button
+                  onClick={() => setShowAddButton(true)}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-primary bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors"
+                >
+                  <Plus size={12} />
+                  링크 버튼 추가
+                </button>
+              )}
+            </div>
+
+            {/* Existing buttons */}
+            {buttons.length > 0 && (
+              <div className="space-y-3 mb-3">
+                {buttons.map((btn, idx) => {
+                  const badge = buttonTypeBadge(btn.type);
+                  const og = ogData[btn.url];
+                  return (
+                    <div key={idx} className="border border-border-light rounded-lg p-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm font-medium text-text">{btn.name}</span>
+                            <span className={`px-1.5 py-0.5 text-xs rounded ${badge.cls}`}>{badge.label}</span>
+                          </div>
+                          <a href={btn.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline flex items-center gap-1 truncate max-w-xs">
+                            {btn.url}
+                            <ExternalLink size={10} />
+                          </a>
+                        </div>
+                        <button onClick={() => removeButton(idx)} className="p-1 text-text-muted hover:text-error rounded">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+
+                      {/* OG Preview */}
+                      {ogLoading.has(idx) ? (
+                        <div className="mt-2 flex items-center gap-2 text-xs text-text-muted">
+                          <Loader2 size={12} className="animate-spin" />
+                          미리보기 로딩 중...
+                        </div>
+                      ) : og ? (
+                        <div className="mt-2 flex gap-2 p-2 bg-surface rounded-lg">
+                          {og.image && (
+                            <img src={og.image} alt="" className="w-16 h-16 object-cover rounded shrink-0" />
+                          )}
+                          <div className="min-w-0">
+                            {og.title && <p className="text-xs font-medium text-text truncate">{og.title}</p>}
+                            {og.description && <p className="text-xs text-text-muted line-clamp-2">{og.description}</p>}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Add button form */}
+            {showAddButton && (
+              <div className="border border-dashed border-border rounded-lg p-4 space-y-3">
+                <div>
+                  <label className="text-xs font-medium text-text-sub">버튼 이름</label>
+                  <input
+                    value={newButtonName}
+                    onChange={(e) => setNewButtonName(e.target.value)}
+                    placeholder="예: 자세히 보기"
+                    className="w-full mt-1 px-3 py-2 border border-border-light rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-text-sub">URL</label>
+                  <input
+                    value={newButtonUrl}
+                    onChange={(e) => handleNewButtonUrlChange(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full mt-1 px-3 py-2 border border-border-light rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-text-sub">유형</label>
+                  <select
+                    value={newButtonType}
+                    onChange={(e) => setNewButtonType(e.target.value as "web" | "video" | "blog")}
+                    className="w-full mt-1 px-3 py-2 border border-border-light rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  >
+                    <option value="web">일반</option>
+                    <option value="video">동영상</option>
+                    <option value="blog">블로그</option>
+                  </select>
+                </div>
+
+                {/* OG Preview for new button */}
+                {ogLoading.has(-1) ? (
+                  <div className="flex items-center gap-2 text-xs text-text-muted">
+                    <Loader2 size={12} className="animate-spin" />
+                    미리보기 로딩 중...
+                  </div>
+                ) : ogData[newButtonUrl] ? (
+                  <div className="flex gap-2 p-2 bg-surface rounded-lg">
+                    {ogData[newButtonUrl].image && (
+                      <img src={ogData[newButtonUrl].image} alt="" className="w-16 h-16 object-cover rounded shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      {ogData[newButtonUrl].title && <p className="text-xs font-medium text-text truncate">{ogData[newButtonUrl].title}</p>}
+                      {ogData[newButtonUrl].description && <p className="text-xs text-text-muted line-clamp-2">{ogData[newButtonUrl].description}</p>}
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="flex gap-2">
+                  <button onClick={() => setShowAddButton(false)} className="flex-1 px-3 py-2 text-sm text-text-sub bg-surface rounded-lg hover:bg-border-light">취소</button>
+                  <button onClick={handleAddButton} disabled={!newButtonName.trim() || !newButtonUrl.trim()} className="flex-1 px-3 py-2 text-sm text-white bg-primary rounded-lg hover:bg-primary-dark disabled:opacity-50">추가</button>
+                </div>
+              </div>
+            )}
+
+            {buttons.length === 0 && !showAddButton && (
+              <p className="text-xs text-text-muted">링크 버튼을 추가하면 메시지에 클릭 가능한 버튼이 포함됩니다.</p>
+            )}
+          </div>
+
+          {/* 이미지 첨부 (브랜드 메시지만) */}
+          {messageType === "brand_message" && (
+            <div className="bg-white border border-border-light rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <ImageIcon size={16} className="text-text-sub" />
+                <p className="text-sm font-medium text-text">이미지 첨부</p>
+              </div>
+
+              {imageUrl ? (
+                <div className="relative inline-block">
+                  <img src={imageUrl} alt="첨부 이미지" className="w-48 h-32 object-cover rounded-lg border border-border-light" />
+                  <button
+                    onClick={() => setImageUrl("")}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={imageUploading}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 border border-dashed border-border rounded-lg text-sm text-text-sub hover:bg-surface transition-colors disabled:opacity-50"
+                  >
+                    {imageUploading ? (
+                      <><Loader2 size={14} className="animate-spin" /> 업로드 중...</>
+                    ) : (
+                      <><ImageIcon size={14} /> 이미지 선택</>
+                    )}
+                  </button>
+                  <p className="text-xs text-text-muted mt-1.5">JPG, PNG 등 이미지 파일 (권장 크기: 800x400px)</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 우측: 액션 패널 */}
@@ -215,6 +536,18 @@ export default function KakaoComposeClient() {
                   {messageType === "alimtalk" ? validRecipients.length : agreedRecipients.length}명
                 </span>
               </div>
+              {buttons.length > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-text-sub">링크 버튼</span>
+                  <span className="font-medium text-text">{buttons.length}개</span>
+                </div>
+              )}
+              {imageUrl && (
+                <div className="flex justify-between">
+                  <span className="text-text-sub">이미지</span>
+                  <span className="font-medium text-green-600">첨부됨</span>
+                </div>
+              )}
             </div>
 
             <div className="mt-5">

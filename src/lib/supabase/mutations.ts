@@ -1206,6 +1206,9 @@ export async function createMarketingTemplate(data: {
   subject?: string;
   body: string;
   variables?: string[];
+  type?: string;
+  kakao_template_code?: string;
+  kakao_status?: string;
   created_by?: string;
 }) {
   const supabase = createAdminClient();
@@ -1239,6 +1242,7 @@ export async function deleteMarketingTemplate(id: string) {
 export async function createMarketingGroup(data: {
   name: string;
   description?: string;
+  group_type?: "static" | "dynamic";
   filter_criteria?: Record<string, unknown>;
   member_ids?: string[];
   created_by?: string;
@@ -1267,6 +1271,61 @@ export async function deleteMarketingGroup(id: string) {
   const { error } = await supabase.from("marketing_groups").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/marketing/groups");
+}
+
+export async function addMembersToGroup(groupId: string, memberIds: string[]) {
+  const supabase = createAdminClient();
+  const { data: group } = await supabase
+    .from("marketing_groups")
+    .select("member_ids")
+    .eq("id", groupId)
+    .single();
+  const existing = (group?.member_ids as string[]) || [];
+  const merged = [...new Set([...existing, ...memberIds])];
+  const { error } = await supabase
+    .from("marketing_groups")
+    .update({
+      member_ids: merged,
+      member_count: merged.length,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", groupId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/marketing/groups");
+}
+
+export async function removeMemberFromGroup(groupId: string, memberId: string) {
+  const supabase = createAdminClient();
+  const { data: group } = await supabase
+    .from("marketing_groups")
+    .select("member_ids")
+    .eq("id", groupId)
+    .single();
+  const existing = (group?.member_ids as string[]) || [];
+  const filtered = existing.filter((id) => id !== memberId);
+  const { error } = await supabase
+    .from("marketing_groups")
+    .update({
+      member_ids: filtered,
+      member_count: filtered.length,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", groupId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/marketing/groups");
+}
+
+// ─── 마케팅: 캠페인 삭제 (소프트 삭제) ───
+
+export async function deleteMarketingCampaigns(ids: string[]) {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("marketing_campaigns")
+    .update({ deleted_at: new Date().toISOString() })
+    .in("id", ids);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/marketing/history");
+  revalidatePath("/admin/marketing");
 }
 
 // ─── 사이트 설정 ───
