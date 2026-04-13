@@ -9,7 +9,7 @@ function getResend() {
   return new Resend(key);
 }
 
-const FROM_EMAIL = "KECA <noreply@keca.or.kr>";
+const FROM_EMAIL = "KECA 한국교육컨설팅협회 <noreply@keca.or.kr>";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "info@keca.or.kr";
 
 // 문의 접수 알림 (관리자에게)

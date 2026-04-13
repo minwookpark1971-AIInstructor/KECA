@@ -3,31 +3,36 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendMarketingEmail } from "@/lib/email";
 
-// GET: 수신자 프로필 조회
-export async function GET(request: NextRequest) {
-  const action = request.nextUrl.searchParams.get("action");
+// GET: 전체 회원 목록 조회 (수신자 추가 모달용)
+export async function GET() {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("profiles")
+    .select("id, name, email, phone, role, is_instructor, marketing_email_agreed")
+    .order("created_at", { ascending: false });
 
-  if (action === "get_recipients") {
-    const idsParam = request.nextUrl.searchParams.get("ids") || "";
-    const ids = idsParam.split(",").filter(Boolean);
+  return NextResponse.json({ members: data || [] });
+}
+
+// POST: 수신자 조회 OR 이메일 발송
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+
+  // action=get_recipients: 선택된 회원 ID로 프로필 조회
+  if (body.action === "get_recipients") {
+    const ids: string[] = body.ids || [];
     if (ids.length === 0) {
       return NextResponse.json({ recipients: [] });
     }
-
     const supabase = createAdminClient();
     const { data } = await supabase
       .from("profiles")
       .select("id, name, email, phone, role, is_instructor, marketing_email_agreed")
       .in("id", ids);
-
     return NextResponse.json({ recipients: data || [] });
   }
 
-  return NextResponse.json({ error: "Unknown action" }, { status: 400 });
-}
-
-// POST: 이메일 발송
-export async function POST(request: NextRequest) {
+  // 이메일 발송 로직
   // 관리자 권한 확인
   const supabaseUser = await createClient();
   const { data: { user } } = await supabaseUser.auth.getUser();
@@ -46,7 +51,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 });
   }
 
-  const body = await request.json();
   const { recipientIds, subject, body: emailBody, templateId } = body as {
     recipientIds: string[];
     subject: string;

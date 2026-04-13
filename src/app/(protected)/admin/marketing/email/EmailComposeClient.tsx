@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, Send, Eye, X, AlertTriangle, ArrowLeft } from "lucide-react";
+import { Mail, Send, Eye, X, AlertTriangle, ArrowLeft, UserPlus, Search } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
+import { roleLabels } from "@/lib/utils";
 import type { Profile, MarketingTemplate } from "@/types";
 
 interface Props {
@@ -21,6 +23,14 @@ export default function EmailComposeClient({ templates }: Props) {
   const [isSending, setIsSending] = useState(false);
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  // 수신자 추가 모달
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [allMembers, setAllMembers] = useState<Profile[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [modalSearch, setModalSearch] = useState("");
+  const [modalFilter, setModalFilter] = useState("all");
+  const [modalSelected, setModalSelected] = useState<Set<string>>(new Set());
+
   // sessionStorage에서 수신자 ID 로드
   useEffect(() => {
     const stored = sessionStorage.getItem("marketing_recipients");
@@ -34,10 +44,17 @@ export default function EmailComposeClient({ templates }: Props) {
       return;
     }
 
-    // 서버에서 프로필 조회
-    fetch(`/api/marketing/send-email?action=get_recipients&ids=${ids.join(",")}`)
+    // POST로 수신자 프로필 조회
+    fetch("/api/marketing/send-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "get_recipients", ids }),
+    })
       .then((res) => res.json())
-      .then((data) => setRecipients(data.recipients || []))
+      .then((data) => {
+        setRecipients(data.recipients || []);
+        sessionStorage.removeItem("marketing_recipients");
+      })
       .catch(() => setMsg({ type: "error", text: "수신자 정보를 불러오지 못했습니다." }))
       .finally(() => setLoading(false));
   }, []);
@@ -66,6 +83,74 @@ export default function EmailComposeClient({ templates }: Props) {
       .replace(/\{\{name\}\}/g, sample.name)
       .replace(/\{\{email\}\}/g, sample.email)
       .replace(/\{\{role\}\}/g, sample.role);
+  };
+
+  // 수신자 추가 모달 열기
+  const openAddModal = async () => {
+    setShowAddModal(true);
+    setModalSearch("");
+    setModalFilter("all");
+    // 이미 추가된 수신자는 체크 상태로 표시
+    setModalSelected(new Set(recipients.map((r) => r.id)));
+
+    if (allMembers.length === 0) {
+      setMembersLoading(true);
+      try {
+        const res = await fetch("/api/marketing/send-email");
+        const data = await res.json();
+        setAllMembers(data.members || []);
+      } catch {
+        setMsg({ type: "error", text: "회원 목록을 불러오지 못했습니다." });
+      } finally {
+        setMembersLoading(false);
+      }
+    } else {
+      setModalSelected(new Set(recipients.map((r) => r.id)));
+    }
+  };
+
+  // 모달 필터링
+  const filteredModalMembers = useMemo(() => {
+    return allMembers.filter((m) => {
+      if (modalFilter === "instructor" && !m.is_instructor) return false;
+      if (modalFilter !== "all" && modalFilter !== "instructor" && m.role !== modalFilter) return false;
+      if (modalSearch && !m.name.includes(modalSearch) && !m.email.includes(modalSearch)) return false;
+      return true;
+    });
+  }, [allMembers, modalFilter, modalSearch]);
+
+  const toggleModalSelect = (id: string) => {
+    setModalSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const isModalAllSelected = filteredModalMembers.length > 0 && filteredModalMembers.every((m) => modalSelected.has(m.id));
+  const toggleModalSelectAll = () => {
+    if (isModalAllSelected) {
+      const filteredIds = new Set(filteredModalMembers.map((m) => m.id));
+      setModalSelected((prev) => {
+        const next = new Set(prev);
+        filteredIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setModalSelected((prev) => {
+        const next = new Set(prev);
+        filteredModalMembers.forEach((m) => next.add(m.id));
+        return next;
+      });
+    }
+  };
+
+  // 모달에서 수신자 확정
+  const confirmAddRecipients = () => {
+    const selectedMembers = allMembers.filter((m) => modalSelected.has(m.id));
+    setRecipients(selectedMembers);
+    setShowAddModal(false);
   };
 
   const handleSend = async () => {
@@ -133,7 +218,16 @@ export default function EmailComposeClient({ templates }: Props) {
         <div className="lg:col-span-2 space-y-5">
           {/* 수신자 */}
           <div className="bg-white border border-border-light rounded-xl p-5">
-            <p className="text-sm font-medium text-text mb-3">수신자 ({recipients.length}명)</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-medium text-text">수신자 ({recipients.length}명)</p>
+              <button
+                onClick={openAddModal}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary text-xs font-medium rounded-lg hover:bg-primary/20 transition-colors"
+              >
+                <UserPlus size={13} />
+                수신자 추가
+              </button>
+            </div>
             {notAgreedCount > 0 && (
               <div className="flex items-center gap-2 mb-3 p-2.5 bg-yellow-50 rounded-lg">
                 <AlertTriangle size={14} className="text-yellow-600" />
@@ -143,9 +237,16 @@ export default function EmailComposeClient({ templates }: Props) {
               </div>
             )}
             {recipients.length === 0 ? (
-              <p className="text-sm text-text-muted">
-                회원관리에서 회원을 선택한 후 &quot;이메일 발송&quot; 버튼을 눌러주세요.
-              </p>
+              <div className="text-center py-6">
+                <p className="text-sm text-text-muted mb-3">수신자가 없습니다.</p>
+                <button
+                  onClick={openAddModal}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition-colors"
+                >
+                  <UserPlus size={15} />
+                  회원 목록에서 선택
+                </button>
+              </div>
             ) : (
               <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
                 {recipients.map((r) => (
@@ -170,7 +271,11 @@ export default function EmailComposeClient({ templates }: Props) {
           {/* 발신자 */}
           <div className="bg-white border border-border-light rounded-xl p-5">
             <p className="text-sm font-medium text-text mb-2">발신자</p>
-            <p className="text-sm text-text-sub">KECA 한국교육컨설팅협회 &lt;kecamanager@gmail.com&gt;</p>
+            <div className="text-sm text-text-sub space-y-1">
+              <p>발신: <span className="font-medium text-text">KECA 한국교육컨설팅협회</span> &lt;noreply@keca.or.kr&gt;</p>
+              <p>답장: <span className="font-medium text-text">kecamanager@gmail.com</span></p>
+            </div>
+            <p className="text-xs text-text-muted mt-2">수신자가 답장하면 kecamanager@gmail.com으로 수신됩니다.</p>
           </div>
 
           {/* 템플릿 선택 */}
@@ -289,6 +394,135 @@ export default function EmailComposeClient({ templates }: Props) {
                 <p className="text-xs text-text-muted mt-1">
                   <span className="underline">수신 거부</span>
                 </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 수신자 추가 모달 */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between p-5 border-b border-border-light shrink-0">
+              <h3 className="text-lg font-bold text-text">수신자 선택</h3>
+              <button onClick={() => setShowAddModal(false)} className="p-1 text-text-muted hover:text-text">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* 필터 + 검색 */}
+            <div className="px-5 pt-4 pb-3 space-y-3 shrink-0">
+              <div className="flex gap-1 bg-surface border border-border-light rounded-lg p-1 flex-wrap">
+                {[
+                  { key: "all", label: "전체" },
+                  { key: "approved", label: "승인완료" },
+                  { key: "associate", label: "준회원" },
+                  { key: "member", label: "정회원" },
+                  { key: "instructor", label: "강사" },
+                ].map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => setModalFilter(f.key)}
+                    className={cn(
+                      "px-3 py-1 text-xs font-medium rounded-md transition-colors",
+                      modalFilter === f.key ? "bg-primary text-white" : "text-text-sub hover:bg-white"
+                    )}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+                <input
+                  type="text"
+                  value={modalSearch}
+                  onChange={(e) => setModalSearch(e.target.value)}
+                  placeholder="이름 또는 이메일 검색"
+                  className="w-full pl-9 pr-4 py-2 border border-border-light rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+            </div>
+
+            {/* 회원 목록 */}
+            <div className="flex-1 overflow-y-auto px-5">
+              {membersLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+                </div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-white">
+                    <tr className="border-b border-border-light text-text-sub">
+                      <th className="text-center px-2 py-2 w-10">
+                        <input
+                          type="checkbox"
+                          checked={isModalAllSelected}
+                          onChange={toggleModalSelectAll}
+                          className="rounded border-border text-primary focus:ring-primary/20"
+                        />
+                      </th>
+                      <th className="text-left px-3 py-2 font-medium">이름</th>
+                      <th className="text-left px-3 py-2 font-medium">이메일</th>
+                      <th className="text-center px-3 py-2 font-medium">상태</th>
+                      <th className="text-center px-3 py-2 font-medium">수신동의</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-light">
+                    {filteredModalMembers.map((m) => (
+                      <tr
+                        key={m.id}
+                        className={cn("hover:bg-surface/50 cursor-pointer", modalSelected.has(m.id) && "bg-primary/5")}
+                        onClick={() => toggleModalSelect(m.id)}
+                      >
+                        <td className="text-center px-2 py-2">
+                          <input
+                            type="checkbox"
+                            checked={modalSelected.has(m.id)}
+                            onChange={() => toggleModalSelect(m.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="rounded border-border text-primary focus:ring-primary/20"
+                          />
+                        </td>
+                        <td className="px-3 py-2 font-medium text-text">{m.name}</td>
+                        <td className="px-3 py-2 text-text-sub text-xs">{m.email}</td>
+                        <td className="px-3 py-2 text-center">
+                          <span className="text-xs text-text-muted">{roleLabels[m.role] || m.role}</span>
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <span className={`text-xs ${m.marketing_email_agreed ? "text-green-600" : "text-gray-400"}`}>
+                            {m.marketing_email_agreed ? "동의" : "미동의"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {!membersLoading && filteredModalMembers.length === 0 && (
+                <p className="text-sm text-text-muted text-center py-8">검색 결과가 없습니다.</p>
+              )}
+            </div>
+
+            {/* 하단 확인 */}
+            <div className="flex items-center justify-between p-5 border-t border-border-light shrink-0">
+              <span className="text-sm text-text-sub">
+                <span className="text-primary font-bold">{modalSelected.size}</span>명 선택됨
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 text-sm text-text-sub bg-surface rounded-xl hover:bg-border-light transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={confirmAddRecipients}
+                  className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-xl hover:bg-primary-dark transition-colors"
+                >
+                  수신자 적용
+                </button>
               </div>
             </div>
           </div>
