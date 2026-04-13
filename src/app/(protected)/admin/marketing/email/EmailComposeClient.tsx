@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, Send, Eye, X, AlertTriangle, ArrowLeft, UserPlus, Search } from "lucide-react";
+import { Mail, Send, Eye, X, AlertTriangle, ArrowLeft, UserPlus, Search, Users, GraduationCap } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { roleLabels } from "@/lib/utils";
@@ -237,14 +237,16 @@ export default function EmailComposeClient({ templates }: Props) {
               </div>
             )}
             {recipients.length === 0 ? (
-              <div className="text-center py-6">
-                <p className="text-sm text-text-muted mb-3">수신자가 없습니다.</p>
+              <div className="text-center py-8 bg-surface/50 rounded-xl border border-dashed border-border">
+                <Users size={32} className="mx-auto text-text-muted mb-3" />
+                <p className="text-sm text-text-sub mb-1">수신자를 선택해주세요</p>
+                <p className="text-xs text-text-muted mb-4">회원 목록에서 개별 또는 그룹(정회원/준회원/강사)으로 선택할 수 있습니다.</p>
                 <button
                   onClick={openAddModal}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition-colors"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition-colors shadow-sm"
                 >
-                  <UserPlus size={15} />
-                  회원 목록에서 선택
+                  <UserPlus size={16} />
+                  수신자 선택
                 </button>
               </div>
             ) : (
@@ -411,8 +413,85 @@ export default function EmailComposeClient({ templates }: Props) {
               </button>
             </div>
 
-            {/* 필터 + 검색 */}
+            {/* 그룹 빠른 선택 + 필터 + 검색 */}
             <div className="px-5 pt-4 pb-3 space-y-3 shrink-0">
+              {/* 그룹 빠른 선택 */}
+              {!membersLoading && allMembers.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-text-muted mb-2">그룹 선택</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {[
+                      {
+                        label: "정회원",
+                        icon: Users,
+                        color: "bg-green-50 text-green-700 border-green-200 hover:bg-green-100",
+                        filter: (m: Profile) => m.role === "member",
+                      },
+                      {
+                        label: "준회원",
+                        icon: Users,
+                        color: "bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100",
+                        filter: (m: Profile) => m.role === "associate",
+                      },
+                      {
+                        label: "강사",
+                        icon: GraduationCap,
+                        color: "bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100",
+                        filter: (m: Profile) => m.is_instructor,
+                      },
+                    ].map((group) => {
+                      const groupMembers = allMembers.filter(group.filter);
+                      const allGroupSelected = groupMembers.length > 0 && groupMembers.every((m) => modalSelected.has(m.id));
+                      return (
+                        <button
+                          key={group.label}
+                          onClick={() => {
+                            setModalSelected((prev) => {
+                              const next = new Set(prev);
+                              if (allGroupSelected) {
+                                groupMembers.forEach((m) => next.delete(m.id));
+                              } else {
+                                groupMembers.forEach((m) => next.add(m.id));
+                              }
+                              return next;
+                            });
+                          }}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-colors",
+                            allGroupSelected
+                              ? "bg-primary text-white border-primary"
+                              : group.color
+                          )}
+                        >
+                          <group.icon size={13} />
+                          {group.label} ({groupMembers.length})
+                        </button>
+                      );
+                    })}
+                    <button
+                      onClick={() => {
+                        const allSelected = allMembers.length > 0 && allMembers.every((m) => modalSelected.has(m.id));
+                        if (allSelected) {
+                          setModalSelected(new Set());
+                        } else {
+                          setModalSelected(new Set(allMembers.map((m) => m.id)));
+                        }
+                      }}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-colors",
+                        allMembers.length > 0 && allMembers.every((m) => modalSelected.has(m.id))
+                          ? "bg-primary text-white border-primary"
+                          : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+                      )}
+                    >
+                      <Mail size={13} />
+                      전체 ({allMembers.length})
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 필터 탭 */}
               <div className="flex gap-1 bg-surface border border-border-light rounded-lg p-1 flex-wrap">
                 {[
                   { key: "all", label: "전체" },
@@ -433,6 +512,8 @@ export default function EmailComposeClient({ templates }: Props) {
                   </button>
                 ))}
               </div>
+
+              {/* 검색 */}
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
                 <input
