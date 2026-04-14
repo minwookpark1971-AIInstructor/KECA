@@ -537,6 +537,17 @@ export async function getMarketingTemplates(channel?: string): Promise<Marketing
   return (data as unknown as MarketingTemplate[]) ?? [];
 }
 
+export async function getAllMarketingTemplates(channel?: string): Promise<MarketingTemplate[]> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("marketing_templates")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (channel) query = query.eq("channel", channel);
+  const { data } = await query;
+  return (data as unknown as MarketingTemplate[]) ?? [];
+}
+
 export async function getMembersByIds(ids: string[]): Promise<Profile[]> {
   if (ids.length === 0) return [];
   const supabase = await createClient();
