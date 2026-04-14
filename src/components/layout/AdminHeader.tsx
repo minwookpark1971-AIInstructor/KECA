@@ -32,6 +32,15 @@ export function AdminHeader() {
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
+
+    // 잔여 Supabase 쿠키 강제 삭제 (방어적 처리)
+    document.cookie.split(";").forEach((c) => {
+      const name = c.trim().split("=")[0];
+      if (name.startsWith("sb-")) {
+        document.cookie = `${name}=; path=/; max-age=0`;
+      }
+    });
+
     router.push("/");
     router.refresh();
   };
