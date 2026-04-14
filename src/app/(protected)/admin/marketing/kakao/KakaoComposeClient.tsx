@@ -482,6 +482,7 @@ export default function KakaoComposeClient({ templates }: Props) {
 
   const executeSend = async () => {
     setShowConfirmSend(false);
+    setMsg(null);
     setIsSending(true);
 
     const finalMessage =
@@ -505,7 +506,15 @@ export default function KakaoComposeClient({ templates }: Props) {
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "발송 실패");
 
-      setMsg({ type: "success", text: `${result.successCount || 0}명에게 메시지가 발송되었습니다.` });
+      // 부분 실패 체크
+      if (result.failCount > 0 && result.successCount > 0) {
+        setMsg({
+          type: "success",
+          text: `${result.successCount}명 발송 성공, ${result.failCount}명 실패`,
+        });
+      } else {
+        setMsg({ type: "success", text: `${result.successCount || 0}명에게 메시지가 발송되었습니다.` });
+      }
       sessionStorage.removeItem("marketing_recipients");
     } catch (err) {
       setMsg({ type: "error", text: err instanceof Error ? err.message : "발송에 실패했습니다." });

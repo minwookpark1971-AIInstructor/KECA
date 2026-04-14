@@ -54,10 +54,16 @@ export async function sendAlimtalkViaSolapi(
     return { success: false, error: "SOLAPI_PFID not configured" };
   }
 
+  const senderNumber = process.env.SOLAPI_SENDER_NUMBER;
+  if (!senderNumber) {
+    console.error("[Solapi Alimtalk] SOLAPI_SENDER_NUMBER 미설정");
+    return { success: false, error: "발신번호(SOLAPI_SENDER_NUMBER)가 설정되지 않았습니다." };
+  }
+
   try {
     const messageParams: Record<string, unknown> = {
       to: normalizedPhone,
-      from: process.env.SOLAPI_SENDER_NUMBER || normalizedPhone,
+      from: senderNumber,
       kakaoOptions: {
         pfId,
         templateId,
@@ -101,10 +107,15 @@ export async function sendBrandMessageViaSolapi(
     return { success: false, error: "SOLAPI_PFID not configured" };
   }
 
+  const senderNumber = process.env.SOLAPI_SENDER_NUMBER;
+  if (!senderNumber) {
+    console.error("[Solapi BrandMessage] SOLAPI_SENDER_NUMBER 미설정");
+    return { success: false, error: "발신번호(SOLAPI_SENDER_NUMBER)가 설정되지 않았습니다." };
+  }
+
   try {
     const kakaoOptions: Record<string, unknown> = {
       pfId,
-      text: message,
     };
 
     if (options?.imageUrl) {
@@ -114,17 +125,22 @@ export async function sendBrandMessageViaSolapi(
       kakaoOptions.buttons = options.buttons;
     }
 
+    console.log("[Solapi BrandMessage] 발송 시도:", { to: normalizedPhone, from: senderNumber, textLength: message.length });
+
     const result = await client.sendOne({
       to: normalizedPhone,
-      from: process.env.SOLAPI_SENDER_NUMBER || normalizedPhone,
+      from: senderNumber,
+      text: message,
       kakaoOptions,
     } as Parameters<typeof client.sendOne>[0]);
 
+    console.log("[Solapi BrandMessage] 발송 성공:", { messageId: result.messageId });
     return { success: true, messageId: result.messageId };
   } catch (err) {
-    const message2 = err instanceof Error ? err.message : "브랜드 메시지 발송 실패";
-    console.error("[Solapi BrandMessage] 발송 실패:", message2);
-    return { success: false, error: message2 };
+    const errMsg = err instanceof Error ? err.message : "브랜드 메시지 발송 실패";
+    const errDetail = err instanceof Error ? err.stack : JSON.stringify(err);
+    console.error("[Solapi BrandMessage] 발송 실패:", errMsg, "\n상세:", errDetail);
+    return { success: false, error: errMsg };
   }
 }
 
