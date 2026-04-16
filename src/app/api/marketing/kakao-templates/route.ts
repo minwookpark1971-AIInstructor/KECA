@@ -41,6 +41,7 @@ export async function GET() {
       const statusMap: Record<string, string> = {
         APPROVED: "approved",
         REJECTED: "rejected",
+        PENDING: "pending_review",
         READY: "pending_review",
         INSPECTING: "pending_review",
       };

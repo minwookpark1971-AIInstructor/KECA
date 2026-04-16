@@ -234,7 +234,7 @@ export async function getApprovedTemplatesFromSolapi(): Promise<
     name: string;
     content: string;
     status: string;
-    buttons?: unknown[];
+    buttons?: readonly unknown[];
   }>
 > {
   const client = getSolapiClient();
@@ -242,12 +242,12 @@ export async function getApprovedTemplatesFromSolapi(): Promise<
 
   try {
     // 솔라피 SDK의 카카오 알림톡 템플릿 목록 조회
-    const result = await (client as unknown as { getAlimtalkTemplates: () => Promise<{ templateList: Array<{ templateId: string; templateName: string; templateContent: string; templateStatus: string; buttons?: unknown[] }> }> }).getAlimtalkTemplates();
+    const result = await client.getKakaoAlimtalkTemplates();
     return (result.templateList || []).map((t) => ({
       templateId: t.templateId,
-      name: t.templateName,
-      content: t.templateContent,
-      status: t.templateStatus,
+      name: t.name,
+      content: t.content || "",
+      status: t.status,
       buttons: t.buttons,
     }));
   } catch (err) {
