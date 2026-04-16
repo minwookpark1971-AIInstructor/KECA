@@ -1,11 +1,19 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { ArrowLeft, AlertTriangle, Send, X, Info, Link2, Plus, Trash2, Image as ImageIcon, ExternalLink, Loader2 } from "lucide-react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import {
+  ArrowLeft, AlertTriangle, Send, X, Info, Link2, Plus, Trash2,
+  Image as ImageIcon, ExternalLink, Loader2, UserPlus, Search,
+  Users, GraduationCap, Phone, Upload, Lock, FileText, RefreshCw,
+  ChevronDown, MessageSquare,
+} from "lucide-react";
 import Link from "next/link";
-import type { Profile, MarketingTemplate } from "@/types";
+import { cn, roleLabels } from "@/lib/utils";
+import type { Profile, MarketingTemplate, MarketingGroup } from "@/types";
+import * as XLSX from "xlsx";
 
 type MessageType = "alimtalk" | "brand_message";
+type BrandMessageType = "text" | "image";
 
 interface LinkButton {
   name: string;
@@ -28,6 +36,7 @@ export default function KakaoComposeClient({ templates }: Props) {
   const [loading, setLoading] = useState(true);
   const [messageType, setMessageType] = useState<MessageType>("alimtalk");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [templateCode, setTemplateCode] = useState("");
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -46,6 +55,40 @@ export default function KakaoComposeClient({ templates }: Props) {
   const [imageUrl, setImageUrl] = useState("");
   const [imageUploading, setImageUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Brand message specific
+  const [brandMessageType, setBrandMessageType] = useState<BrandMessageType>("text");
+  const [isAdMessage, setIsAdMessage] = useState(true);
+  const [unsubscribeNumber, setUnsubscribeNumber] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // 발송 확인 모달 (confirm 대체)
+  const [showConfirmSend, setShowConfirmSend] = useState(false);
+
+  // 수신자 추가 모달
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [allMembers, setAllMembers] = useState<Profile[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [modalSearch, setModalSearch] = useState("");
+  const [modalFilter, setModalFilter] = useState("all");
+  const [modalSelected, setModalSelected] = useState<Set<string>>(new Set());
+
+  // 수신 그룹
+  const [showGroupDropdown, setShowGroupDropdown] = useState(false);
+  const [groups, setGroups] = useState<MarketingGroup[]>([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+
+  // 엑셀 업로드
+  const [showExcelUpload, setShowExcelUpload] = useState(false);
+  const excelInputRef = useRef<HTMLInputElement>(null);
+
+  // 템플릿 선택 모달
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [templateFilter, setTemplateFilter] = useState<"all" | "alimtalk" | "brand_message">("all");
+  const [templateStatusFilter, setTemplateStatusFilter] = useState<"all" | "approved" | "pending_review" | "rejected">("all");
+  const [templateSearch, setTemplateSearch] = useState("");
+  const [previewTemplate, setPreviewTemplate] = useState<MarketingTemplate | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // sessionStorage에서 수신자 ID 로드
   useEffect(() => {
@@ -66,7 +109,10 @@ export default function KakaoComposeClient({ templates }: Props) {
       body: JSON.stringify({ action: "get_recipients", ids }),
     })
       .then((res) => res.json())
-      .then((data) => setRecipients(data.recipients || []))
+      .then((data) => {
+        setRecipients(data.recipients || []);
+        sessionStorage.removeItem("marketing_recipients");
+      })
       .catch(() => setMsg({ type: "error", text: "수신자 정보를 불러오지 못했습니다." }))
       .finally(() => setLoading(false));
   }, []);
@@ -83,7 +129,273 @@ export default function KakaoComposeClient({ templates }: Props) {
   const agreedRecipients = validRecipients.filter((r) => r.marketing_kakao_agreed);
   const notAgreedCount = validRecipients.length - agreedRecipients.length;
 
-  // OG metadata fetch (debounced)
+  // 발송 대상
+  const sendTargets = messageType === "alimtalk" ? validRecipients : agreedRecipients;
+
+  // 글자 수 제한
+  const maxChars = messageType === "brand_message" ? (brandMessageType === "image" ? 400 : 1300) : 0;
+
+  // ─── 수신자 모달 ───
+
+  const openAddModal = async () => {
+    setShowAddModal(true);
+    setModalSearch("");
+    setModalFilter("all");
+    setModalSelected(new Set(recipients.map((r) => r.id)));
+
+    if (allMembers.length === 0) {
+      setMembersLoading(true);
+      try {
+        const res = await fetch("/api/marketing/send-email");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        setAllMembers(data.members || []);
+      } catch {
+        setMsg({ type: "error", text: "회원 목록을 불러오지 못했습니다." });
+      } finally {
+        setMembersLoading(false);
+      }
+    } else {
+      setModalSelected(new Set(recipients.map((r) => r.id)));
+    }
+  };
+
+  const filteredModalMembers = useMemo(() => {
+    return allMembers.filter((m) => {
+      if (modalFilter === "instructor" && !m.is_instructor) return false;
+      if (modalFilter !== "all" && modalFilter !== "instructor" && m.role !== modalFilter) return false;
+      if (modalSearch) {
+        const q = modalSearch.toLowerCase();
+        if (
+          !m.name.toLowerCase().includes(q) &&
+          !m.email.toLowerCase().includes(q) &&
+          !(m.phone && m.phone.includes(modalSearch))
+        )
+          return false;
+      }
+      return true;
+    });
+  }, [allMembers, modalFilter, modalSearch]);
+
+  const toggleModalSelect = (id: string) => {
+    setModalSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const isModalAllSelected =
+    filteredModalMembers.length > 0 && filteredModalMembers.every((m) => modalSelected.has(m.id));
+  const toggleModalSelectAll = () => {
+    if (isModalAllSelected) {
+      const filteredIds = new Set(filteredModalMembers.map((m) => m.id));
+      setModalSelected((prev) => {
+        const next = new Set(prev);
+        filteredIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setModalSelected((prev) => {
+        const next = new Set(prev);
+        filteredModalMembers.forEach((m) => next.add(m.id));
+        return next;
+      });
+    }
+  };
+
+  const confirmAddRecipients = () => {
+    const selectedMembers = allMembers.filter((m) => modalSelected.has(m.id));
+    setRecipients(selectedMembers);
+    setShowAddModal(false);
+  };
+
+  // ─── 수신 그룹 연동 ───
+
+  const loadGroups = async () => {
+    if (groups.length > 0) {
+      setShowGroupDropdown(true);
+      return;
+    }
+    setGroupsLoading(true);
+    setShowGroupDropdown(true);
+    try {
+      const res = await fetch("/api/marketing/groups");
+      const data = await res.json();
+      setGroups(data.groups || []);
+    } catch {
+      setMsg({ type: "error", text: "수신 그룹 목록을 불러오지 못했습니다." });
+    } finally {
+      setGroupsLoading(false);
+    }
+  };
+
+  const loadGroupMembers = async (group: MarketingGroup) => {
+    setShowGroupDropdown(false);
+    if (!group.member_ids || group.member_ids.length === 0) {
+      setMsg({ type: "error", text: "해당 그룹에 회원이 없습니다." });
+      return;
+    }
+    try {
+      const res = await fetch("/api/marketing/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "get_recipients", ids: group.member_ids }),
+      });
+      const data = await res.json();
+      const newMembers: Profile[] = data.recipients || [];
+      setRecipients((prev) => {
+        const existingIds = new Set(prev.map((r) => r.id));
+        const unique = newMembers.filter((m) => !existingIds.has(m.id));
+        return [...prev, ...unique];
+      });
+      setMsg({ type: "success", text: `"${group.name}" 그룹에서 ${newMembers.length}명이 추가되었습니다.` });
+    } catch {
+      setMsg({ type: "error", text: "그룹 회원을 불러오지 못했습니다." });
+    }
+  };
+
+  // ─── 엑셀 업로드 ───
+
+  const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const wb = XLSX.read(evt.target?.result, { type: "binary" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json<Record<string, string>>(ws);
+
+        const existingPhones = new Set(recipients.map((r) => r.phone).filter(Boolean));
+        let added = 0;
+        let duplicated = 0;
+        const newRecipients: Profile[] = [];
+
+        for (const row of rows) {
+          const phone = (row["수신번호"] || row["연락처"] || row["phone"] || row["Phone"] || "")
+            .toString()
+            .replace(/[-\s()]/g, "");
+          if (!phone) continue;
+
+          if (existingPhones.has(phone)) {
+            duplicated++;
+            continue;
+          }
+
+          existingPhones.add(phone);
+          const name = (row["이름"] || row["name"] || row["Name"] || "외부수신자").toString();
+          newRecipients.push({
+            id: `excel_${Date.now()}_${added}`,
+            email: "",
+            name,
+            phone,
+            role: "approved",
+            is_instructor: false,
+            marketing_kakao_agreed: true,
+          } as Profile);
+          added++;
+        }
+
+        setRecipients((prev) => [...prev, ...newRecipients]);
+        setMsg({
+          type: "success",
+          text: `${added}건 추가${duplicated > 0 ? `, ${duplicated}건 중복 제외` : ""}`,
+        });
+      } catch {
+        setMsg({ type: "error", text: "엑셀 파일 파싱에 실패했습니다." });
+      }
+      setShowExcelUpload(false);
+    };
+    reader.readAsBinaryString(file);
+    if (excelInputRef.current) excelInputRef.current.value = "";
+  };
+
+  // ─── 템플릿 관련 ───
+
+  const filteredTemplates = useMemo(() => {
+    return templates.filter((t) => {
+      if (t.channel !== "kakao") return false;
+      if (templateFilter !== "all" && t.type !== templateFilter) return false;
+      if (templateStatusFilter !== "all" && t.kakao_status !== templateStatusFilter) return false;
+      if (templateSearch && !t.name.toLowerCase().includes(templateSearch.toLowerCase())) return false;
+      return true;
+    });
+  }, [templates, templateFilter, templateStatusFilter, templateSearch]);
+
+  const applyTemplate = (template: MarketingTemplate) => {
+    setSelectedTemplateId(template.id);
+    setMessage(template.body);
+    setTemplateCode(template.kakao_template_code || "");
+    if (template.type === "alimtalk" || template.type === "brand_message") {
+      setMessageType(template.type);
+    }
+    setShowTemplateModal(false);
+    setPreviewTemplate(null);
+  };
+
+  const clearTemplate = () => {
+    setSelectedTemplateId("");
+    setTemplateCode("");
+    setMessage("");
+  };
+
+  const selectedTemplate = templates.find((t) => t.id === selectedTemplateId);
+
+  const handleSyncTemplates = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch("/api/marketing/kakao-templates");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setMsg({ type: "success", text: data.message || `${data.synced}개 템플릿 동기화 완료` });
+      window.location.reload();
+    } catch {
+      setMsg({ type: "error", text: "템플릿 동기화에 실패했습니다." });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const renderWithHighlightedVars = (text: string) => {
+    return text.split(/(#\{[^}]+\})/g).map((part, i) =>
+      part.startsWith("#{") ? (
+        <span
+          key={i}
+          className="inline-block px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-mono font-medium"
+        >
+          {part}
+        </span>
+      ) : (
+        <span key={i}>{part}</span>
+      )
+    );
+  };
+
+  const getTemplateVars = (text: string) => {
+    const matches = text.match(/#\{[^}]+\}/g);
+    return matches ? [...new Set(matches)] : [];
+  };
+
+  // ─── 변수 삽입 ───
+
+  const insertVariable = (variable: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const newMessage = message.slice(0, start) + variable + message.slice(end);
+    setMessage(newMessage);
+    setTimeout(() => {
+      textarea.selectionStart = textarea.selectionEnd = start + variable.length;
+      textarea.focus();
+    }, 0);
+  };
+
+  // ─── OG metadata ───
+
   const fetchOgData = useCallback((url: string, index: number) => {
     if (!url) return;
     try {
@@ -91,7 +403,6 @@ export default function KakaoComposeClient({ templates }: Props) {
     } catch {
       return;
     }
-
     setOgLoading((prev) => new Set(prev).add(index));
     fetch(`/api/og-metadata?url=${encodeURIComponent(url)}`)
       .then((res) => res.json())
@@ -122,7 +433,6 @@ export default function KakaoComposeClient({ templates }: Props) {
     if (!newButtonName.trim() || !newButtonUrl.trim()) return;
     if (buttons.length >= 5) return;
     setButtons((prev) => [...prev, { name: newButtonName.trim(), url: newButtonUrl.trim(), type: newButtonType }]);
-    // Fetch OG for the newly added button
     fetchOgData(newButtonUrl.trim(), buttons.length);
     setNewButtonName("");
     setNewButtonUrl("");
@@ -134,7 +444,8 @@ export default function KakaoComposeClient({ templates }: Props) {
     setButtons((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Image upload
+  // ─── Image upload ───
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -155,21 +466,18 @@ export default function KakaoComposeClient({ templates }: Props) {
     }
   };
 
-  const handleSend = async () => {
+  // ─── 발송 ───
+
+  const handleSendClick = () => {
     if (!message.trim()) {
       setMsg({ type: "error", text: "메시지를 입력해주세요." });
       return;
     }
-
-    const target = messageType === "alimtalk" ? validRecipients : agreedRecipients;
-    if (target.length === 0) {
+    if (sendTargets.length === 0) {
       setMsg({ type: "error", text: "발송 가능한 수신자가 없습니다." });
       return;
     }
-
-    // 알림톡은 검수 통과한 템플릿 코드가 필수
-    const selectedTpl = templates.find((t) => t.id === selectedTemplateId);
-    const templateCode = selectedTpl?.kakao_template_code;
+    // 알림톡은 솔라피에 등록·승인된 템플릿 코드가 필수
     if (messageType === "alimtalk" && !templateCode) {
       setMsg({
         type: "error",
@@ -177,27 +485,44 @@ export default function KakaoComposeClient({ templates }: Props) {
       });
       return;
     }
+    setShowConfirmSend(true);
+  };
 
-    if (!confirm(`${target.length}명에게 카카오톡 메시지를 발송하시겠습니까?`)) return;
-
+  const executeSend = async () => {
+    setShowConfirmSend(false);
+    setMsg(null);
     setIsSending(true);
+
+    const finalMessage =
+      isAdMessage && messageType === "brand_message"
+        ? `(광고) KECA\n${message}${unsubscribeNumber ? `\n\n무료수신거부 ${unsubscribeNumber}` : ""}`
+        : message;
+
     try {
       const res = await fetch("/api/marketing/send-kakao", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          recipientIds: target.map((r) => r.id),
+          recipientIds: sendTargets.map((r) => r.id),
           messageType,
-          message,
+          message: finalMessage,
+          templateCode: templateCode || undefined,
           buttons: buttons.length > 0 ? buttons : undefined,
           imageUrl: imageUrl || undefined,
-          templateCode: templateCode || undefined,
         }),
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "발송 실패");
 
-      setMsg({ type: "success", text: `${result.successCount || 0}명에게 메시지가 발송되었습니다.` });
+      // 부분 실패 체크
+      if (result.failCount > 0 && result.successCount > 0) {
+        setMsg({
+          type: "success",
+          text: `${result.successCount}명 발송 성공, ${result.failCount}명 실패`,
+        });
+      } else {
+        setMsg({ type: "success", text: `${result.successCount || 0}명에게 메시지가 발송되었습니다.` });
+      }
       sessionStorage.removeItem("marketing_recipients");
     } catch (err) {
       setMsg({ type: "error", text: err instanceof Error ? err.message : "발송에 실패했습니다." });
@@ -206,11 +531,61 @@ export default function KakaoComposeClient({ templates }: Props) {
     }
   };
 
+  const handleTestSend = async () => {
+    const testPhone = prompt("테스트 수신 번호를 입력하세요 (예: 010-1234-5678)");
+    if (!testPhone || !message.trim()) return;
+    if (messageType === "alimtalk" && !templateCode) {
+      setMsg({
+        type: "error",
+        text: "알림톡 테스트 발송은 등록된 템플릿을 선택해야 합니다.",
+      });
+      return;
+    }
+    setIsSending(true);
+    try {
+      const res = await fetch("/api/marketing/send-kakao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipientIds: [],
+          messageType,
+          message,
+          templateCode: templateCode || undefined,
+          buttons: buttons.length > 0 ? buttons : undefined,
+          imageUrl: imageUrl || undefined,
+          testPhone,
+        }),
+      });
+      const result = await res.json();
+      setMsg({ type: result.error ? "error" : "success", text: result.error || "테스트 발송이 요청되었습니다." });
+    } catch {
+      setMsg({ type: "error", text: "테스트 발송에 실패했습니다." });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const buttonTypeBadge = (type: string) => {
     switch (type) {
-      case "video": return { label: "동영상", cls: "bg-red-50 text-red-600" };
-      case "blog": return { label: "블로그", cls: "bg-green-50 text-green-600" };
-      default: return { label: "일반", cls: "bg-blue-50 text-blue-600" };
+      case "video":
+        return { label: "동영상", cls: "bg-red-50 text-red-600" };
+      case "blog":
+        return { label: "블로그", cls: "bg-green-50 text-green-600" };
+      default:
+        return { label: "일반", cls: "bg-blue-50 text-blue-600" };
+    }
+  };
+
+  const kakaoStatusBadge = (status?: string) => {
+    switch (status) {
+      case "approved":
+        return { label: "승인", cls: "bg-green-100 text-green-700" };
+      case "pending_review":
+        return { label: "심사중", cls: "bg-yellow-100 text-yellow-700" };
+      case "rejected":
+        return { label: "반려", cls: "bg-red-100 text-red-700" };
+      default:
+        return { label: "미등록", cls: "bg-gray-100 text-gray-600" };
     }
   };
 
@@ -232,7 +607,9 @@ export default function KakaoComposeClient({ templates }: Props) {
       </div>
 
       {msg && (
-        <div className={`mb-4 p-3 rounded-lg text-sm ${msg.type === "success" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+        <div
+          className={`mb-4 p-3 rounded-lg text-sm ${msg.type === "success" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}
+        >
           {msg.text}
         </div>
       )}
@@ -245,24 +622,34 @@ export default function KakaoComposeClient({ templates }: Props) {
             <p className="font-medium">2026년 카카오 비즈메시지 정책 안내</p>
             <p>알림톡: 계약/거래에 직접 관련된 정보성 메시지만 가능 (광고 문구 포함 시 반려)</p>
             <p>브랜드 메시지: 채널 친구에게만 발송, 야간(21:00~08:00) 발송 불가</p>
-            <p>발송은 공식 딜러사(솔라피/비즈톡 등)를 통해 처리됩니다.</p>
+            <p>발송은 공식 딜러사(솔라피)를 통해 처리됩니다.</p>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 좌측: 작성 폼 */}
+        {/* ═══ 좌측: 작성 폼 ═══ */}
         <div className="lg:col-span-2 space-y-5">
-          {/* 발송 유형 */}
+          {/* ─── 발송 유형 ─── */}
           <div className="bg-white border border-border-light rounded-xl p-5">
             <p className="text-sm font-medium text-text mb-3">발송 유형</p>
             <div className="flex gap-3">
-              <label className={`flex-1 px-4 py-3 rounded-xl border cursor-pointer transition-colors ${messageType === "alimtalk" ? "border-primary bg-primary/5" : "border-border-light hover:bg-surface"}`}>
+              <label
+                className={cn(
+                  "flex-1 px-4 py-3 rounded-xl border cursor-pointer transition-colors",
+                  messageType === "alimtalk" ? "border-primary bg-primary/5" : "border-border-light hover:bg-surface"
+                )}
+              >
                 <input type="radio" name="type" value="alimtalk" checked={messageType === "alimtalk"} onChange={() => setMessageType("alimtalk")} className="hidden" />
                 <p className="text-sm font-medium text-text">알림톡</p>
                 <p className="text-xs text-text-muted mt-0.5">정보성 메시지 (템플릿 기반)</p>
               </label>
-              <label className={`flex-1 px-4 py-3 rounded-xl border cursor-pointer transition-colors ${messageType === "brand_message" ? "border-yellow-500 bg-yellow-50" : "border-border-light hover:bg-surface"}`}>
+              <label
+                className={cn(
+                  "flex-1 px-4 py-3 rounded-xl border cursor-pointer transition-colors",
+                  messageType === "brand_message" ? "border-yellow-500 bg-yellow-50" : "border-border-light hover:bg-surface"
+                )}
+              >
                 <input type="radio" name="type" value="brand_message" checked={messageType === "brand_message"} onChange={() => setMessageType("brand_message")} className="hidden" />
                 <p className="text-sm font-medium text-text">브랜드 메시지</p>
                 <p className="text-xs text-text-muted mt-0.5">광고/홍보 메시지 (자유 형식)</p>
@@ -270,9 +657,78 @@ export default function KakaoComposeClient({ templates }: Props) {
             </div>
           </div>
 
-          {/* 수신자 */}
+          {/* ─── 수신자 ─── */}
           <div className="bg-white border border-border-light rounded-xl p-5">
-            <p className="text-sm font-medium text-text mb-3">수신자 ({recipients.length}명)</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-medium text-text">수신자 ({recipients.length}명)</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={openAddModal}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-50 text-yellow-700 text-xs font-medium rounded-lg hover:bg-yellow-100 transition-colors border border-yellow-200"
+                >
+                  <UserPlus size={13} />
+                  회원 추가
+                </button>
+                <div className="relative">
+                  <button
+                    onClick={loadGroups}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface text-text-sub text-xs font-medium rounded-lg hover:bg-border-light transition-colors border border-border-light"
+                  >
+                    <Users size={13} />
+                    그룹 불러오기
+                    <ChevronDown size={11} />
+                  </button>
+                  {showGroupDropdown && (
+                    <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-border-light rounded-xl shadow-lg z-20 max-h-60 overflow-y-auto">
+                      {groupsLoading ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 size={16} className="animate-spin text-text-muted" />
+                        </div>
+                      ) : groups.length === 0 ? (
+                        <p className="text-xs text-text-muted p-3 text-center">수신 그룹이 없습니다.</p>
+                      ) : (
+                        groups.map((g) => (
+                          <button
+                            key={g.id}
+                            onClick={() => loadGroupMembers(g)}
+                            className="w-full text-left px-4 py-2.5 hover:bg-surface transition-colors border-b border-border-light last:border-b-0"
+                          >
+                            <p className="text-sm font-medium text-text">{g.name}</p>
+                            <p className="text-xs text-text-muted">
+                              {g.group_type === "dynamic" ? "동적" : "정적"} · {g.member_count || g.member_ids?.length || 0}명
+                            </p>
+                          </button>
+                        ))
+                      )}
+                      <button
+                        onClick={() => setShowGroupDropdown(false)}
+                        className="w-full text-center text-xs text-text-muted py-2 hover:bg-surface border-t border-border-light"
+                      >
+                        닫기
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    setShowExcelUpload(true);
+                    setTimeout(() => excelInputRef.current?.click(), 100);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface text-text-sub text-xs font-medium rounded-lg hover:bg-border-light transition-colors border border-border-light"
+                >
+                  <Upload size={13} />
+                  엑셀
+                </button>
+                <input
+                  ref={excelInputRef}
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={handleExcelUpload}
+                  className="hidden"
+                />
+              </div>
+            </div>
+
             {noPhoneCount > 0 && (
               <div className="flex items-center gap-2 mb-3 p-2.5 bg-red-50 rounded-lg">
                 <AlertTriangle size={14} className="text-red-500" />
@@ -285,88 +741,301 @@ export default function KakaoComposeClient({ templates }: Props) {
                 <span className="text-xs text-yellow-700">{notAgreedCount}명이 카카오톡 수신에 동의하지 않아 제외됩니다.</span>
               </div>
             )}
+
             {recipients.length === 0 ? (
-              <p className="text-sm text-text-muted">회원관리에서 회원을 선택한 후 &quot;카카오톡 발송&quot; 버튼을 눌러주세요.</p>
+              <div className="text-center py-8 bg-yellow-50/50 rounded-xl border border-dashed border-yellow-200">
+                <Phone size={32} className="mx-auto text-yellow-400 mb-3" />
+                <p className="text-sm text-text-sub mb-1">수신자를 선택해주세요</p>
+                <p className="text-xs text-text-muted mb-4">회원 목록에서 개별 또는 그룹(정회원/준회원/강사)으로 선택할 수 있습니다.</p>
+                <button
+                  onClick={openAddModal}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-yellow-500 text-white text-sm font-medium rounded-lg hover:bg-yellow-600 transition-colors shadow-sm"
+                >
+                  <UserPlus size={16} />
+                  수신자 선택
+                </button>
+              </div>
             ) : (
               <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
                 {recipients.map((r) => (
-                  <span key={r.id} className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-full ${r.phone ? "bg-yellow-50 text-yellow-700" : "bg-gray-100 text-gray-400 line-through"}`}>
+                  <span
+                    key={r.id}
+                    className={cn(
+                      "inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-full",
+                      r.phone ? "bg-yellow-50 text-yellow-700" : "bg-gray-100 text-gray-400 line-through"
+                    )}
+                  >
                     {r.name} {r.phone ? `(${r.phone})` : "(연락처 없음)"}
-                    <button onClick={() => removeRecipient(r.id)} className="hover:text-error"><X size={12} /></button>
+                    {!r.phone && <AlertTriangle size={10} className="text-gray-400" />}
+                    <button onClick={() => removeRecipient(r.id)} className="hover:text-error">
+                      <X size={12} />
+                    </button>
                   </span>
                 ))}
               </div>
             )}
           </div>
 
-          {/* 템플릿 선택 */}
-          {(() => {
-            const filteredTemplates = templates.filter(
-              (t) => t.channel === "kakao" && (messageType === "alimtalk" ? t.type === "alimtalk" : t.type === "brand_message")
-            );
-            return filteredTemplates.length > 0 ? (
-              <div className="bg-white border border-border-light rounded-xl p-5">
-                <p className="text-sm font-medium text-text mb-2">템플릿 선택 (선택사항)</p>
-                <select
-                  value={selectedTemplateId}
-                  onChange={(e) => {
-                    setSelectedTemplateId(e.target.value);
-                    const tpl = templates.find((t) => t.id === e.target.value);
-                    if (tpl) setMessage(tpl.body);
-                  }}
-                  className="w-full px-3 py-2 border border-border-light rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="">직접 작성</option>
-                  {filteredTemplates.map((t) => (
-                    <option key={t.id} value={t.id}>{t.name}{t.kakao_template_code ? ` (${t.kakao_template_code})` : ""}</option>
-                  ))}
-                </select>
-                {selectedTemplateId && (() => {
-                  const selected = templates.find((t) => t.id === selectedTemplateId);
-                  return selected?.kakao_template_code ? (
-                    <p className="mt-2 text-xs text-text-muted bg-surface rounded-lg px-3 py-2">
-                      템플릿 코드: <span className="font-mono font-medium">{selected.kakao_template_code}</span>
-                    </p>
-                  ) : null;
-                })()}
-              </div>
-            ) : null;
-          })()}
-
-          {/* 메시지 작성 */}
+          {/* ─── 템플릿 선택 ─── */}
           <div className="bg-white border border-border-light rounded-xl p-5">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-text">
-                {messageType === "alimtalk" ? "메시지 내용 (템플릿)" : "메시지 내용"}
-              </p>
-              <p className="text-xs text-text-muted">변수: {"#{이름}"}, {"#{연락처}"}</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-medium text-text">템플릿</p>
+              <button
+                onClick={handleSyncTemplates}
+                disabled={isSyncing}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-sub bg-surface rounded-lg hover:bg-border-light transition-colors disabled:opacity-50"
+              >
+                <RefreshCw size={12} className={isSyncing ? "animate-spin" : ""} />
+                솔라피 동기화
+              </button>
             </div>
-            {messageType === "alimtalk" && (
-              <div className="mb-3 p-2.5 bg-surface rounded-lg">
-                <p className="text-xs text-text-muted">
-                  알림톡은 카카오 검수를 통과한 템플릿만 사용 가능합니다. 딜러사 대시보드에서 템플릿을 등록하고 승인받은 후 사용하세요.
-                </p>
+
+            {selectedTemplate ? (
+              <div className="p-3 bg-surface rounded-lg">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-text">{selectedTemplate.name}</p>
+                    {selectedTemplate.kakao_template_code && (
+                      <p className="text-xs text-text-muted mt-0.5">
+                        코드: <span className="font-mono">{selectedTemplate.kakao_template_code}</span>
+                      </p>
+                    )}
+                    <div className="flex gap-1.5 mt-1.5">
+                      <span className={cn("px-1.5 py-0.5 text-xs rounded", kakaoStatusBadge(selectedTemplate.kakao_status).cls)}>
+                        {kakaoStatusBadge(selectedTemplate.kakao_status).label}
+                      </span>
+                      <span className="px-1.5 py-0.5 text-xs rounded bg-surface text-text-muted">
+                        {selectedTemplate.type === "alimtalk" ? "알림톡" : "브랜드메시지"}
+                      </span>
+                    </div>
+                  </div>
+                  <button onClick={clearTemplate} className="p-1 text-text-muted hover:text-error rounded">
+                    <X size={14} />
+                  </button>
+                </div>
               </div>
+            ) : (
+              <p className="text-sm text-text-muted mb-3">직접 작성 또는 템플릿을 선택하세요.</p>
             )}
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={8}
-              placeholder={messageType === "alimtalk"
-                ? "[KECA] #{이름}님, 교육 일정 안내\n\n교육명: OO 과정\n일시: 2026-00-00 10:00\n장소: OOO\n\n자세한 내용은 홈페이지를 확인해주세요."
-                : "[KECA] 신규 교육 프로그램 안내\n\n안녕하세요, #{이름}님!\n\nKECA에서 새로운 교육 프로그램을 준비했습니다.\n\n자세한 내용 확인하기 >"}
-              className="w-full px-3 py-2 border border-border-light rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-y"
-            />
+
+            <button
+              onClick={() => {
+                setShowTemplateModal(true);
+                setPreviewTemplate(null);
+                setTemplateSearch("");
+              }}
+              className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-primary bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors"
+            >
+              <FileText size={14} />
+              템플릿 선택
+            </button>
           </div>
 
-          {/* 링크 버튼 */}
+          {/* ─── 메시지 작성 ─── */}
+          <div className="bg-white border border-border-light rounded-xl p-5">
+            {messageType === "alimtalk" ? (
+              /* ── 알림톡: 템플릿 기반 ── */
+              <>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-text">메시지 내용 (템플릿)</p>
+                  <p className="text-xs text-text-muted">변수: {"#{이름}"}, {"#{연락처}"}</p>
+                </div>
+                <div className="mb-3 p-2.5 bg-surface rounded-lg">
+                  <p className="text-xs text-text-muted">
+                    알림톡은 카카오 검수를 통과한 템플릿만 사용 가능합니다. 솔라피 대시보드에서 템플릿을 등록하고 승인받은 후 사용하세요.
+                  </p>
+                </div>
+
+                {selectedTemplateId && message ? (
+                  <>
+                    <div className="relative">
+                      <div className="absolute top-2 right-2">
+                        <Lock size={14} className="text-text-muted" />
+                      </div>
+                      <div className="w-full px-3 py-2 border border-border-light rounded-lg text-sm bg-gray-50 whitespace-pre-wrap min-h-[200px]">
+                        {renderWithHighlightedVars(message)}
+                      </div>
+                    </div>
+                    {(() => {
+                      const vars = getTemplateVars(message);
+                      return vars.length > 0 ? (
+                        <div className="mt-2 p-2.5 bg-blue-50 rounded-lg">
+                          <p className="text-xs text-blue-700">
+                            이 템플릿에는 {vars.join(", ")} 변수가 포함되어 있습니다. 수신자의 해당 정보가 자동으로 치환됩니다.
+                          </p>
+                        </div>
+                      ) : null;
+                    })()}
+                  </>
+                ) : (
+                  <>
+                    <textarea
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      rows={8}
+                      placeholder={"[KECA] #{이름}님, 교육 일정 안내\n\n교육명: OO 과정\n일시: 2026-00-00 10:00\n장소: OOO\n\n자세한 내용은 홈페이지를 확인해주세요."}
+                      className="w-full px-3 py-2 border border-border-light rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-y"
+                    />
+                    <p className="text-xs text-text-muted mt-1">솔라피에서 검수 승인된 템플릿 사용을 권장합니다.</p>
+                  </>
+                )}
+                <p className="text-xs text-text-muted text-right mt-1">{message.length}자</p>
+              </>
+            ) : (
+              /* ── 브랜드 메시지: 자유 형식 ── */
+              <>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-text">메시지 내용 (자유 작성)</p>
+                </div>
+
+                {/* 메시지 유형 서브 탭 */}
+                <div className="flex gap-2 mb-3">
+                  {(
+                    [
+                      { key: "text", label: "텍스트형" },
+                      { key: "image", label: "이미지형" },
+                    ] as const
+                  ).map((t) => (
+                    <button
+                      key={t.key}
+                      onClick={() => setBrandMessageType(t.key)}
+                      className={cn(
+                        "px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors",
+                        brandMessageType === t.key
+                          ? "border-yellow-500 bg-yellow-50 text-yellow-700"
+                          : "border-border-light text-text-sub hover:bg-surface"
+                      )}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* 변수 삽입 버튼 */}
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs text-text-muted">변수 삽입:</span>
+                  {["#{이름}", "#{연락처}"].map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => insertVariable(v)}
+                      className="px-2 py-1 text-xs font-mono bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+
+                {/* 이미지형: 이미지 업로드 */}
+                {brandMessageType === "image" && (
+                  <div className="mb-3">
+                    {imageUrl ? (
+                      <div className="relative inline-block">
+                        <img src={imageUrl} alt="첨부 이미지" className="w-48 h-32 object-cover rounded-lg border border-border-light" />
+                        <button
+                          onClick={() => setImageUrl("")}
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={imageUploading}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 border border-dashed border-border rounded-lg text-sm text-text-sub hover:bg-surface transition-colors disabled:opacity-50"
+                        >
+                          {imageUploading ? (
+                            <>
+                              <Loader2 size={14} className="animate-spin" /> 업로드 중...
+                            </>
+                          ) : (
+                            <>
+                              <ImageIcon size={14} /> 이미지 선택
+                            </>
+                          )}
+                        </button>
+                        <p className="text-xs text-text-muted mt-1.5">800x400 권장, JPG/PNG, 최대 5MB</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 텍스트 입력 */}
+                <textarea
+                  ref={textareaRef}
+                  value={message}
+                  onChange={(e) => {
+                    if (maxChars > 0 && e.target.value.length > maxChars) return;
+                    setMessage(e.target.value);
+                  }}
+                  rows={brandMessageType === "image" ? 5 : 8}
+                  placeholder={"안녕하세요, #{이름}님!\n\nKECA에서 새로운 교육 프로그램을 준비했습니다.\n\n자세한 내용 확인하기 >"}
+                  className="w-full px-3 py-2 border border-border-light rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-200 resize-y"
+                />
+                <div className="flex items-center justify-between mt-1">
+                  <div />
+                  <p
+                    className={cn(
+                      "text-xs",
+                      maxChars > 0 && message.length > maxChars * 0.92
+                        ? message.length >= maxChars
+                          ? "text-red-500 font-medium"
+                          : "text-yellow-600"
+                        : "text-text-muted"
+                    )}
+                  >
+                    {message.length}/{maxChars.toLocaleString()}자
+                  </p>
+                </div>
+
+                {/* 광고성 메시지 */}
+                <div className="mt-3 space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isAdMessage}
+                      onChange={(e) => setIsAdMessage(e.target.checked)}
+                      className="rounded border-border text-yellow-500 focus:ring-yellow-200"
+                    />
+                    <span className="text-sm text-text">광고성 메시지</span>
+                  </label>
+                  {isAdMessage && (
+                    <div className="p-2.5 bg-yellow-50 rounded-lg space-y-2">
+                      <p className="text-xs text-yellow-700">
+                        &quot;(광고)&quot; 접두사와 수신거부 안내가 메시지에 자동 추가됩니다.
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-yellow-700 whitespace-nowrap">080 수신거부:</label>
+                        <input
+                          value={unsubscribeNumber}
+                          onChange={(e) => setUnsubscribeNumber(e.target.value)}
+                          placeholder="080-XXX-XXXX"
+                          className="flex-1 px-2 py-1 border border-yellow-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-yellow-300"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-3 p-2.5 bg-surface rounded-lg">
+                  <p className="text-xs text-text-muted">
+                    브랜드 메시지는 채널 친구에게만 발송 가능하며, 야간(21:00~08:00) 발송이 불가합니다. 광고성 메시지 발송 시 관련 법률을 준수해 주세요.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* ─── 링크 버튼 ─── */}
           <div className="bg-white border border-border-light rounded-xl p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Link2 size={16} className="text-text-sub" />
                 <p className="text-sm font-medium text-text">링크 버튼 ({buttons.length}/5)</p>
               </div>
-              {buttons.length < 5 && (
+              {buttons.length < 5 && !(messageType === "alimtalk" && selectedTemplateId) && (
                 <button
                   onClick={() => setShowAddButton(true)}
                   className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-primary bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors"
@@ -377,7 +1046,10 @@ export default function KakaoComposeClient({ templates }: Props) {
               )}
             </div>
 
-            {/* Existing buttons */}
+            {messageType === "alimtalk" && selectedTemplateId && (
+              <p className="text-xs text-text-muted mb-3">템플릿에 설정된 버튼 정보가 사용됩니다.</p>
+            )}
+
             {buttons.length > 0 && (
               <div className="space-y-3 mb-3">
                 {buttons.map((btn, idx) => {
@@ -391,17 +1063,22 @@ export default function KakaoComposeClient({ templates }: Props) {
                             <span className="text-sm font-medium text-text">{btn.name}</span>
                             <span className={`px-1.5 py-0.5 text-xs rounded ${badge.cls}`}>{badge.label}</span>
                           </div>
-                          <a href={btn.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline flex items-center gap-1 truncate max-w-xs">
+                          <a
+                            href={btn.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-500 hover:underline flex items-center gap-1 truncate max-w-xs"
+                          >
                             {btn.url}
                             <ExternalLink size={10} />
                           </a>
                         </div>
-                        <button onClick={() => removeButton(idx)} className="p-1 text-text-muted hover:text-error rounded">
-                          <Trash2 size={14} />
-                        </button>
+                        {!(messageType === "alimtalk" && selectedTemplateId) && (
+                          <button onClick={() => removeButton(idx)} className="p-1 text-text-muted hover:text-error rounded">
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
-
-                      {/* OG Preview */}
                       {ogLoading.has(idx) ? (
                         <div className="mt-2 flex items-center gap-2 text-xs text-text-muted">
                           <Loader2 size={12} className="animate-spin" />
@@ -409,9 +1086,7 @@ export default function KakaoComposeClient({ templates }: Props) {
                         </div>
                       ) : og ? (
                         <div className="mt-2 flex gap-2 p-2 bg-surface rounded-lg">
-                          {og.image && (
-                            <img src={og.image} alt="" className="w-16 h-16 object-cover rounded shrink-0" />
-                          )}
+                          {og.image && <img src={og.image} alt="" className="w-16 h-16 object-cover rounded shrink-0" />}
                           <div className="min-w-0">
                             {og.title && <p className="text-xs font-medium text-text truncate">{og.title}</p>}
                             {og.description && <p className="text-xs text-text-muted line-clamp-2">{og.description}</p>}
@@ -424,17 +1099,18 @@ export default function KakaoComposeClient({ templates }: Props) {
               </div>
             )}
 
-            {/* Add button form */}
             {showAddButton && (
               <div className="border border-dashed border-border rounded-lg p-4 space-y-3">
                 <div>
-                  <label className="text-xs font-medium text-text-sub">버튼 이름</label>
+                  <label className="text-xs font-medium text-text-sub">버튼 이름 (14자 이내)</label>
                   <input
                     value={newButtonName}
                     onChange={(e) => setNewButtonName(e.target.value)}
+                    maxLength={14}
                     placeholder="예: 자세히 보기"
                     className="w-full mt-1 px-3 py-2 border border-border-light rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
+                  <p className="text-xs text-text-muted mt-0.5">{newButtonName.length}/14자</p>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-text-sub">URL</label>
@@ -457,8 +1133,6 @@ export default function KakaoComposeClient({ templates }: Props) {
                     <option value="blog">블로그</option>
                   </select>
                 </div>
-
-                {/* OG Preview for new button */}
                 {ogLoading.has(-1) ? (
                   <div className="flex items-center gap-2 text-xs text-text-muted">
                     <Loader2 size={12} className="animate-spin" />
@@ -471,14 +1145,23 @@ export default function KakaoComposeClient({ templates }: Props) {
                     )}
                     <div className="min-w-0">
                       {ogData[newButtonUrl].title && <p className="text-xs font-medium text-text truncate">{ogData[newButtonUrl].title}</p>}
-                      {ogData[newButtonUrl].description && <p className="text-xs text-text-muted line-clamp-2">{ogData[newButtonUrl].description}</p>}
+                      {ogData[newButtonUrl].description && (
+                        <p className="text-xs text-text-muted line-clamp-2">{ogData[newButtonUrl].description}</p>
+                      )}
                     </div>
                   </div>
                 ) : null}
-
                 <div className="flex gap-2">
-                  <button onClick={() => setShowAddButton(false)} className="flex-1 px-3 py-2 text-sm text-text-sub bg-surface rounded-lg hover:bg-border-light">취소</button>
-                  <button onClick={handleAddButton} disabled={!newButtonName.trim() || !newButtonUrl.trim()} className="flex-1 px-3 py-2 text-sm text-white bg-primary rounded-lg hover:bg-primary-dark disabled:opacity-50">추가</button>
+                  <button onClick={() => setShowAddButton(false)} className="flex-1 px-3 py-2 text-sm text-text-sub bg-surface rounded-lg hover:bg-border-light">
+                    취소
+                  </button>
+                  <button
+                    onClick={handleAddButton}
+                    disabled={!newButtonName.trim() || !newButtonUrl.trim()}
+                    className="flex-1 px-3 py-2 text-sm text-white bg-primary rounded-lg hover:bg-primary-dark disabled:opacity-50"
+                  >
+                    추가
+                  </button>
                 </div>
               </div>
             )}
@@ -488,14 +1171,13 @@ export default function KakaoComposeClient({ templates }: Props) {
             )}
           </div>
 
-          {/* 이미지 첨부 (브랜드 메시지만) */}
-          {messageType === "brand_message" && (
+          {/* ─── 이미지 첨부 (브랜드 메시지 텍스트형만) ─── */}
+          {messageType === "brand_message" && brandMessageType === "text" && (
             <div className="bg-white border border-border-light rounded-xl p-5">
               <div className="flex items-center gap-2 mb-3">
                 <ImageIcon size={16} className="text-text-sub" />
-                <p className="text-sm font-medium text-text">이미지 첨부</p>
+                <p className="text-sm font-medium text-text">이미지 첨부 (선택)</p>
               </div>
-
               {imageUrl ? (
                 <div className="relative inline-block">
                   <img src={imageUrl} alt="첨부 이미지" className="w-48 h-32 object-cover rounded-lg border border-border-light" />
@@ -508,22 +1190,20 @@ export default function KakaoComposeClient({ templates }: Props) {
                 </div>
               ) : (
                 <div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     disabled={imageUploading}
                     className="inline-flex items-center gap-1.5 px-4 py-2 border border-dashed border-border rounded-lg text-sm text-text-sub hover:bg-surface transition-colors disabled:opacity-50"
                   >
                     {imageUploading ? (
-                      <><Loader2 size={14} className="animate-spin" /> 업로드 중...</>
+                      <>
+                        <Loader2 size={14} className="animate-spin" /> 업로드 중...
+                      </>
                     ) : (
-                      <><ImageIcon size={14} /> 이미지 선택</>
+                      <>
+                        <ImageIcon size={14} /> 이미지 선택
+                      </>
                     )}
                   </button>
                   <p className="text-xs text-text-muted mt-1.5">JPG, PNG 등 이미지 파일 (권장 크기: 800x400px)</p>
@@ -533,7 +1213,7 @@ export default function KakaoComposeClient({ templates }: Props) {
           )}
         </div>
 
-        {/* 우측: 액션 패널 */}
+        {/* ═══ 우측: 액션 패널 ═══ */}
         <div className="space-y-4">
           <div className="bg-white border border-border-light rounded-xl p-5 sticky top-20">
             <h3 className="text-sm font-bold text-text mb-4">발송 정보</h3>
@@ -548,9 +1228,7 @@ export default function KakaoComposeClient({ templates }: Props) {
               </div>
               <div className="flex justify-between">
                 <span className="text-text-sub">발송 대상</span>
-                <span className="font-medium text-green-600">
-                  {messageType === "alimtalk" ? validRecipients.length : agreedRecipients.length}명
-                </span>
+                <span className="font-medium text-green-600">{sendTargets.length}명</span>
               </div>
               {buttons.length > 0 && (
                 <div className="flex justify-between">
@@ -567,74 +1245,28 @@ export default function KakaoComposeClient({ templates }: Props) {
             </div>
 
             <div className="mt-5">
-              {(() => {
-                const selectedTpl = templates.find((t) => t.id === selectedTemplateId);
-                const needsTemplate = messageType === "alimtalk" && !selectedTpl?.kakao_template_code;
-                return (
-                  <>
-                    <button
-                      onClick={handleSend}
-                      disabled={
-                        isSending ||
-                        (messageType === "alimtalk" ? validRecipients.length === 0 : agreedRecipients.length === 0) ||
-                        !message.trim() ||
-                        needsTemplate
-                      }
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-yellow-500 text-white text-sm font-medium rounded-xl hover:bg-yellow-600 transition-colors disabled:opacity-50"
-                    >
-                      <Send size={16} />
-                      {isSending ? "발송 중..." : "카카오톡 발송"}
-                    </button>
-                    {needsTemplate && (
-                      <p className="mt-2 text-xs text-yellow-700">
-                        알림톡 발송에는 솔라피에 등록된 템플릿 선택이 필요합니다.
-                      </p>
-                    )}
-                  </>
-                );
-              })()}
+              <button
+                onClick={handleSendClick}
+                disabled={
+                  isSending ||
+                  sendTargets.length === 0 ||
+                  !message.trim() ||
+                  (messageType === "alimtalk" && !templateCode)
+                }
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-yellow-500 text-white text-sm font-medium rounded-xl hover:bg-yellow-600 transition-colors disabled:opacity-50"
+              >
+                <Send size={16} />
+                {isSending ? "발송 중..." : messageType === "alimtalk" ? "알림톡 발송" : "브랜드 메시지 발송"}
+              </button>
+              {messageType === "alimtalk" && !templateCode && (
+                <p className="mt-2 text-xs text-yellow-700">
+                  알림톡 발송에는 솔라피에 등록된 템플릿 선택이 필요합니다.
+                </p>
+              )}
             </div>
 
-            {/* 테스트 발송 */}
             <button
-              onClick={async () => {
-                const testPhone = prompt("테스트 수신 번호를 입력하세요 (예: 010-1234-5678)");
-                if (!testPhone || !message.trim()) return;
-
-                // 알림톡은 검수 통과한 템플릿 코드가 필수
-                const selectedTpl = templates.find((t) => t.id === selectedTemplateId);
-                const templateCode = selectedTpl?.kakao_template_code;
-                if (messageType === "alimtalk" && !templateCode) {
-                  setMsg({
-                    type: "error",
-                    text: "알림톡 테스트 발송은 등록된 템플릿을 선택해야 합니다.",
-                  });
-                  return;
-                }
-
-                setIsSending(true);
-                try {
-                  const res = await fetch("/api/marketing/send-kakao", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      recipientIds: [],
-                      messageType,
-                      message,
-                      buttons: buttons.length > 0 ? buttons : undefined,
-                      imageUrl: imageUrl || undefined,
-                      templateCode: templateCode || undefined,
-                      testPhone,
-                    }),
-                  });
-                  const result = await res.json();
-                  setMsg({ type: result.error ? "error" : "success", text: result.error || "테스트 발송이 요청되었습니다." });
-                } catch {
-                  setMsg({ type: "error", text: "테스트 발송에 실패했습니다." });
-                } finally {
-                  setIsSending(false);
-                }
-              }}
+              onClick={handleTestSend}
               disabled={isSending || !message.trim()}
               className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-surface text-text-sub text-xs font-medium rounded-xl hover:bg-border-light transition-colors disabled:opacity-50 mt-2"
             >
@@ -645,12 +1277,459 @@ export default function KakaoComposeClient({ templates }: Props) {
               <p className="text-xs text-text-muted">
                 {messageType === "alimtalk"
                   ? "알림톡은 수신 동의 없이 발송 가능하지만, 계약/거래 관련 정보만 허용됩니다."
-                  : "브랜드 메시지는 카카오톡 채널 친구이며 수신 동의한 회원에게만 발송됩니다."}
+                  : "브랜드 메시지는 채널 친구 + 광고 수신 동의 고객에게만 발송됩니다."}
               </p>
             </div>
           </div>
         </div>
       </div>
+
+      {/* ═══ 발송 확인 모달 ═══ */}
+      {showConfirmSend && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full">
+            <div className="p-6 text-center">
+              <div className="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center mx-auto mb-4">
+                <Send size={20} className="text-yellow-600" />
+              </div>
+              <h3 className="text-lg font-bold text-text mb-2">
+                {messageType === "alimtalk" ? "알림톡" : "브랜드 메시지"} 발송 확인
+              </h3>
+              <p className="text-sm text-text-sub">
+                <span className="font-bold text-yellow-600">{sendTargets.length}명</span>에게{" "}
+                {messageType === "alimtalk" ? "알림톡" : "브랜드 메시지"}을 발송합니다.
+              </p>
+              <p className="text-xs text-text-muted mt-1">발송 후에는 취소할 수 없습니다.</p>
+            </div>
+            <div className="flex gap-2 p-5 border-t border-border-light">
+              <button
+                onClick={() => setShowConfirmSend(false)}
+                className="flex-1 px-4 py-2.5 text-sm text-text-sub bg-surface rounded-xl hover:bg-border-light transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={executeSend}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-yellow-500 text-white text-sm font-medium rounded-xl hover:bg-yellow-600 transition-colors"
+              >
+                <Send size={14} />
+                발송
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ 수신자 추가 모달 ═══ */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between p-5 border-b border-border-light shrink-0">
+              <h3 className="text-lg font-bold text-text">수신자 선택</h3>
+              <button onClick={() => setShowAddModal(false)} className="p-1 text-text-muted hover:text-text">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="px-5 pt-4 pb-3 space-y-3 shrink-0">
+              {/* 그룹 빠른 선택 */}
+              {!membersLoading && allMembers.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-text-muted mb-2">그룹 선택</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {[
+                      { label: "정회원", icon: Users, color: "bg-green-50 text-green-700 border-green-200 hover:bg-green-100", filter: (m: Profile) => m.role === "member" },
+                      { label: "준회원", icon: Users, color: "bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100", filter: (m: Profile) => m.role === "associate" },
+                      { label: "강사", icon: GraduationCap, color: "bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100", filter: (m: Profile) => m.is_instructor },
+                    ].map((group) => {
+                      const groupMembers = allMembers.filter(group.filter);
+                      const allGroupSelected = groupMembers.length > 0 && groupMembers.every((m) => modalSelected.has(m.id));
+                      return (
+                        <button
+                          key={group.label}
+                          onClick={() => {
+                            setModalSelected((prev) => {
+                              const next = new Set(prev);
+                              if (allGroupSelected) groupMembers.forEach((m) => next.delete(m.id));
+                              else groupMembers.forEach((m) => next.add(m.id));
+                              return next;
+                            });
+                          }}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-colors",
+                            allGroupSelected ? "bg-yellow-500 text-white border-yellow-500" : group.color
+                          )}
+                        >
+                          <group.icon size={13} />
+                          {group.label} ({groupMembers.length})
+                        </button>
+                      );
+                    })}
+                    <button
+                      onClick={() => {
+                        const allSelected = allMembers.length > 0 && allMembers.every((m) => modalSelected.has(m.id));
+                        setModalSelected(allSelected ? new Set() : new Set(allMembers.map((m) => m.id)));
+                      }}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-colors",
+                        allMembers.length > 0 && allMembers.every((m) => modalSelected.has(m.id))
+                          ? "bg-yellow-500 text-white border-yellow-500"
+                          : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+                      )}
+                    >
+                      <Phone size={13} />
+                      전체 ({allMembers.length})
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 필터 탭 */}
+              <div className="flex gap-1 bg-surface border border-border-light rounded-lg p-1 flex-wrap">
+                {[
+                  { key: "all", label: "전체" },
+                  { key: "approved", label: "승인완료" },
+                  { key: "associate", label: "준회원" },
+                  { key: "member", label: "정회원" },
+                  { key: "instructor", label: "강사" },
+                ].map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => setModalFilter(f.key)}
+                    className={cn(
+                      "px-3 py-1 text-xs font-medium rounded-md transition-colors",
+                      modalFilter === f.key ? "bg-yellow-500 text-white" : "text-text-sub hover:bg-white"
+                    )}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* 검색 */}
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+                <input
+                  type="text"
+                  value={modalSearch}
+                  onChange={(e) => setModalSearch(e.target.value)}
+                  placeholder="이름, 이메일 또는 연락처 검색"
+                  className="w-full pl-9 pr-4 py-2 border border-border-light rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-200"
+                />
+              </div>
+            </div>
+
+            {/* 회원 목록 */}
+            <div className="flex-1 overflow-y-auto px-5">
+              {membersLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin w-6 h-6 border-2 border-yellow-500 border-t-transparent rounded-full" />
+                </div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-white">
+                    <tr className="border-b border-border-light text-text-sub">
+                      <th className="text-center px-2 py-2 w-10">
+                        <input
+                          type="checkbox"
+                          checked={isModalAllSelected}
+                          onChange={toggleModalSelectAll}
+                          className="rounded border-border text-yellow-500 focus:ring-yellow-200"
+                        />
+                      </th>
+                      <th className="text-left px-3 py-2 font-medium">이름</th>
+                      <th className="text-left px-3 py-2 font-medium">연락처</th>
+                      <th className="text-left px-3 py-2 font-medium">이메일</th>
+                      <th className="text-center px-3 py-2 font-medium">유형</th>
+                      <th className="text-center px-3 py-2 font-medium">카카오동의</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-light">
+                    {filteredModalMembers.map((m) => (
+                      <tr
+                        key={m.id}
+                        className={cn("hover:bg-surface/50 cursor-pointer", modalSelected.has(m.id) && "bg-yellow-50/50")}
+                        onClick={() => toggleModalSelect(m.id)}
+                      >
+                        <td className="text-center px-2 py-2">
+                          <input
+                            type="checkbox"
+                            checked={modalSelected.has(m.id)}
+                            onChange={() => toggleModalSelect(m.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="rounded border-border text-yellow-500 focus:ring-yellow-200"
+                          />
+                        </td>
+                        <td className="px-3 py-2 font-medium text-text">{m.name}</td>
+                        <td className="px-3 py-2 text-text-sub text-xs">
+                          {m.phone ? (
+                            m.phone
+                          ) : (
+                            <span className="flex items-center gap-1 text-gray-400">
+                              <AlertTriangle size={10} />
+                              (없음)
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-text-sub text-xs">{m.email}</td>
+                        <td className="px-3 py-2 text-center">
+                          <span className="text-xs text-text-muted">{roleLabels[m.role] || m.role}</span>
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <span className={`text-xs ${m.marketing_kakao_agreed ? "text-green-600" : "text-gray-400"}`}>
+                            {m.marketing_kakao_agreed ? "동의" : "미동의"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {!membersLoading && filteredModalMembers.length === 0 && (
+                <p className="text-sm text-text-muted text-center py-8">검색 결과가 없습니다.</p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between p-5 border-t border-border-light shrink-0">
+              <span className="text-sm text-text-sub">
+                <span className="text-yellow-600 font-bold">{modalSelected.size}</span>명 선택됨
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 text-sm text-text-sub bg-surface rounded-xl hover:bg-border-light transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={confirmAddRecipients}
+                  className="px-4 py-2 bg-yellow-500 text-white text-sm font-medium rounded-xl hover:bg-yellow-600 transition-colors"
+                >
+                  수신자 적용
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ 템플릿 선택 모달 ═══ */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between p-5 border-b border-border-light shrink-0">
+              <h3 className="text-lg font-bold text-text">템플릿 선택</h3>
+              <button onClick={() => setShowTemplateModal(false)} className="p-1 text-text-muted hover:text-text">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="flex-1 flex overflow-hidden">
+              {/* 좌측: 템플릿 리스트 */}
+              <div className="w-[60%] border-r border-border-light flex flex-col">
+                <div className="p-4 space-y-3 shrink-0">
+                  {/* 유형 필터 */}
+                  <div className="flex gap-1 bg-surface rounded-lg p-1">
+                    {(
+                      [
+                        { key: "all", label: "전체" },
+                        { key: "alimtalk", label: "알림톡" },
+                        { key: "brand_message", label: "브랜드메시지" },
+                      ] as const
+                    ).map((f) => (
+                      <button
+                        key={f.key}
+                        onClick={() => setTemplateFilter(f.key)}
+                        className={cn(
+                          "flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
+                          templateFilter === f.key ? "bg-white text-text shadow-sm" : "text-text-sub hover:text-text"
+                        )}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* 상태 필터 */}
+                  <div className="flex gap-1.5 flex-wrap">
+                    {(
+                      [
+                        { key: "all", label: "전체", cls: "bg-gray-100 text-gray-600" },
+                        { key: "approved", label: "승인", cls: "bg-green-100 text-green-700" },
+                        { key: "pending_review", label: "심사중", cls: "bg-yellow-100 text-yellow-700" },
+                        { key: "rejected", label: "반려", cls: "bg-red-100 text-red-700" },
+                      ] as const
+                    ).map((f) => (
+                      <button
+                        key={f.key}
+                        onClick={() => setTemplateStatusFilter(f.key)}
+                        className={cn(
+                          "px-2.5 py-1 text-xs rounded-full transition-colors border",
+                          templateStatusFilter === f.key
+                            ? "border-text font-medium ring-1 ring-text/20"
+                            : "border-transparent",
+                          f.cls
+                        )}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* 검색 */}
+                  <div className="relative">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+                    <input
+                      type="text"
+                      value={templateSearch}
+                      onChange={(e) => setTemplateSearch(e.target.value)}
+                      placeholder="템플릿 이름 검색"
+                      className="w-full pl-9 pr-4 py-2 border border-border-light rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                </div>
+
+                {/* 템플릿 카드 리스트 */}
+                <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
+                  {filteredTemplates.length === 0 ? (
+                    <div className="text-center py-8">
+                      <MessageSquare size={32} className="mx-auto text-text-muted mb-3" />
+                      <p className="text-sm text-text-muted">템플릿이 없습니다.</p>
+                      <p className="text-xs text-text-muted mt-1">솔라피 동기화를 실행하거나 새 템플릿을 등록하세요.</p>
+                    </div>
+                  ) : (
+                    filteredTemplates.map((t) => {
+                      const status = kakaoStatusBadge(t.kakao_status);
+                      const isSelected = previewTemplate?.id === t.id;
+                      return (
+                        <button
+                          key={t.id}
+                          onClick={() => setPreviewTemplate(t)}
+                          className={cn(
+                            "w-full text-left p-3 rounded-lg border transition-colors",
+                            isSelected ? "border-primary bg-primary/5" : "border-border-light hover:bg-surface"
+                          )}
+                        >
+                          <p className="text-sm font-medium text-text">{t.name}</p>
+                          {t.kakao_template_code && (
+                            <p className="text-xs text-text-muted mt-0.5 font-mono">{t.kakao_template_code}</p>
+                          )}
+                          <div className="flex gap-1.5 mt-1.5">
+                            <span className={cn("px-1.5 py-0.5 text-xs rounded", status.cls)}>{status.label}</span>
+                            <span className="px-1.5 py-0.5 text-xs rounded bg-surface text-text-muted">
+                              {t.type === "alimtalk" ? "알림톡" : "브랜드메시지"}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* 우측: 미리보기 */}
+              <div className="w-[40%] flex flex-col p-5">
+                {previewTemplate ? (
+                  <>
+                    <div className="mb-4">
+                      <p className="text-sm font-bold text-text">{previewTemplate.name}</p>
+                      {previewTemplate.kakao_template_code && (
+                        <p className="text-xs text-text-muted mt-0.5">
+                          코드: <span className="font-mono">{previewTemplate.kakao_template_code}</span>
+                        </p>
+                      )}
+                      <div className="flex gap-1.5 mt-1.5">
+                        <span className={cn("px-1.5 py-0.5 text-xs rounded", kakaoStatusBadge(previewTemplate.kakao_status).cls)}>
+                          {kakaoStatusBadge(previewTemplate.kakao_status).label}
+                        </span>
+                        <span className="px-1.5 py-0.5 text-xs rounded bg-surface text-text-muted">
+                          {previewTemplate.type === "alimtalk" ? "알림톡" : "브랜드메시지"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 카카오톡 말풍선 프리뷰 */}
+                    <div className="flex-1 overflow-y-auto">
+                      <p className="text-xs text-text-muted mb-2">미리보기</p>
+                      <div className="flex items-start gap-2">
+                        <div className="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center shrink-0">
+                          <MessageSquare size={14} className="text-white" />
+                        </div>
+                        <div className="max-w-[260px]">
+                          <p className="text-xs text-text-muted mb-1">KECA</p>
+                          <div className="bg-[#FEE500] rounded-2xl rounded-tl-sm p-1">
+                            <div className="bg-white rounded-xl p-3 text-sm whitespace-pre-wrap leading-relaxed">
+                              {renderWithHighlightedVars(previewTemplate.body)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 변수 안내 */}
+                      {(() => {
+                        const vars = getTemplateVars(previewTemplate.body);
+                        return vars.length > 0 ? (
+                          <div className="mt-3 p-2.5 bg-blue-50 rounded-lg">
+                            <p className="text-xs text-blue-700">
+                              이 템플릿에는 {vars.join(", ")} 변수가 포함되어 있습니다. 수신자의 해당 정보가 자동으로 치환됩니다.
+                            </p>
+                          </div>
+                        ) : null;
+                      })()}
+                    </div>
+
+                    {/* 사용 버튼 */}
+                    <div className="mt-4 pt-4 border-t border-border-light">
+                      {previewTemplate.kakao_status === "approved" || previewTemplate.type === "brand_message" ? (
+                        <button
+                          onClick={() => applyTemplate(previewTemplate)}
+                          className="w-full px-4 py-2.5 bg-yellow-500 text-white text-sm font-medium rounded-xl hover:bg-yellow-600 transition-colors"
+                        >
+                          이 템플릿 사용
+                        </button>
+                      ) : (
+                        <div>
+                          <button
+                            disabled
+                            className="w-full px-4 py-2.5 bg-gray-200 text-gray-400 text-sm font-medium rounded-xl cursor-not-allowed"
+                          >
+                            이 템플릿 사용
+                          </button>
+                          <p className="text-xs text-red-500 mt-1.5 text-center">
+                            이 템플릿은 아직 승인되지 않았습니다.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center">
+                      <FileText size={32} className="mx-auto text-text-muted mb-3" />
+                      <p className="text-sm text-text-muted">좌측에서 템플릿을 선택하세요</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-4 border-t border-border-light shrink-0">
+              <button
+                onClick={clearTemplate}
+                className="text-sm text-text-sub hover:text-text transition-colors"
+              >
+                직접 작성으로 전환
+              </button>
+              <button
+                onClick={() => setShowTemplateModal(false)}
+                className="px-4 py-2 text-sm text-text-sub bg-surface rounded-xl hover:bg-border-light transition-colors"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

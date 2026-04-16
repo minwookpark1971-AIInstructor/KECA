@@ -10,7 +10,7 @@ export async function GET() {
   // marketing_email_agreed 컬럼이 없을 수 있으므로 (016 마이그레이션 미적용 시) 두 가지 시도
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, name, email, phone, role, is_instructor, marketing_email_agreed")
+    .select("id, name, email, phone, role, is_instructor, marketing_email_agreed, marketing_kakao_agreed")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -22,7 +22,8 @@ export async function GET() {
 
     const members = (fallback || []).map((m) => ({
       ...m,
-      marketing_email_agreed: true, // 컬럼 미존재 시 기본 동의로 처리
+      marketing_email_agreed: true,
+      marketing_kakao_agreed: true,
     }));
     return NextResponse.json({ members });
   }

@@ -193,6 +193,7 @@ export async function POST(request: NextRequest) {
   // 실제 발송 (솔라피 SDK)
   let successCount = 0;
   let failCount = 0;
+  let firstError = "";
 
   for (const recipient of targetRecipients) {
     // 변수 치환
@@ -233,8 +234,13 @@ export async function POST(request: NextRequest) {
       .eq("campaign_id", campaign.id)
       .eq("recipient_id", recipient.id);
 
-    if (result.success) successCount++;
-    else failCount++;
+    if (result.success) {
+      successCount++;
+    } else {
+      failCount++;
+      if (!firstError && result.error) firstError = result.error;
+      console.error(`[send-kakao] 발송 실패 (${recipient.name} / ${recipient.phone}):`, result.error);
+    }
 
     // Rate limit: 100ms 간격
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -251,6 +257,17 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString(),
     })
     .eq("id", campaign.id);
+
+  // 전체 실패 시 에러 정보 포함
+  if (successCount === 0 && failCount > 0) {
+    return NextResponse.json({
+      error: `전체 발송 실패: ${firstError || "알 수 없는 오류"}`,
+      campaignId: campaign.id,
+      successCount,
+      failCount,
+      totalRecipients: targetRecipients.length,
+    }, { status: 500 });
+  }
 
   return NextResponse.json({
     campaignId: campaign.id,

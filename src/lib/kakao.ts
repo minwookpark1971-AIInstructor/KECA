@@ -5,7 +5,7 @@
  * - 솔라피(solapi.com) 가입 + API Key/Secret 발급
  * - 카카오 비즈니스 채널 개설 + 솔라피에서 채널 연동 (PFID 발급)
  * - 알림톡 템플릿 등록 + 카카오 검수 승인
- * - 환경변수: SOLAPI_API_KEY, SOLAPI_API_SECRET, SOLAPI_PFID
+ * - 환경변수: SOLAPI_API_KEY, SOLAPI_API_SECRET, SOLAPI_PFID, SOLAPI_SENDER_NUMBER
  */
 
 import { SolapiMessageService } from "solapi";
@@ -86,6 +86,7 @@ export async function sendAlimtalkViaSolapi(
     return { success: false, error: "SOLAPI_PFID 환경변수 미설정" };
   }
   if (!senderNumber) {
+    console.error("[Solapi Alimtalk] SOLAPI_SENDER_NUMBER 미설정");
     return {
       success: false,
       error:
@@ -110,11 +111,14 @@ export async function sendAlimtalkViaSolapi(
       (messageParams.kakaoOptions as Record<string, unknown>).buttons = buttons;
     }
 
+    console.log("[Solapi Alimtalk] 발송 시도:", { to: normalizedPhone, templateId });
     const result = await client.sendOne(messageParams as Parameters<typeof client.sendOne>[0]);
+    console.log("[Solapi Alimtalk] 발송 성공:", { messageId: result.messageId });
     return { success: true, messageId: result.messageId };
   } catch (err) {
     const message = extractSolapiError(err);
-    console.error("[Solapi Alimtalk] 발송 실패:", message, err);
+    const detail = err instanceof Error ? err.stack : JSON.stringify(err);
+    console.error("[Solapi Alimtalk] 발송 실패:", message, "\n상세:", detail);
     return { success: false, error: message };
   }
 }
@@ -143,6 +147,7 @@ export async function sendBrandMessageViaSolapi(
     return { success: false, error: "SOLAPI_PFID 환경변수 미설정" };
   }
   if (!senderNumber) {
+    console.error("[Solapi BrandMessage] SOLAPI_SENDER_NUMBER 미설정");
     return {
       success: false,
       error:
@@ -195,6 +200,14 @@ export async function sendBrandMessageViaSolapi(
       }
     }
 
+    console.log("[Solapi BrandMessage] 발송 시도:", {
+      to: normalizedPhone,
+      from: normalizePhoneNumber(senderNumber),
+      type: messageType,
+      textLength: message.length,
+      hasImage,
+    });
+
     const result = await client.sendOne({
       to: normalizedPhone,
       from: normalizePhoneNumber(senderNumber),
@@ -203,10 +216,12 @@ export async function sendBrandMessageViaSolapi(
       kakaoOptions,
     } as Parameters<typeof client.sendOne>[0]);
 
+    console.log("[Solapi BrandMessage] 발송 성공:", { messageId: result.messageId });
     return { success: true, messageId: result.messageId };
   } catch (err) {
     const message2 = extractSolapiError(err);
-    console.error("[Solapi BrandMessage] 발송 실패:", message2, err);
+    const detail = err instanceof Error ? err.stack : JSON.stringify(err);
+    console.error("[Solapi BrandMessage] 발송 실패:", message2, "\n상세:", detail);
     return { success: false, error: message2 };
   }
 }
