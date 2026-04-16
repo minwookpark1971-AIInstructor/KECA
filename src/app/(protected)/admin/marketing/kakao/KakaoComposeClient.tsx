@@ -21,6 +21,11 @@ const PERSONAL_VAR_NAMES = new Set([
   "연락처", "휴대폰", "전화번호", "phone",
 ]);
 
+// "구글폼/외부 URL 단축" 역할 변수명 — 이 변수는 URL 입력 후 발송 시 code로 자동 변환
+const REDIRECT_VAR_NAMES = new Set([
+  "code", "신청코드", "applyCode", "신청링크", "링크",
+]);
+
 // 템플릿 본문에서 변수명 추출 (#{name} 제거하고 name만 반환, 중복 제거)
 function getRawVarNames(text: string): string[] {
   const matches = text.match(/#\{([^}]+)\}/g) || [];
@@ -108,6 +113,8 @@ export default function KakaoComposeClient({ templates }: Props) {
   const [templateButtonUrls, setTemplateButtonUrls] = useState<
     Record<string, { linkMo: string; linkPc?: string }>
   >({});
+  // "구글폼/외부 URL 단축" 역할 변수별 입력값 (변수명 → 실제 외부 URL)
+  const [redirectUrls, setRedirectUrls] = useState<Record<string, string>>({});
 
   // sessionStorage에서 수신자 ID 로드
   useEffect(() => {
@@ -369,13 +376,27 @@ export default function KakaoComposeClient({ templates }: Props) {
     } else {
       setTemplateButtonUrls({});
     }
-    // 템플릿 본문에서 변수 추출 → 공통 변수 입력 폼 초기화
-    const rawVars = getRawVarNames(template.body);
+    // 템플릿 본문 + 버튼 URL에서 모두 변수 추출 → 변수명 분류
+    // 버튼 URL에도 #{변수}가 있을 수 있음 (예: https://keca.vercel.app/apply/#{code})
+    const bodyVars = getRawVarNames(template.body);
+    const buttonVars = (template.kakao_buttons || []).flatMap((b) => [
+      ...(b.linkMo ? getRawVarNames(b.linkMo) : []),
+      ...(b.linkPc ? getRawVarNames(b.linkPc) : []),
+    ]);
+    const allVars = [...new Set([...bodyVars, ...buttonVars])];
+
     const nextVars: Record<string, string> = {};
-    for (const v of rawVars) {
-      if (!PERSONAL_VAR_NAMES.has(v)) nextVars[v] = "";
+    const nextRedirects: Record<string, string> = {};
+    for (const v of allVars) {
+      if (PERSONAL_VAR_NAMES.has(v)) continue;
+      if (REDIRECT_VAR_NAMES.has(v)) {
+        nextRedirects[v] = "";
+      } else {
+        nextVars[v] = "";
+      }
     }
     setTemplateVariables(nextVars);
+    setRedirectUrls(nextRedirects);
     setShowTemplateModal(false);
     setPreviewTemplate(null);
   };
@@ -386,6 +407,7 @@ export default function KakaoComposeClient({ templates }: Props) {
     setMessage("");
     setTemplateVariables({});
     setTemplateButtonUrls({});
+    setRedirectUrls({});
   };
 
   const selectedTemplate = templates.find((t) => t.id === selectedTemplateId);
@@ -514,6 +536,32 @@ export default function KakaoComposeClient({ templates }: Props) {
 
   // ─── 발송 ───
 
+  // 리다이렉트 변수가 있으면 각각 /api/apply-redirects로 code를 발급받아 variables에 병합
+  const resolveRedirectVariables = useCallback(async (): Promise<Record<string, string>> => {
+    const merged: Record<string, string> = { ...templateVariables };
+    const entries = Object.entries(redirectUrls);
+    if (entries.length === 0) return merged;
+
+    const tpl = templates.find((t) => t.id === selectedTemplateId);
+    const labelPrefix = tpl?.name || "알림톡";
+
+    for (const [varName, rawUrl] of entries) {
+      const url = rawUrl.trim();
+      if (!url) continue;
+      const res = await fetch("/api/apply-redirects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target_url: url, label: `${labelPrefix} · #{${varName}}` }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.code) {
+        throw new Error(data.error || "단축 링크 생성 실패");
+      }
+      merged[varName] = data.code;
+    }
+    return merged;
+  }, [templateVariables, redirectUrls, templates, selectedTemplateId]);
+
   // 알림톡 발송용 버튼 배열 구성 (템플릿 구조 + 관리자 입력 URL)
   const buildAlimtalkButtons = useCallback(() => {
     if (messageType !== "alimtalk" || !selectedTemplateId) return undefined;
@@ -569,17 +617,35 @@ export default function KakaoComposeClient({ templates }: Props) {
         return;
       }
       // 알림톡 WL 버튼의 linkMo(모바일 URL) 미입력 검증 (카카오 3036 방지)
+      // 단, URL에 #{변수}가 포함돼 있으면 카카오가 variables로 치환하므로 검증 제외
       const tpl = templates.find((t) => t.id === selectedTemplateId);
       const webButtons = (tpl?.kakao_buttons || []).filter((b) => b.buttonType === "WL");
-      const missingUrls = webButtons.filter(
-        (b) => !templateButtonUrls[b.buttonName]?.linkMo?.trim()
-      );
+      const missingUrls = webButtons.filter((b) => {
+        const hasTemplateVar = b.linkMo && /#\{[^}]+\}/.test(b.linkMo);
+        if (hasTemplateVar) return false; // 변수 URL은 카카오가 치환
+        return !templateButtonUrls[b.buttonName]?.linkMo?.trim();
+      });
       if (missingUrls.length > 0) {
         setMsg({
           type: "error",
           text: `다음 버튼의 URL을 입력해주세요: ${missingUrls.map((b) => b.buttonName).join(", ")}`,
         });
         return;
+      }
+      // 리다이렉트 변수(구글폼 URL) 미입력 / 형식 검증
+      for (const [varName, url] of Object.entries(redirectUrls)) {
+        const trimmed = url.trim();
+        if (!trimmed) {
+          setMsg({ type: "error", text: `#{${varName}}의 URL을 입력해주세요.` });
+          return;
+        }
+        if (!/^https?:\/\//i.test(trimmed)) {
+          setMsg({
+            type: "error",
+            text: `#{${varName}}의 URL은 http:// 또는 https://로 시작해야 합니다.`,
+          });
+          return;
+        }
       }
     }
     setShowConfirmSend(true);
@@ -597,6 +663,8 @@ export default function KakaoComposeClient({ templates }: Props) {
 
     try {
       const alimtalkButtons = buildAlimtalkButtons();
+      const resolvedVariables =
+        messageType === "alimtalk" ? await resolveRedirectVariables() : undefined;
       const res = await fetch("/api/marketing/send-kakao", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -610,7 +678,7 @@ export default function KakaoComposeClient({ templates }: Props) {
               ? alimtalkButtons
               : (buttons.length > 0 ? buttons : undefined),
           imageUrl: imageUrl || undefined,
-          variables: messageType === "alimtalk" ? templateVariables : undefined,
+          variables: resolvedVariables,
         }),
       });
       const result = await res.json();
@@ -646,6 +714,8 @@ export default function KakaoComposeClient({ templates }: Props) {
     setIsSending(true);
     try {
       const alimtalkButtons = buildAlimtalkButtons();
+      const resolvedVariables =
+        messageType === "alimtalk" ? await resolveRedirectVariables() : undefined;
       const res = await fetch("/api/marketing/send-kakao", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -660,7 +730,7 @@ export default function KakaoComposeClient({ templates }: Props) {
               : (buttons.length > 0 ? buttons : undefined),
           imageUrl: imageUrl || undefined,
           testPhone,
-          variables: messageType === "alimtalk" ? templateVariables : undefined,
+          variables: resolvedVariables,
         }),
       });
       const result = await res.json();
@@ -964,9 +1034,19 @@ export default function KakaoComposeClient({ templates }: Props) {
                       </div>
                     </div>
                     {(() => {
-                      const rawVars = getRawVarNames(message);
+                      const tpl = templates.find((t) => t.id === selectedTemplateId);
+                      const bodyVars = getRawVarNames(message);
+                      // 버튼 URL에만 있는 변수도 포함 (예: https://keca.vercel.app/apply/#{code})
+                      const buttonVars = (tpl?.kakao_buttons || []).flatMap((b) => [
+                        ...(b.linkMo ? getRawVarNames(b.linkMo) : []),
+                        ...(b.linkPc ? getRawVarNames(b.linkPc) : []),
+                      ]);
+                      const rawVars = [...new Set([...bodyVars, ...buttonVars])];
                       const personalVars = rawVars.filter((v) => PERSONAL_VAR_NAMES.has(v));
-                      const commonVars = rawVars.filter((v) => !PERSONAL_VAR_NAMES.has(v));
+                      const redirectVars = rawVars.filter((v) => REDIRECT_VAR_NAMES.has(v));
+                      const commonVars = rawVars.filter(
+                        (v) => !PERSONAL_VAR_NAMES.has(v) && !REDIRECT_VAR_NAMES.has(v)
+                      );
                       return (
                         <div className="mt-3 space-y-3">
                           {personalVars.length > 0 && (
@@ -1002,6 +1082,37 @@ export default function KakaoComposeClient({ templates }: Props) {
                               ))}
                             </div>
                           )}
+                          {/* 구글폼/외부 URL 단축 링크 입력 */}
+                          {redirectVars.length > 0 && (
+                            <div className="p-3 border border-purple-200 bg-purple-50/40 rounded-lg space-y-2">
+                              <p className="text-xs font-medium text-purple-700">
+                                신청 링크 입력 (자체 도메인 단축 URL로 자동 변환)
+                              </p>
+                              <p className="text-[11px] text-purple-600">
+                                입력한 URL은 발송 직전 keca.vercel.app/apply/{`{code}`} 형태의 단축 링크로
+                                치환되어 카카오톡 수신자에게 전달됩니다.
+                              </p>
+                              {redirectVars.map((varName) => (
+                                <div key={varName} className="flex items-center gap-2">
+                                  <label className="text-xs font-mono text-purple-700 min-w-[100px] shrink-0">
+                                    {`#{${varName}}`}
+                                  </label>
+                                  <input
+                                    type="url"
+                                    value={redirectUrls[varName] || ""}
+                                    onChange={(e) =>
+                                      setRedirectUrls((prev) => ({
+                                        ...prev,
+                                        [varName]: e.target.value,
+                                      }))
+                                    }
+                                    placeholder="https://docs.google.com/forms/..."
+                                    className="flex-1 px-2.5 py-1.5 border border-purple-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          )}
                           {/* 템플릿 링크 버튼 URL 입력 */}
                           {(() => {
                             const tpl = templates.find((t) => t.id === selectedTemplateId);
@@ -1016,43 +1127,69 @@ export default function KakaoComposeClient({ templates }: Props) {
                                 </p>
                                 {webBtns.map((btn) => {
                                   const urls = templateButtonUrls[btn.buttonName] || { linkMo: "" };
+                                  // URL에 #{변수}가 포함돼 있으면 카카오가 variables로 치환하므로 readonly
+                                  const hasVarInLinkMo = !!btn.linkMo && /#\{[^}]+\}/.test(btn.linkMo);
+                                  const hasVarInLinkPc = !!btn.linkPc && /#\{[^}]+\}/.test(btn.linkPc);
                                   return (
                                     <div key={btn.buttonName} className="space-y-1.5">
                                       <label className="text-xs font-medium text-text">
                                         {btn.buttonName}{" "}
                                         <span className="text-text-muted">(웹 링크)</span>
                                       </label>
-                                      <input
-                                        type="text"
-                                        placeholder="https://... (모바일, 필수)"
-                                        value={urls.linkMo}
-                                        onChange={(e) =>
-                                          setTemplateButtonUrls((prev) => ({
-                                            ...prev,
-                                            [btn.buttonName]: {
-                                              ...prev[btn.buttonName],
-                                              linkMo: e.target.value,
-                                            },
-                                          }))
-                                        }
-                                        className="w-full px-2.5 py-1.5 border border-yellow-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300 bg-white"
-                                      />
-                                      <input
-                                        type="text"
-                                        placeholder="https://... (PC, 선택)"
-                                        value={urls.linkPc || ""}
-                                        onChange={(e) =>
-                                          setTemplateButtonUrls((prev) => ({
-                                            ...prev,
-                                            [btn.buttonName]: {
-                                              ...prev[btn.buttonName],
-                                              linkMo: prev[btn.buttonName]?.linkMo || "",
-                                              linkPc: e.target.value || undefined,
-                                            },
-                                          }))
-                                        }
-                                        className="w-full px-2.5 py-1.5 border border-yellow-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300 bg-white"
-                                      />
+                                      {hasVarInLinkMo ? (
+                                        <>
+                                          <input
+                                            type="text"
+                                            value={btn.linkMo || ""}
+                                            readOnly
+                                            className="w-full px-2.5 py-1.5 border border-gray-200 rounded text-sm bg-gray-50 text-text-muted font-mono"
+                                          />
+                                          <p className="text-[11px] text-gray-500">
+                                            이 URL은 위의 변수 입력 값으로 자동 치환됩니다 (편집 불필요).
+                                          </p>
+                                        </>
+                                      ) : (
+                                        <input
+                                          type="text"
+                                          placeholder="https://... (모바일, 필수)"
+                                          value={urls.linkMo}
+                                          onChange={(e) =>
+                                            setTemplateButtonUrls((prev) => ({
+                                              ...prev,
+                                              [btn.buttonName]: {
+                                                ...prev[btn.buttonName],
+                                                linkMo: e.target.value,
+                                              },
+                                            }))
+                                          }
+                                          className="w-full px-2.5 py-1.5 border border-yellow-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300 bg-white"
+                                        />
+                                      )}
+                                      {hasVarInLinkPc ? (
+                                        <input
+                                          type="text"
+                                          value={btn.linkPc || ""}
+                                          readOnly
+                                          className="w-full px-2.5 py-1.5 border border-gray-200 rounded text-sm bg-gray-50 text-text-muted font-mono"
+                                        />
+                                      ) : (
+                                        <input
+                                          type="text"
+                                          placeholder="https://... (PC, 선택)"
+                                          value={urls.linkPc || ""}
+                                          onChange={(e) =>
+                                            setTemplateButtonUrls((prev) => ({
+                                              ...prev,
+                                              [btn.buttonName]: {
+                                                ...prev[btn.buttonName],
+                                                linkMo: prev[btn.buttonName]?.linkMo || "",
+                                                linkPc: e.target.value || undefined,
+                                              },
+                                            }))
+                                          }
+                                          className="w-full px-2.5 py-1.5 border border-yellow-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300 bg-white"
+                                        />
+                                      )}
                                     </div>
                                   );
                                 })}
