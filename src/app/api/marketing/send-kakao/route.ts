@@ -7,6 +7,21 @@ import {
   normalizePhoneNumber,
 } from "@/lib/kakao";
 
+// 자동 매핑되는 개인화 변수명 (수신자 프로필에서 채움)
+const PERSON_NAME_KEYS = ["이름", "회원명", "성명", "name"];
+const PERSON_PHONE_KEYS = ["연락처", "휴대폰", "전화번호", "phone"];
+
+// 알림톡 발송용 변수 맵 생성: 공통 변수 + 개인화 자동 매핑
+function buildAlimtalkVariables(
+  recipient: { name: string; phone: string | null | undefined },
+  commonVars: Record<string, string> = {}
+): Record<string, string> {
+  const result: Record<string, string> = { ...commonVars };
+  for (const key of PERSON_NAME_KEYS) result[key] = recipient.name;
+  for (const key of PERSON_PHONE_KEYS) result[key] = recipient.phone || "";
+  return result;
+}
+
 export async function POST(request: NextRequest) {
   // 관리자 권한 확인
   const supabaseUser = await createClient();
@@ -43,7 +58,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { recipientIds, messageType, message, buttons, imageUrl, templateCode, testPhone } = body as {
+  const { recipientIds, messageType, message, buttons, imageUrl, templateCode, testPhone, variables } = body as {
     recipientIds: string[];
     messageType: "alimtalk" | "brand_message";
     message: string;
@@ -51,6 +66,7 @@ export async function POST(request: NextRequest) {
     imageUrl?: string;
     templateCode?: string;
     testPhone?: string;
+    variables?: Record<string, string>;
   };
 
   const isTestMode = !!testPhone;
@@ -99,11 +115,12 @@ export async function POST(request: NextRequest) {
     let result: { success: boolean; messageId?: string; error?: string };
 
     if (messageType === "alimtalk") {
+      // 알림톡: 승인 템플릿 구조 유지 — 버튼은 템플릿에 등록된 것만 자동 사용
       result = await sendAlimtalkViaSolapi(
         testPhone,
         templateCode!,
-        { "이름": "테스트" },
-        solapiButtons
+        buildAlimtalkVariables({ name: "테스트", phone: testPhone }, variables),
+        undefined
       );
     } else {
       result = await sendBrandMessageViaSolapi(
@@ -204,12 +221,12 @@ export async function POST(request: NextRequest) {
     let result: { success: boolean; messageId?: string; error?: string };
 
     if (messageType === "alimtalk") {
-      // 알림톡: 템플릿 코드 필수 (위 가드에서 검증됨)
+      // 알림톡: 승인 템플릿 구조 유지 — 버튼은 템플릿에 등록된 것만 자동 사용
       result = await sendAlimtalkViaSolapi(
         recipient.phone!,
         templateCode!,
-        { "이름": recipient.name },
-        solapiButtons
+        buildAlimtalkVariables(recipient, variables),
+        undefined
       );
     } else {
       // 브랜드 메시지: 자유 형식

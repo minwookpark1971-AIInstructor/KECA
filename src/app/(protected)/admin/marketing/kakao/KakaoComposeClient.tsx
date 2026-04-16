@@ -15,6 +15,18 @@ import * as XLSX from "xlsx";
 type MessageType = "alimtalk" | "brand_message";
 type BrandMessageType = "text" | "image";
 
+// 자동 매핑되는 개인화 변수명 (수신자 프로필에서 채움 — UI 입력 불필요)
+const PERSONAL_VAR_NAMES = new Set([
+  "이름", "회원명", "성명", "name",
+  "연락처", "휴대폰", "전화번호", "phone",
+]);
+
+// 템플릿 본문에서 변수명 추출 (#{name} 제거하고 name만 반환, 중복 제거)
+function getRawVarNames(text: string): string[] {
+  const matches = text.match(/#\{([^}]+)\}/g) || [];
+  return [...new Set(matches.map((m) => m.slice(2, -1)))];
+}
+
 interface LinkButton {
   name: string;
   url: string;
@@ -89,6 +101,9 @@ export default function KakaoComposeClient({ templates }: Props) {
   const [templateSearch, setTemplateSearch] = useState("");
   const [previewTemplate, setPreviewTemplate] = useState<MarketingTemplate | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // 알림톡 템플릿 공통 변수 값 (관리자가 입력; 모든 수신자에게 동일하게 전송)
+  const [templateVariables, setTemplateVariables] = useState<Record<string, string>>({});
 
   // sessionStorage에서 수신자 ID 로드
   useEffect(() => {
@@ -332,6 +347,18 @@ export default function KakaoComposeClient({ templates }: Props) {
     if (template.type === "alimtalk" || template.type === "brand_message") {
       setMessageType(template.type);
     }
+    // 알림톡: 승인 템플릿 구조 유지 — UI에서 추가된 버튼을 제거 (카카오 3036 방지)
+    if (template.type === "alimtalk") {
+      setButtons([]);
+      setShowAddButton(false);
+    }
+    // 템플릿 본문에서 변수 추출 → 공통 변수 입력 폼 초기화
+    const rawVars = getRawVarNames(template.body);
+    const nextVars: Record<string, string> = {};
+    for (const v of rawVars) {
+      if (!PERSONAL_VAR_NAMES.has(v)) nextVars[v] = "";
+    }
+    setTemplateVariables(nextVars);
     setShowTemplateModal(false);
     setPreviewTemplate(null);
   };
@@ -340,6 +367,7 @@ export default function KakaoComposeClient({ templates }: Props) {
     setSelectedTemplateId("");
     setTemplateCode("");
     setMessage("");
+    setTemplateVariables({});
   };
 
   const selectedTemplate = templates.find((t) => t.id === selectedTemplateId);
@@ -485,6 +513,19 @@ export default function KakaoComposeClient({ templates }: Props) {
       });
       return;
     }
+    // 알림톡: 공통 변수 미입력 검증 (카카오 3063 방지)
+    if (messageType === "alimtalk" && selectedTemplateId) {
+      const rawVars = getRawVarNames(message);
+      const commonVars = rawVars.filter((v) => !PERSONAL_VAR_NAMES.has(v));
+      const missing = commonVars.filter((v) => !templateVariables[v]?.trim());
+      if (missing.length > 0) {
+        setMsg({
+          type: "error",
+          text: `다음 변수 값을 입력해주세요: ${missing.map((v) => `#{${v}}`).join(", ")}`,
+        });
+        return;
+      }
+    }
     setShowConfirmSend(true);
   };
 
@@ -509,6 +550,7 @@ export default function KakaoComposeClient({ templates }: Props) {
           templateCode: templateCode || undefined,
           buttons: buttons.length > 0 ? buttons : undefined,
           imageUrl: imageUrl || undefined,
+          variables: messageType === "alimtalk" ? templateVariables : undefined,
         }),
       });
       const result = await res.json();
@@ -554,6 +596,7 @@ export default function KakaoComposeClient({ templates }: Props) {
           buttons: buttons.length > 0 ? buttons : undefined,
           imageUrl: imageUrl || undefined,
           testPhone,
+          variables: messageType === "alimtalk" ? templateVariables : undefined,
         }),
       });
       const result = await res.json();
@@ -838,7 +881,7 @@ export default function KakaoComposeClient({ templates }: Props) {
               <>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-medium text-text">메시지 내용 (템플릿)</p>
-                  <p className="text-xs text-text-muted">변수: {"#{이름}"}, {"#{연락처}"}</p>
+                  <p className="text-xs text-text-muted">자동 치환: #{"{이름}"}, #{"{연락처}"}</p>
                 </div>
                 <div className="mb-3 p-2.5 bg-surface rounded-lg">
                   <p className="text-xs text-text-muted">
@@ -857,14 +900,46 @@ export default function KakaoComposeClient({ templates }: Props) {
                       </div>
                     </div>
                     {(() => {
-                      const vars = getTemplateVars(message);
-                      return vars.length > 0 ? (
-                        <div className="mt-2 p-2.5 bg-blue-50 rounded-lg">
-                          <p className="text-xs text-blue-700">
-                            이 템플릿에는 {vars.join(", ")} 변수가 포함되어 있습니다. 수신자의 해당 정보가 자동으로 치환됩니다.
-                          </p>
+                      const rawVars = getRawVarNames(message);
+                      const personalVars = rawVars.filter((v) => PERSONAL_VAR_NAMES.has(v));
+                      const commonVars = rawVars.filter((v) => !PERSONAL_VAR_NAMES.has(v));
+                      return (
+                        <div className="mt-3 space-y-3">
+                          {personalVars.length > 0 && (
+                            <div className="p-2.5 bg-green-50 rounded-lg">
+                              <p className="text-xs text-green-700">
+                                자동 치환: {personalVars.map((v) => `#{${v}}`).join(", ")} → 수신자 정보로 자동 입력됩니다.
+                              </p>
+                            </div>
+                          )}
+                          {commonVars.length > 0 && (
+                            <div className="p-3 border border-blue-200 bg-blue-50/30 rounded-lg space-y-2">
+                              <p className="text-xs font-medium text-blue-700">
+                                공통 변수 입력 (모든 수신자에게 동일하게 전송)
+                              </p>
+                              {commonVars.map((varName) => (
+                                <div key={varName} className="flex items-center gap-2">
+                                  <label className="text-xs font-mono text-blue-700 min-w-[100px] shrink-0">
+                                    {`#{${varName}}`}
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={templateVariables[varName] || ""}
+                                    onChange={(e) =>
+                                      setTemplateVariables((prev) => ({
+                                        ...prev,
+                                        [varName]: e.target.value,
+                                      }))
+                                    }
+                                    placeholder={`${varName} 값 입력`}
+                                    className="flex-1 px-2.5 py-1.5 border border-blue-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      ) : null;
+                      );
                     })()}
                   </>
                 ) : (
