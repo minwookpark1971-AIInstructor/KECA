@@ -26,6 +26,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 });
   }
 
+  // 솔라피 환경변수 사전 검증
+  const missingEnv = [
+    !process.env.SOLAPI_API_KEY && "SOLAPI_API_KEY",
+    !process.env.SOLAPI_API_SECRET && "SOLAPI_API_SECRET",
+    !process.env.SOLAPI_PFID && "SOLAPI_PFID",
+    !process.env.SOLAPI_SENDER_NUMBER && "SOLAPI_SENDER_NUMBER",
+  ].filter(Boolean);
+  if (missingEnv.length > 0) {
+    return NextResponse.json(
+      {
+        error: `솔라피 환경변수 미설정: ${missingEnv.join(", ")}. 서버 환경변수를 확인해주세요.`,
+      },
+      { status: 500 }
+    );
+  }
+
   const body = await request.json();
   const { recipientIds, messageType, message, buttons, imageUrl, templateCode, testPhone } = body as {
     recipientIds: string[];
@@ -58,6 +74,19 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // 알림톡: 검수 통과한 templateCode 필수 — 미설정 시 카카오가 거부하고 SMS 폴백 위험이 있음
+  if (messageType === "alimtalk") {
+    if (!templateCode || templateCode === "DEFAULT") {
+      return NextResponse.json(
+        {
+          error:
+            "알림톡 발송에는 솔라피에 등록·승인된 템플릿 코드가 필요합니다. 템플릿을 선택해주세요.",
+        },
+        { status: 400 }
+      );
+    }
+  }
+
   // 테스트 발송 모드: 1건만 즉시 발송
   if (isTestMode) {
     const solapiButtons = buttons?.map((btn) => ({
@@ -72,7 +101,7 @@ export async function POST(request: NextRequest) {
     if (messageType === "alimtalk") {
       result = await sendAlimtalkViaSolapi(
         testPhone,
-        templateCode || "DEFAULT",
+        templateCode!,
         { "이름": "테스트" },
         solapiButtons
       );
@@ -174,11 +203,10 @@ export async function POST(request: NextRequest) {
     let result: { success: boolean; messageId?: string; error?: string };
 
     if (messageType === "alimtalk") {
-      // 알림톡: 템플릿 코드 필수
-      const tplCode = templateCode || "DEFAULT";
+      // 알림톡: 템플릿 코드 필수 (위 가드에서 검증됨)
       result = await sendAlimtalkViaSolapi(
         recipient.phone!,
-        tplCode,
+        templateCode!,
         { "이름": recipient.name },
         solapiButtons
       );

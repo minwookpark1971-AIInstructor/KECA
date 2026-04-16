@@ -167,6 +167,17 @@ export default function KakaoComposeClient({ templates }: Props) {
       return;
     }
 
+    // 알림톡은 검수 통과한 템플릿 코드가 필수
+    const selectedTpl = templates.find((t) => t.id === selectedTemplateId);
+    const templateCode = selectedTpl?.kakao_template_code;
+    if (messageType === "alimtalk" && !templateCode) {
+      setMsg({
+        type: "error",
+        text: "알림톡은 솔라피에 등록·승인된 템플릿을 선택해야 합니다.",
+      });
+      return;
+    }
+
     if (!confirm(`${target.length}명에게 카카오톡 메시지를 발송하시겠습니까?`)) return;
 
     setIsSending(true);
@@ -180,6 +191,7 @@ export default function KakaoComposeClient({ templates }: Props) {
           message,
           buttons: buttons.length > 0 ? buttons : undefined,
           imageUrl: imageUrl || undefined,
+          templateCode: templateCode || undefined,
         }),
       });
       const result = await res.json();
@@ -555,14 +567,32 @@ export default function KakaoComposeClient({ templates }: Props) {
             </div>
 
             <div className="mt-5">
-              <button
-                onClick={handleSend}
-                disabled={isSending || (messageType === "alimtalk" ? validRecipients.length === 0 : agreedRecipients.length === 0) || !message.trim()}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-yellow-500 text-white text-sm font-medium rounded-xl hover:bg-yellow-600 transition-colors disabled:opacity-50"
-              >
-                <Send size={16} />
-                {isSending ? "발송 중..." : "카카오톡 발송"}
-              </button>
+              {(() => {
+                const selectedTpl = templates.find((t) => t.id === selectedTemplateId);
+                const needsTemplate = messageType === "alimtalk" && !selectedTpl?.kakao_template_code;
+                return (
+                  <>
+                    <button
+                      onClick={handleSend}
+                      disabled={
+                        isSending ||
+                        (messageType === "alimtalk" ? validRecipients.length === 0 : agreedRecipients.length === 0) ||
+                        !message.trim() ||
+                        needsTemplate
+                      }
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-yellow-500 text-white text-sm font-medium rounded-xl hover:bg-yellow-600 transition-colors disabled:opacity-50"
+                    >
+                      <Send size={16} />
+                      {isSending ? "발송 중..." : "카카오톡 발송"}
+                    </button>
+                    {needsTemplate && (
+                      <p className="mt-2 text-xs text-yellow-700">
+                        알림톡 발송에는 솔라피에 등록된 템플릿 선택이 필요합니다.
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
             </div>
 
             {/* 테스트 발송 */}
@@ -570,6 +600,18 @@ export default function KakaoComposeClient({ templates }: Props) {
               onClick={async () => {
                 const testPhone = prompt("테스트 수신 번호를 입력하세요 (예: 010-1234-5678)");
                 if (!testPhone || !message.trim()) return;
+
+                // 알림톡은 검수 통과한 템플릿 코드가 필수
+                const selectedTpl = templates.find((t) => t.id === selectedTemplateId);
+                const templateCode = selectedTpl?.kakao_template_code;
+                if (messageType === "alimtalk" && !templateCode) {
+                  setMsg({
+                    type: "error",
+                    text: "알림톡 테스트 발송은 등록된 템플릿을 선택해야 합니다.",
+                  });
+                  return;
+                }
+
                 setIsSending(true);
                 try {
                   const res = await fetch("/api/marketing/send-kakao", {
@@ -581,6 +623,7 @@ export default function KakaoComposeClient({ templates }: Props) {
                       message,
                       buttons: buttons.length > 0 ? buttons : undefined,
                       imageUrl: imageUrl || undefined,
+                      templateCode: templateCode || undefined,
                       testPhone,
                     }),
                   });

@@ -17,7 +17,13 @@ function getSolapiClient(): SolapiMessageService | null {
   const apiSecret = process.env.SOLAPI_API_SECRET;
 
   if (!apiKey || !apiSecret) {
-    console.warn("[Solapi] API 키 미설정 — 발송을 스킵합니다.");
+    const missing = [
+      !apiKey && "SOLAPI_API_KEY",
+      !apiSecret && "SOLAPI_API_SECRET",
+    ]
+      .filter(Boolean)
+      .join(", ");
+    console.warn(`[Solapi] 환경변수 미설정 (${missing}) — 발송을 스킵합니다.`);
     return null;
   }
 
@@ -25,6 +31,31 @@ function getSolapiClient(): SolapiMessageService | null {
 }
 
 const PFID = () => process.env.SOLAPI_PFID || "";
+
+// 솔라피 예외에서 실패 사유/코드를 최대한 추출
+function extractSolapiError(err: unknown): string {
+  if (!err) return "알 수 없는 오류";
+  if (err instanceof Error) {
+    const anyErr = err as Error & {
+      failedMessageList?: Array<{ statusCode?: string; statusMessage?: string }>;
+      errorCode?: string;
+      errorMessage?: string;
+    };
+    const failed = anyErr.failedMessageList?.[0];
+    if (failed?.statusCode || failed?.statusMessage) {
+      return `${failed.statusCode || ""} ${failed.statusMessage || ""}`.trim();
+    }
+    if (anyErr.errorCode || anyErr.errorMessage) {
+      return `${anyErr.errorCode || ""} ${anyErr.errorMessage || ""}`.trim();
+    }
+    return anyErr.message;
+  }
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
+}
 
 // ─── 전화번호 정규화 ───
 
@@ -49,19 +80,29 @@ export async function sendAlimtalkViaSolapi(
 
   const normalizedPhone = normalizePhoneNumber(phone);
   const pfId = PFID();
+  const senderNumber = process.env.SOLAPI_SENDER_NUMBER;
 
   if (!pfId) {
-    return { success: false, error: "SOLAPI_PFID not configured" };
+    return { success: false, error: "SOLAPI_PFID 환경변수 미설정" };
+  }
+  if (!senderNumber) {
+    return {
+      success: false,
+      error:
+        "SOLAPI_SENDER_NUMBER 미설정 — 솔라피에 사전 등록된 발신번호가 필요합니다.",
+    };
   }
 
   try {
     const messageParams: Record<string, unknown> = {
       to: normalizedPhone,
-      from: process.env.SOLAPI_SENDER_NUMBER || normalizedPhone,
+      from: normalizePhoneNumber(senderNumber),
+      type: "ATA", // 알림톡 타입 명시 — 미지정 시 SMS 자동 폴백 가능
       kakaoOptions: {
         pfId,
         templateId,
         variables,
+        disableSms: true, // 카카오 발송 실패 시 SMS 폴백 차단
       },
     };
 
@@ -72,8 +113,8 @@ export async function sendAlimtalkViaSolapi(
     const result = await client.sendOne(messageParams as Parameters<typeof client.sendOne>[0]);
     return { success: true, messageId: result.messageId };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "알림톡 발송 실패";
-    console.error("[Solapi Alimtalk] 발송 실패:", message);
+    const message = extractSolapiError(err);
+    console.error("[Solapi Alimtalk] 발송 실패:", message, err);
     return { success: false, error: message };
   }
 }
@@ -96,34 +137,76 @@ export async function sendBrandMessageViaSolapi(
 
   const normalizedPhone = normalizePhoneNumber(phone);
   const pfId = PFID();
+  const senderNumber = process.env.SOLAPI_SENDER_NUMBER;
 
   if (!pfId) {
-    return { success: false, error: "SOLAPI_PFID not configured" };
+    return { success: false, error: "SOLAPI_PFID 환경변수 미설정" };
+  }
+  if (!senderNumber) {
+    return {
+      success: false,
+      error:
+        "SOLAPI_SENDER_NUMBER 미설정 — 솔라피에 사전 등록된 발신번호가 필요합니다.",
+    };
   }
 
   try {
+    // 친구톡: 텍스트(CTA) / 이미지 포함(CTI) 분기
+    const hasImage = !!options?.imageUrl;
+    const messageType = hasImage ? "CTI" : "CTA";
+
     const kakaoOptions: Record<string, unknown> = {
       pfId,
-      text: message,
+      disableSms: true, // 카카오 발송 실패 시 SMS 폴백 차단
     };
 
-    if (options?.imageUrl) {
-      kakaoOptions.imageUrl = options.imageUrl;
-    }
     if (options?.buttons && options.buttons.length > 0) {
       kakaoOptions.buttons = options.buttons;
     }
 
+    // 이미지가 있는 경우 솔라피 Storage API로 업로드해 imageId 획득
+    if (hasImage) {
+      try {
+        const clickLink =
+          options?.buttons?.[0]?.linkMo ||
+          options?.buttons?.[0]?.linkPc ||
+          options!.imageUrl!;
+        const uploadResult = await (
+          client as unknown as {
+            uploadFile: (
+              filePath: string,
+              fileType: string,
+              name?: string,
+              link?: string
+            ) => Promise<{ fileId: string }>;
+          }
+        ).uploadFile(options!.imageUrl!, "KAKAO", undefined, clickLink);
+        if (!uploadResult?.fileId) {
+          return {
+            success: false,
+            error: "이미지 업로드 실패 — Solapi Storage API 응답 없음",
+          };
+        }
+        kakaoOptions.imageId = uploadResult.fileId;
+      } catch (uploadErr) {
+        const uploadMsg = extractSolapiError(uploadErr);
+        console.error("[Solapi BrandMessage] 이미지 업로드 실패:", uploadMsg, uploadErr);
+        return { success: false, error: `이미지 업로드 실패: ${uploadMsg}` };
+      }
+    }
+
     const result = await client.sendOne({
       to: normalizedPhone,
-      from: process.env.SOLAPI_SENDER_NUMBER || normalizedPhone,
+      from: normalizePhoneNumber(senderNumber),
+      text: message, // 본문은 메시지 최상위 — kakaoOptions에는 text 필드 없음
+      type: messageType,
       kakaoOptions,
     } as Parameters<typeof client.sendOne>[0]);
 
     return { success: true, messageId: result.messageId };
   } catch (err) {
-    const message2 = err instanceof Error ? err.message : "브랜드 메시지 발송 실패";
-    console.error("[Solapi BrandMessage] 발송 실패:", message2);
+    const message2 = extractSolapiError(err);
+    console.error("[Solapi BrandMessage] 발송 실패:", message2, err);
     return { success: false, error: message2 };
   }
 }

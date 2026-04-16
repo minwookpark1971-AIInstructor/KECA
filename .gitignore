@@ -42,3 +42,7 @@ next-env.d.ts
 tmpclaude-*
 
 .vercel
+
+# secrets (do not commit)
+카카오톡 API Key.txt
+*.secret.txt
