@@ -391,6 +391,18 @@ export interface MarketingSendLog {
 export type TemplateType = "email" | "alimtalk" | "brand_message";
 export type KakaoTemplateStatus = "draft" | "pending_review" | "approved" | "rejected";
 
+// 솔라피 알림톡 템플릿 버튼 (WL=웹링크, AL=앱링크, 그 외 default)
+export type KakaoButtonType = "WL" | "AL" | "BK" | "MD" | "DS" | "BC" | "BT" | "AC";
+
+export interface KakaoTemplateButton {
+  buttonName: string;
+  buttonType: KakaoButtonType;
+  linkMo?: string;  // WL 타입 — 모바일 URL (필수)
+  linkPc?: string;  // WL 타입 — PC URL (선택)
+  linkAnd?: string; // AL 타입 — 안드로이드 스킴
+  linkIos?: string; // AL 타입 — iOS 스킴
+}
+
 export interface MarketingTemplate {
   id: string;
   name: string;
@@ -401,6 +413,7 @@ export interface MarketingTemplate {
   variables?: string[];
   kakao_template_code?: string;
   kakao_status?: KakaoTemplateStatus;
+  kakao_buttons?: KakaoTemplateButton[];
   is_active: boolean;
   created_by?: string;
   created_at: string;

@@ -22,6 +22,36 @@ function buildAlimtalkVariables(
   return result;
 }
 
+// 요청 body의 buttons를 솔라피 SDK 형식으로 변환 (알림톡/브랜드 메시지 공용)
+type IncomingBtn =
+  | { buttonName: string; buttonType: string; linkMo?: string; linkPc?: string; linkAnd?: string; linkIos?: string }
+  | { name: string; url: string; type: string };
+type SolapiBtn = { buttonName: string; buttonType: string; linkMo?: string; linkPc?: string; linkAnd?: string; linkIos?: string };
+
+function toSolapiButtons(btns?: IncomingBtn[]): SolapiBtn[] | undefined {
+  if (!btns || btns.length === 0) return undefined;
+  return btns.map((b) => {
+    if ("buttonName" in b && "buttonType" in b) {
+      // 알림톡 템플릿 기반 — 템플릿과 동일한 name/type 유지
+      return {
+        buttonName: b.buttonName,
+        buttonType: b.buttonType,
+        linkMo: b.linkMo,
+        linkPc: b.linkPc,
+        linkAnd: b.linkAnd,
+        linkIos: b.linkIos,
+      };
+    }
+    // 브랜드 메시지 호환 — {name, url, type} → WL 버튼
+    return {
+      buttonName: b.name,
+      buttonType: "WL",
+      linkMo: b.url,
+      linkPc: b.url,
+    };
+  });
+}
+
 export async function POST(request: NextRequest) {
   // 관리자 권한 확인
   const supabaseUser = await createClient();
@@ -58,11 +88,17 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
+  // 알림톡은 {buttonName, buttonType, linkMo, linkPc, linkAnd, linkIos} 형식,
+  // 브랜드 메시지는 {name, url, type} 형식 — 하위에서 분기 처리
+  type IncomingButton =
+    | { buttonName: string; buttonType: string; linkMo?: string; linkPc?: string; linkAnd?: string; linkIos?: string }
+    | { name: string; url: string; type: string };
+
   const { recipientIds, messageType, message, buttons, imageUrl, templateCode, testPhone, variables } = body as {
     recipientIds: string[];
     messageType: "alimtalk" | "brand_message";
     message: string;
-    buttons?: Array<{ name: string; url: string; type: string }>;
+    buttons?: IncomingButton[];
     imageUrl?: string;
     templateCode?: string;
     testPhone?: string;
@@ -84,9 +120,27 @@ export async function POST(request: NextRequest) {
   }
   if (buttons) {
     for (const btn of buttons) {
-      if (!btn.name || !btn.url) {
-        return NextResponse.json({ error: "링크 버튼의 이름과 URL을 모두 입력해주세요." }, { status: 400 });
+      // 브랜드 메시지 형식 {name, url, type}
+      if ("name" in btn && "url" in btn) {
+        if (!btn.name || !btn.url) {
+          return NextResponse.json({ error: "링크 버튼의 이름과 URL을 모두 입력해주세요." }, { status: 400 });
+        }
+        continue;
       }
+      // 알림톡 형식 {buttonName, buttonType, linkMo, ...}
+      if ("buttonName" in btn && "buttonType" in btn) {
+        if (!btn.buttonName || !btn.buttonType) {
+          return NextResponse.json({ error: "버튼 이름/타입이 비어 있습니다." }, { status: 400 });
+        }
+        if (btn.buttonType === "WL" && !btn.linkMo) {
+          return NextResponse.json(
+            { error: `"${btn.buttonName}" 버튼의 모바일 URL(linkMo)을 입력해주세요.` },
+            { status: 400 }
+          );
+        }
+        continue;
+      }
+      return NextResponse.json({ error: "지원되지 않는 버튼 형식입니다." }, { status: 400 });
     }
   }
 
@@ -105,22 +159,17 @@ export async function POST(request: NextRequest) {
 
   // 테스트 발송 모드: 1건만 즉시 발송
   if (isTestMode) {
-    const solapiButtons = buttons?.map((btn) => ({
-      buttonName: btn.name,
-      buttonType: "WL" as const,
-      linkMo: btn.url,
-      linkPc: btn.url,
-    }));
+    const solapiButtons = toSolapiButtons(buttons);
 
     let result: { success: boolean; messageId?: string; error?: string };
 
     if (messageType === "alimtalk") {
-      // 알림톡: 승인 템플릿 구조 유지 — 버튼은 템플릿에 등록된 것만 자동 사용
+      // 알림톡: 승인 템플릿 구조 유지 — 버튼명/타입은 템플릿과 동일, URL은 관리자 override 가능
       result = await sendAlimtalkViaSolapi(
         testPhone,
         templateCode!,
         buildAlimtalkVariables({ name: "테스트", phone: testPhone }, variables),
-        undefined
+        solapiButtons
       );
     } else {
       result = await sendBrandMessageViaSolapi(
@@ -199,13 +248,8 @@ export async function POST(request: NextRequest) {
   }));
   await supabaseAdmin.from("marketing_send_logs").insert(logs);
 
-  // 솔라피 버튼 형식 변환
-  const solapiButtons = buttons?.map((btn) => ({
-    buttonName: btn.name,
-    buttonType: "WL" as const,
-    linkMo: btn.url,
-    linkPc: btn.url,
-  }));
+  // 솔라피 버튼 형식 변환 (알림톡/브랜드 메시지 형식 모두 처리)
+  const solapiButtons = toSolapiButtons(buttons);
 
   // 실제 발송 (솔라피 SDK)
   let successCount = 0;
@@ -221,12 +265,12 @@ export async function POST(request: NextRequest) {
     let result: { success: boolean; messageId?: string; error?: string };
 
     if (messageType === "alimtalk") {
-      // 알림톡: 승인 템플릿 구조 유지 — 버튼은 템플릿에 등록된 것만 자동 사용
+      // 알림톡: 승인 템플릿 구조 유지 — 버튼명/타입은 템플릿과 동일, URL은 관리자 override 가능
       result = await sendAlimtalkViaSolapi(
         recipient.phone!,
         templateCode!,
         buildAlimtalkVariables(recipient, variables),
-        undefined
+        solapiButtons
       );
     } else {
       // 브랜드 메시지: 자유 형식

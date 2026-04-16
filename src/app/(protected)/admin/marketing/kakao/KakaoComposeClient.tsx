@@ -104,6 +104,10 @@ export default function KakaoComposeClient({ templates }: Props) {
 
   // 알림톡 템플릿 공통 변수 값 (관리자가 입력; 모든 수신자에게 동일하게 전송)
   const [templateVariables, setTemplateVariables] = useState<Record<string, string>>({});
+  // 알림톡 템플릿의 WL 버튼별 URL (buttonName 기준)
+  const [templateButtonUrls, setTemplateButtonUrls] = useState<
+    Record<string, { linkMo: string; linkPc?: string }>
+  >({});
 
   // sessionStorage에서 수신자 ID 로드
   useEffect(() => {
@@ -351,6 +355,19 @@ export default function KakaoComposeClient({ templates }: Props) {
     if (template.type === "alimtalk") {
       setButtons([]);
       setShowAddButton(false);
+      // 템플릿 링크 버튼(WL)의 URL 기본값 세팅
+      const btnUrls: Record<string, { linkMo: string; linkPc?: string }> = {};
+      for (const btn of template.kakao_buttons || []) {
+        if (btn.buttonType === "WL") {
+          btnUrls[btn.buttonName] = {
+            linkMo: btn.linkMo || "",
+            linkPc: btn.linkPc || undefined,
+          };
+        }
+      }
+      setTemplateButtonUrls(btnUrls);
+    } else {
+      setTemplateButtonUrls({});
     }
     // 템플릿 본문에서 변수 추출 → 공통 변수 입력 폼 초기화
     const rawVars = getRawVarNames(template.body);
@@ -368,6 +385,7 @@ export default function KakaoComposeClient({ templates }: Props) {
     setTemplateCode("");
     setMessage("");
     setTemplateVariables({});
+    setTemplateButtonUrls({});
   };
 
   const selectedTemplate = templates.find((t) => t.id === selectedTemplateId);
@@ -496,6 +514,31 @@ export default function KakaoComposeClient({ templates }: Props) {
 
   // ─── 발송 ───
 
+  // 알림톡 발송용 버튼 배열 구성 (템플릿 구조 + 관리자 입력 URL)
+  const buildAlimtalkButtons = useCallback(() => {
+    if (messageType !== "alimtalk" || !selectedTemplateId) return undefined;
+    const tpl = templates.find((t) => t.id === selectedTemplateId);
+    if (!tpl?.kakao_buttons?.length) return undefined;
+    return tpl.kakao_buttons.map((btn) => {
+      if (btn.buttonType === "WL") {
+        const urls = templateButtonUrls[btn.buttonName];
+        return {
+          buttonName: btn.buttonName,
+          buttonType: "WL" as const,
+          linkMo: (urls?.linkMo || btn.linkMo || "").trim(),
+          linkPc: (urls?.linkPc || btn.linkPc || undefined),
+        };
+      }
+      // 비-웹링크 버튼은 템플릿 그대로 전달 (AL/BK 등)
+      return {
+        buttonName: btn.buttonName,
+        buttonType: btn.buttonType,
+        linkAnd: btn.linkAnd,
+        linkIos: btn.linkIos,
+      };
+    });
+  }, [messageType, selectedTemplateId, templates, templateButtonUrls]);
+
   const handleSendClick = () => {
     if (!message.trim()) {
       setMsg({ type: "error", text: "메시지를 입력해주세요." });
@@ -525,6 +568,19 @@ export default function KakaoComposeClient({ templates }: Props) {
         });
         return;
       }
+      // 알림톡 WL 버튼의 linkMo(모바일 URL) 미입력 검증 (카카오 3036 방지)
+      const tpl = templates.find((t) => t.id === selectedTemplateId);
+      const webButtons = (tpl?.kakao_buttons || []).filter((b) => b.buttonType === "WL");
+      const missingUrls = webButtons.filter(
+        (b) => !templateButtonUrls[b.buttonName]?.linkMo?.trim()
+      );
+      if (missingUrls.length > 0) {
+        setMsg({
+          type: "error",
+          text: `다음 버튼의 URL을 입력해주세요: ${missingUrls.map((b) => b.buttonName).join(", ")}`,
+        });
+        return;
+      }
     }
     setShowConfirmSend(true);
   };
@@ -540,6 +596,7 @@ export default function KakaoComposeClient({ templates }: Props) {
         : message;
 
     try {
+      const alimtalkButtons = buildAlimtalkButtons();
       const res = await fetch("/api/marketing/send-kakao", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -548,7 +605,10 @@ export default function KakaoComposeClient({ templates }: Props) {
           messageType,
           message: finalMessage,
           templateCode: templateCode || undefined,
-          buttons: buttons.length > 0 ? buttons : undefined,
+          buttons:
+            messageType === "alimtalk"
+              ? alimtalkButtons
+              : (buttons.length > 0 ? buttons : undefined),
           imageUrl: imageUrl || undefined,
           variables: messageType === "alimtalk" ? templateVariables : undefined,
         }),
@@ -585,6 +645,7 @@ export default function KakaoComposeClient({ templates }: Props) {
     }
     setIsSending(true);
     try {
+      const alimtalkButtons = buildAlimtalkButtons();
       const res = await fetch("/api/marketing/send-kakao", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -593,7 +654,10 @@ export default function KakaoComposeClient({ templates }: Props) {
           messageType,
           message,
           templateCode: templateCode || undefined,
-          buttons: buttons.length > 0 ? buttons : undefined,
+          buttons:
+            messageType === "alimtalk"
+              ? alimtalkButtons
+              : (buttons.length > 0 ? buttons : undefined),
           imageUrl: imageUrl || undefined,
           testPhone,
           variables: messageType === "alimtalk" ? templateVariables : undefined,
@@ -938,6 +1002,71 @@ export default function KakaoComposeClient({ templates }: Props) {
                               ))}
                             </div>
                           )}
+                          {/* 템플릿 링크 버튼 URL 입력 */}
+                          {(() => {
+                            const tpl = templates.find((t) => t.id === selectedTemplateId);
+                            const allBtns = tpl?.kakao_buttons || [];
+                            const webBtns = allBtns.filter((b) => b.buttonType === "WL");
+                            const otherBtns = allBtns.filter((b) => b.buttonType !== "WL");
+                            if (allBtns.length === 0) return null;
+                            return (
+                              <div className="p-3 border border-yellow-200 bg-yellow-50/40 rounded-lg space-y-3">
+                                <p className="text-xs font-medium text-yellow-800">
+                                  템플릿 링크 버튼 URL 입력
+                                </p>
+                                {webBtns.map((btn) => {
+                                  const urls = templateButtonUrls[btn.buttonName] || { linkMo: "" };
+                                  return (
+                                    <div key={btn.buttonName} className="space-y-1.5">
+                                      <label className="text-xs font-medium text-text">
+                                        {btn.buttonName}{" "}
+                                        <span className="text-text-muted">(웹 링크)</span>
+                                      </label>
+                                      <input
+                                        type="text"
+                                        placeholder="https://... (모바일, 필수)"
+                                        value={urls.linkMo}
+                                        onChange={(e) =>
+                                          setTemplateButtonUrls((prev) => ({
+                                            ...prev,
+                                            [btn.buttonName]: {
+                                              ...prev[btn.buttonName],
+                                              linkMo: e.target.value,
+                                            },
+                                          }))
+                                        }
+                                        className="w-full px-2.5 py-1.5 border border-yellow-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300 bg-white"
+                                      />
+                                      <input
+                                        type="text"
+                                        placeholder="https://... (PC, 선택)"
+                                        value={urls.linkPc || ""}
+                                        onChange={(e) =>
+                                          setTemplateButtonUrls((prev) => ({
+                                            ...prev,
+                                            [btn.buttonName]: {
+                                              ...prev[btn.buttonName],
+                                              linkMo: prev[btn.buttonName]?.linkMo || "",
+                                              linkPc: e.target.value || undefined,
+                                            },
+                                          }))
+                                        }
+                                        className="w-full px-2.5 py-1.5 border border-yellow-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300 bg-white"
+                                      />
+                                    </div>
+                                  );
+                                })}
+                                {otherBtns.length > 0 && (
+                                  <p className="text-xs text-text-muted">
+                                    추가 버튼: {otherBtns.map((b) => b.buttonName).join(", ")} (URL 편집 불필요)
+                                  </p>
+                                )}
+                                <p className="text-xs text-yellow-700">
+                                  ⓘ 버튼 이름·타입은 승인된 템플릿과 동일해야 합니다. URL만 변경 가능합니다.
+                                </p>
+                              </div>
+                            );
+                          })()}
                         </div>
                       );
                     })()}
@@ -1122,7 +1251,9 @@ export default function KakaoComposeClient({ templates }: Props) {
             </div>
 
             {messageType === "alimtalk" && selectedTemplateId && (
-              <p className="text-xs text-text-muted mb-3">템플릿에 설정된 버튼 정보가 사용됩니다.</p>
+              <p className="text-xs text-text-muted mb-3">
+                알림톡 버튼은 템플릿에 등록된 버튼을 사용하며, URL은 위 메시지 내용 영역의 &quot;템플릿 링크 버튼 URL 입력&quot; 섹션에서 지정합니다.
+              </p>
             )}
 
             {buttons.length > 0 && (

@@ -54,6 +54,9 @@ export async function GET() {
         .eq("kakao_template_code", tpl.templateId)
         .single();
 
+      // 버튼 메타데이터 (WL/AL 등) JSONB로 저장 — 발송 UI에서 URL 편집 시 참조
+      const kakaoButtons = Array.isArray(tpl.buttons) && tpl.buttons.length > 0 ? tpl.buttons : null;
+
       if (existing) {
         // 업데이트
         await supabaseAdmin
@@ -62,6 +65,7 @@ export async function GET() {
             name: tpl.name,
             body: tpl.content,
             kakao_status: kakaoStatus,
+            kakao_buttons: kakaoButtons,
             updated_at: new Date().toISOString(),
           })
           .eq("id", existing.id);
@@ -76,6 +80,7 @@ export async function GET() {
             body: tpl.content,
             kakao_template_code: tpl.templateId,
             kakao_status: kakaoStatus,
+            kakao_buttons: kakaoButtons,
             is_active: kakaoStatus === "approved",
           });
       }
