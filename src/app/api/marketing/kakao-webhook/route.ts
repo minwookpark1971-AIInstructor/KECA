@@ -29,9 +29,15 @@ function verifySignature(rawBody: string, signature: string | null): { ok: boole
   }
 }
 
-const statusMap: Record<string, string> = {
+// Solapi statusCode → 내부 상태 매핑
+// 2xxx, 3xxx: 성공/전달 완료 (단 3108 등 알림톡 도달 상태도 포함)
+// 4xxx: 실패
+// 1xxx: 접수 중
+const explicitStatusMap: Record<string, string> = {
+  "1000": "sent",
   "2000": "delivered",
   "3000": "delivered",
+  "3108": "delivered",
   "4000": "failed",
   "4100": "failed",
   success: "delivered",
@@ -45,6 +51,17 @@ const statusMap: Record<string, string> = {
   READ: "opened",
 };
 
+function mapStatus(raw: string | undefined): string {
+  if (!raw) return "sent";
+  if (explicitStatusMap[raw]) return explicitStatusMap[raw];
+  // 첫 자리 기반 fallback 매핑
+  const first = raw.charAt(0);
+  if (first === "2" || first === "3") return "delivered";
+  if (first === "4" || first === "5") return "failed";
+  if (first === "1") return "sent";
+  return "sent";
+}
+
 type SolapiEvent = {
   messageId?: string;
   statusCode?: string;
@@ -53,14 +70,19 @@ type SolapiEvent = {
   to?: string;
   reason?: string;
   errorMessage?: string;
+  type?: string;
+  from?: string;
+  groupId?: string;
 };
+
+type MatchResult = { matched: boolean; via?: "messageId" | "phone"; error?: string };
 
 async function applyEvent(
   supabase: ReturnType<typeof createAdminClient>,
   event: SolapiEvent
-): Promise<{ matched?: boolean; error?: string }> {
+): Promise<MatchResult> {
   const raw = event.statusCode || event.status || event.eventType || "";
-  const mappedStatus = statusMap[raw] || "sent";
+  const mappedStatus = mapStatus(raw);
 
   const updateData: Record<string, unknown> = { status: mappedStatus };
   if (mappedStatus === "sent" || mappedStatus === "delivered") {
@@ -73,9 +95,25 @@ async function applyEvent(
     updateData.error_message = event.reason || event.errorMessage || raw || "발송 실패";
   }
 
+  // 1순위: provider_message_id로 정확 매칭
+  if (event.messageId) {
+    try {
+      const { data, error } = await supabase
+        .from("marketing_send_logs")
+        .update(updateData)
+        .eq("provider_message_id", event.messageId)
+        .select("id");
+      if (error) return { matched: false, error: `msgid:${error.message}` };
+      if ((data?.length ?? 0) > 0) return { matched: true, via: "messageId" };
+    } catch (err) {
+      return { matched: false, error: `msgid_exc:${(err as Error).message}` };
+    }
+  }
+
+  // 2순위: 정규화된 전화번호로 fallback 매칭 (status 무관하게 가장 최근 pending/sent만)
   const normalizedPhone = (event.to || "").replace(/[^0-9]/g, "");
   if (!normalizedPhone) {
-    return { matched: false, error: "no_phone" };
+    return { matched: false, error: "no_phone_no_msgid" };
   }
 
   try {
@@ -83,12 +121,12 @@ async function applyEvent(
       .from("marketing_send_logs")
       .update(updateData)
       .eq("recipient_phone", normalizedPhone)
-      .eq("status", "pending")
+      .in("status", ["pending", "sent"])
       .select("id");
-    if (error) return { matched: false, error: error.message };
-    return { matched: (data?.length ?? 0) > 0 };
+    if (error) return { matched: false, error: `phone:${error.message}` };
+    return { matched: (data?.length ?? 0) > 0, via: "phone" };
   } catch (err) {
-    return { matched: false, error: (err as Error).message };
+    return { matched: false, error: `phone_exc:${(err as Error).message}` };
   }
 }
 
@@ -139,8 +177,7 @@ export async function POST(request: NextRequest) {
       messageId: e.messageId,
       to: maskPhone(e.to),
       statusCode: e.statusCode,
-      status: e.status,
-      eventType: e.eventType,
+      type: e.type,
     })),
   });
 
@@ -154,18 +191,22 @@ export async function POST(request: NextRequest) {
   const summary = results.reduce(
     (acc, r, i) => {
       if (r.status === "fulfilled") {
-        if (r.value.matched) acc.matched += 1;
+        if (r.value.matched) {
+          acc.matched += 1;
+          if (r.value.via === "messageId") acc.viaMessageId += 1;
+          else if (r.value.via === "phone") acc.viaPhone += 1;
+        } else {
+          acc.unmatched += 1;
+        }
         if (r.value.error) {
           acc.errors.push(`#${i}:${r.value.error}`);
-        } else if (!r.value.matched) {
-          acc.unmatched += 1;
         }
       } else {
         acc.errors.push(`#${i}:${r.reason}`);
       }
       return acc;
     },
-    { matched: 0, unmatched: 0, errors: [] as string[] }
+    { matched: 0, unmatched: 0, viaMessageId: 0, viaPhone: 0, errors: [] as string[] }
   );
 
   if (summary.errors.length > 0 || summary.unmatched > 0) {

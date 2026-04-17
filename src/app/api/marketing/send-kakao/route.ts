@@ -239,11 +239,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "캠페인 생성 실패" }, { status: 500 });
   }
 
-  // 발송 로그 생성
+  // 발송 로그 생성 — 전화번호는 숫자만 남겨 저장 (웹훅 `to`와 포맷 일치 유지)
   const logs = targetRecipients.map((r) => ({
     campaign_id: campaign.id,
     recipient_id: r.id,
-    recipient_phone: r.phone,
+    recipient_phone: r.phone ? normalizePhoneNumber(r.phone) : null,
     channel,
   }));
   await supabaseAdmin.from("marketing_send_logs").insert(logs);
@@ -284,13 +284,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 발송 로그 업데이트
+    // 발송 로그 업데이트 — Solapi messageId 저장하여 웹훅이 정확히 매칭 가능하게 함
     await supabaseAdmin
       .from("marketing_send_logs")
       .update({
         status: result.success ? "sent" : "failed",
         sent_at: result.success ? new Date().toISOString() : null,
         error_message: result.success ? null : result.error,
+        provider_message_id: result.messageId ?? null,
       })
       .eq("campaign_id", campaign.id)
       .eq("recipient_id", recipient.id);
